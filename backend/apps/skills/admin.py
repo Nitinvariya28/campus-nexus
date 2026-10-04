@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SkillCategory, Skill, UserSkill, SocialLink, UserAIUsage
+from .models import SkillCategory, Skill, UserSkill, SocialLink, UserAIUsage, UserLearningResource
 
 @admin.register(SkillCategory)
 class SkillCategoryAdmin(admin.ModelAdmin):
@@ -33,3 +33,9 @@ class UserAIUsageAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "ai_tool", "usage_frequency", "usage_purpose")
     list_filter = ("ai_tool", "usage_frequency", "usage_purpose")
     search_fields = ("user__email",)
+
+@admin.register(UserLearningResource)
+class UserLearningResourceAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "resource_type", "name", "url")
+    list_filter = ("resource_type",)
+    search_fields = ("user__email", "name")

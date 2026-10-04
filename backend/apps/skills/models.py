@@ -92,3 +92,21 @@ class UserAIUsage(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.ai_tool}"
+
+class UserLearningResource(models.Model):
+    RESOURCE_TYPE_CHOICES = [
+        ("YOUTUBE_CHANNEL", "YouTube Channel"),
+        ("CODING_PLATFORM", "Coding Platform"),
+        ("COURSE_WEBSITE", "Course Website"),
+        ("BLOG_FORUM", "Blog/Forum"),
+        ("OTHER", "Other"),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="learning_resources")
+    resource_type = models.CharField(max_length=50, choices=RESOURCE_TYPE_CHOICES)
+    name = models.CharField(max_length=100)
+    url = models.CharField(max_length=500, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.name}"
