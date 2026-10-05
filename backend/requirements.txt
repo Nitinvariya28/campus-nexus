@@ -1,0 +1,27 @@
+# ==========================================
+# Core Web Framework
+# ==========================================
+django>=5.0  # Base web framework
+djangorestframework>=3.15  # Core library for building REST APIs
+
+# ==========================================
+# Database Driver
+# ==========================================
+mysqlclient>=2.2  # MySQL database connector for Django
+
+# ==========================================
+# Authentication & Security
+# ==========================================
+djangorestframework-simplejwt>=5.3  # JWT Authentication for API endpoints
+django-cors-headers>=4.3  # Allows React frontend to communicate with Django API
+
+# ==========================================
+# API Utilities & Filtering
+# ==========================================
+django-filter>=24.2  # For structured queryset filtering (e.g., ?department=CSE)
+
+# ==========================================
+# API Documentation & Debugging (Optional but recommended)
+# ==========================================
+drf-spectacular>=0.27  # For OpenAPI/Swagger API schema generation
+django-debug-toolbar>=4.3  # For query optimization (verifying select_related/prefetch_related)
