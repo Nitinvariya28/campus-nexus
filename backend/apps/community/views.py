@@ -1,6 +1,7 @@
 from django.db.models import Value, CharField
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import LimitOffsetPagination
 from .models import Post
@@ -72,3 +73,150 @@ class UnifiedFeedView(APIView):
                 results.append(AnnouncementFeedSerializer(ann_dict[item['id']], context={'request': request}).data)
 
         return paginator.get_paginated_response(results)
+
+from django.db import transaction
+from apps.companies.models import Company
+from .models import Tag, PostTag, PostMedia
+from .serializers import CreatePostSerializer
+
+class PostOptionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        # 1. Determine Post Types based on Role
+        # All choices: PLACEMENT_EXPERIENCE, INTERVIEW_EXPERIENCE, INTERNSHIP, CAREER_ADVICE, COMPANY_INFO, GENERAL
+        all_choices = dict(Post.POST_TYPE_CHOICES)
+        
+        if user.role == 'PLACEMENT_CELL':
+            allowed_types = ['COMPANY_INFO', 'GENERAL']
+        elif user.role == 'STUDENT':
+            allowed_types = ['INTERNSHIP', 'INTERVIEW_EXPERIENCE', 'GENERAL', 'COMPANY_INFO']
+        elif user.role == 'ALUMNI':
+            allowed_types = ['PLACEMENT_EXPERIENCE', 'INTERVIEW_EXPERIENCE', 'INTERNSHIP', 'CAREER_ADVICE', 'COMPANY_INFO', 'GENERAL']
+        else:
+            allowed_types = ['GENERAL']
+            
+        post_types = [{"value": k, "label": all_choices[k]} for k in allowed_types]
+        
+        # 2. Fetch Active Companies
+        companies = Company.objects.filter(is_active=True).values('id', 'name')
+        
+        # 3. Fetch Active Tags
+        tags = Tag.objects.filter(is_active=True).values('id', 'name')
+        
+        return Response({
+            "post_types": post_types,
+            "companies": list(companies),
+            "tags": list(tags)
+        })
+
+class CreatePostView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        serializer = CreatePostSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        validated_data = serializer.validated_data
+        user = request.user
+        
+        # 1. Role Validation (Security Check)
+        post_type = validated_data.get('post_type')
+        allowed_types_by_role = {
+            'PLACEMENT_CELL': ['COMPANY_INFO', 'GENERAL'],
+            'STUDENT': ['INTERNSHIP', 'INTERVIEW_EXPERIENCE', 'GENERAL', 'COMPANY_INFO'],
+            'ALUMNI': ['PLACEMENT_EXPERIENCE', 'INTERVIEW_EXPERIENCE', 'INTERNSHIP', 'CAREER_ADVICE', 'COMPANY_INFO', 'GENERAL'],
+        }
+        
+        allowed_for_user = allowed_types_by_role.get(user.role, ['GENERAL'])
+        
+        if post_type not in allowed_for_user:
+            return Response({
+                "error": f"Security Block: Users with role '{user.role}' are not authorized to create '{post_type}' posts."
+            }, status=status.HTTP_403_FORBIDDEN)
+            
+        # 2. Handle Company ("Other" logic)
+        company = None
+        company_id = validated_data.get('company_id')
+        new_company_name = validated_data.get('new_company_name')
+        
+        if company_id:
+            try:
+                company = Company.objects.get(id=company_id)
+            except Company.DoesNotExist:
+                return Response({"error": "Selected company does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+        elif new_company_name:
+            # Create a new unverified company
+            company, _ = Company.objects.get_or_create(name=new_company_name, defaults={"is_active": False})
+            
+        # 3. Create the Post
+        post = Post.objects.create(
+            author=user,
+            company=company,
+            post_type=post_type,
+            title=validated_data.get('title'),
+            content=validated_data.get('content')
+        )
+        
+        # 4. Handle Tags (Multiple Select & "Other")
+        tag_ids = validated_data.get('tag_ids', [])
+        new_tags_names = validated_data.get('new_tags', [])
+        
+        final_tags = []
+        if tag_ids:
+            final_tags.extend(list(Tag.objects.filter(id__in=tag_ids)))
+            
+        if new_tags_names:
+            # Create new tags in bulk (or ignore if exist using get_or_create logic in loop)
+            # For strict performance, we iterate since get_or_create is safer for unique constraints
+            for tag_name in new_tags_names:
+                tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
+                final_tags.append(tag_obj)
+                
+        # Bulk create PostTags
+        if final_tags:
+            post_tags_to_create = [PostTag(post=post, tag=tag) for tag in final_tags]
+            PostTag.objects.bulk_create(post_tags_to_create, ignore_conflicts=True)
+            
+        # 5. Handle Media Attachments
+        media_files = validated_data.get('media_files', [])
+        if media_files:
+            media_to_create = [
+                PostMedia(post=post, media_type=media.get('media_type', 'IMAGE'), file=media.get('file'))
+                for media in media_files
+            ]
+            PostMedia.objects.bulk_create(media_to_create)
+            
+        # Return success with the created post data
+        return Response({
+            "message": "Post created successfully.",
+            "post_id": post.id
+        }, status=status.HTTP_201_CREATED)
+
+from django.shortcuts import get_object_or_404
+from .serializers import PostDetailSerializer
+
+class PostDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, post_id):
+        # Optimized N+1 Query Resolution
+        post = get_object_or_404(
+            Post.objects.select_related(
+                'author', 'author__student_profile__department', 'author__student_profile__batch',
+                'author__alumni_profile__current_company', 'company'
+            ).prefetch_related(
+                'media', 'post_tags__tag', 'likes', 
+                'comments', 'comments__author', 
+                'comments__author__student_profile__department', 'comments__author__student_profile__batch',
+                'comments__author__alumni_profile__current_company'
+            ),
+            id=post_id
+        )
+        
+        serializer = PostDetailSerializer(post, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)

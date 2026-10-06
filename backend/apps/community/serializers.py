@@ -95,3 +95,50 @@ class AnnouncementFeedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
         fields = ['feed_type', 'id', 'title', 'content', 'announcement_type', 'target_audience', 'created_at', 'author']
+
+class CreatePostSerializer(serializers.ModelSerializer):
+    company_id = serializers.IntegerField(required=False, allow_null=True)
+    new_company_name = serializers.CharField(required=False, allow_blank=True)
+    tag_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
+    new_tags = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    media_files = serializers.ListField(
+        child=serializers.DictField(child=serializers.CharField()),
+        required=False, default=list
+    ) # expects [{"media_type": "IMAGE", "file": "path/to/img.jpg"}]
+
+    class Meta:
+        model = Post
+        fields = ['title', 'content', 'post_type', 'company_id', 'new_company_name', 'tag_ids', 'new_tags', 'media_files']
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = FeedAuthorSerializer(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'author', 'content', 'created_at']
+
+class PostDetailSerializer(serializers.ModelSerializer):
+    author = FeedAuthorSerializer(read_only=True)
+    media = PostMediaSerializer(many=True, read_only=True)
+    tags = serializers.SerializerMethodField()
+    interactions = serializers.SerializerMethodField()
+    company = serializers.CharField(source='company.name', read_only=True)
+    comments = CommentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Post
+        fields = ['id', 'title', 'content', 'post_type', 'created_at', 'author', 'company', 'media', 'tags', 'interactions', 'comments']
+        
+    def get_tags(self, obj):
+        return [pt.tag.name for pt in obj.post_tags.all()]
+        
+    def get_interactions(self, obj):
+        request = self.context.get('request')
+        user_id = request.user.id if request and request.user.is_authenticated else None
+        
+        likes_list = obj.likes.all()
+        return {
+            "likes_count": len(likes_list),
+            "is_liked_by_me": any(like.user_id == user_id for like in likes_list)
+        }
