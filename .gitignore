@@ -38,3 +38,8 @@ local_settings.py
 .idea/
 .DS_Store
 Thumbs.db
+
+
+
+module-vise-api
+backend/module-vise-api/
