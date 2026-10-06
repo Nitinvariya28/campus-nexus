@@ -11,9 +11,6 @@ class UniversityIdentity(models.Model):
         ("BEE", "B.Tech Electrical Engineering"),
         ("BCV", "B.Tech Civil Engineering"),
     ]
-    STATUS_CHOICES = [
-        ("ACTIVE", "Active"), ("GRADUATED", "Graduated"), ("INACTIVE", "Inactive"),
-    ]
     UNIVERSITY_EMAIL_VALIDATOR = RegexValidator(
         regex=r"^\d{2}(bce|bec|bme|bam|bch|bee|bcv)\d{3}@nirmauni\.ac\.in$",
         message="Enter a valid university email address."
@@ -24,7 +21,6 @@ class UniversityIdentity(models.Model):
     full_name = models.CharField(max_length=150)
     date_of_birth = models.DateField()
     university_email = models.EmailField(unique=True, validators=[UNIVERSITY_EMAIL_VALIDATOR])
-    record_status = models.CharField(max_length=10, choices=STATUS_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

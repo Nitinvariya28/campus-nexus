@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User
+from .models import User, OTPVerification
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
@@ -22,3 +22,9 @@ class CustomUserAdmin(UserAdmin):
             "fields": ("email", "password1", "password2", "role", "is_active", "is_staff", "is_verified"),
         }),
     )
+
+@admin.register(OTPVerification)
+class OTPVerificationAdmin(admin.ModelAdmin):
+    list_display = ("email", "otp_code", "created_at")
+    search_fields = ("email", "otp_code")
+    readonly_fields = ("created_at",)

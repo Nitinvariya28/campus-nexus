@@ -45,3 +45,11 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+class OTPVerification(models.Model):
+    email = models.EmailField()
+    otp_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.email} - {self.otp_code}"

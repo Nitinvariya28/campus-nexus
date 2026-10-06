@@ -3,9 +3,9 @@ from django.db import models
 
 class StudentProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="student_profile")
-    department = models.ForeignKey("university.Department", on_delete=models.PROTECT, related_name="student_profiles")
-    batch = models.ForeignKey("university.Batch", on_delete=models.PROTECT, related_name="student_profiles")
-    semester = models.PositiveSmallIntegerField()
+    department = models.ForeignKey("university.Department", on_delete=models.PROTECT, related_name="student_profiles", default=1)
+    batch = models.ForeignKey("university.Batch", on_delete=models.PROTECT, related_name="student_profiles", default=1)
+    semester = models.PositiveSmallIntegerField(null=True, blank=True)
     bio = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
@@ -22,8 +22,8 @@ class StudentProfile(models.Model):
 
 class AlumniProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="alumni_profile")
-    department = models.ForeignKey("university.Department", on_delete=models.PROTECT, related_name="alumni_profiles")
-    batch = models.ForeignKey("university.Batch", on_delete=models.PROTECT, related_name="alumni_profiles")
+    department = models.ForeignKey("university.Department", on_delete=models.PROTECT, related_name="alumni_profiles", default=1)
+    batch = models.ForeignKey("university.Batch", on_delete=models.PROTECT, related_name="alumni_profiles", default=1)
     current_job_title = models.CharField(max_length=150, blank=True, null=True)
     current_company = models.ForeignKey("companies.Company", on_delete=models.SET_NULL, null=True, blank=True, related_name="alumni_profiles")
     bio = models.TextField(blank=True, null=True)
