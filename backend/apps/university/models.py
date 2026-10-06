@@ -2,36 +2,18 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 class UniversityIdentity(models.Model):
-    PROGRAM_CHOICES = [
-        ("BCE", "B.Tech Computer Engineering"),
-        ("BEC", "B.Tech Electronics & Communication Engineering"),
-        ("BME", "B.Tech Mechanical Engineering"),
-        ("BAM", "B.Tech Mathematics & Computing"),
-        ("BCH", "B.Tech Chemical Engineering"),
-        ("BEE", "B.Tech Electrical Engineering"),
-        ("BCV", "B.Tech Civil Engineering"),
-    ]
     UNIVERSITY_EMAIL_VALIDATOR = RegexValidator(
         regex=r"^\d{2}(bce|bec|bme|bam|bch|bee|bcv)\d{3}@nirmauni\.ac\.in$",
         message="Enter a valid university email address."
     )
-    admission_year = models.PositiveSmallIntegerField()
-    program_code = models.CharField(max_length=10, choices=PROGRAM_CHOICES)
-    roll_number = models.PositiveSmallIntegerField()
     full_name = models.CharField(max_length=150)
     date_of_birth = models.DateField()
     university_email = models.EmailField(unique=True, validators=[UNIVERSITY_EMAIL_VALIDATOR])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["admission_year", "program_code", "roll_number"], name="unique_university_identity"),
-            models.CheckConstraint(condition=(models.Q(roll_number__gte=1) & models.Q(roll_number__lte=250)), name="roll_number_1_to_250"),
-        ]
-
     def __str__(self):
-        return f"{self.admission_year}{self.program_code}{self.roll_number:03d}"
+        return self.university_email
 
 class Department(models.Model):
     name = models.CharField(max_length=150, unique=True)

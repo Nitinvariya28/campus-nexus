@@ -16,6 +16,5 @@ class BatchAdmin(admin.ModelAdmin):
 
 @admin.register(UniversityIdentity)
 class UniversityIdentityAdmin(admin.ModelAdmin):
-    list_display = ("id", "full_name", "university_email", "program_code")
-    list_filter = ("program_code", "admission_year")
+    list_display = ("id", "full_name", "university_email")
     search_fields = ("full_name", "university_email")
