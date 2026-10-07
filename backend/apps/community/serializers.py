@@ -124,11 +124,9 @@ class PostDetailSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     interactions = serializers.SerializerMethodField()
     company = serializers.CharField(source='company.name', read_only=True)
-    comments = CommentSerializer(many=True, read_only=True)
-
     class Meta:
         model = Post
-        fields = ['id', 'title', 'content', 'post_type', 'created_at', 'author', 'company', 'media', 'tags', 'interactions', 'comments']
+        fields = ['id', 'title', 'content', 'post_type', 'created_at', 'author', 'company', 'media', 'tags', 'interactions']
         
     def get_tags(self, obj):
         return [pt.tag.name for pt in obj.post_tags.all()]
@@ -140,5 +138,11 @@ class PostDetailSerializer(serializers.ModelSerializer):
         likes_list = obj.likes.all()
         return {
             "likes_count": len(likes_list),
+            "comments_count": len(obj.comments.all()),
             "is_liked_by_me": any(like.user_id == user_id for like in likes_list)
         }
+
+class CreateCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['content']

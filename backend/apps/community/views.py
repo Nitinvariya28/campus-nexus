@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import LimitOffsetPagination
-from .models import Post
+from .models import Post, Tag, PostTag, PostMedia, Comment, PostLike
 from apps.opportunities.models import Opportunity
 from apps.announcements.models import Announcement
 from .serializers import PostFeedSerializer, OpportunityFeedSerializer, AnnouncementFeedSerializer
@@ -210,13 +210,90 @@ class PostDetailView(APIView):
                 'author', 'author__student_profile__department', 'author__student_profile__batch',
                 'author__alumni_profile__current_company', 'company'
             ).prefetch_related(
-                'media', 'post_tags__tag', 'likes', 
-                'comments', 'comments__author', 
-                'comments__author__student_profile__department', 'comments__author__student_profile__batch',
-                'comments__author__alumni_profile__current_company'
+                'media', 'post_tags__tag', 'likes', 'comments'
             ),
             id=post_id
         )
         
         serializer = PostDetailSerializer(post, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+from .serializers import CreateCommentSerializer, CommentSerializer
+
+class CreateCommentView(APIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = LimitOffsetPagination
+
+    def get(self, request, post_id):
+        # 1. Verify Post exists
+        post_obj = get_object_or_404(Post, id=post_id)
+        
+        # 2. Get all comments ordered by creation date (newest first or oldest first, standard is oldest first for comments)
+        comments = Comment.objects.filter(post=post_obj).select_related(
+            'author', 'author__student_profile__department', 'author__student_profile__batch', 'author__alumni_profile__current_company'
+        ).order_by('created_at')
+        
+        # 3. Paginate
+        paginator = self.pagination_class()
+        paginated_comments = paginator.paginate_queryset(comments, request)
+        
+        # 4. Serialize and return
+        serializer = CommentSerializer(paginated_comments, many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
+
+    def post(self, request, post_id):
+        # 1. Safety Check: Does the Post still exist?
+        post_obj = get_object_or_404(Post, id=post_id)
+        
+        # 2. Validate the incoming text
+        serializer = CreateCommentSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        # 3. Create the Comment (Link Author, Post, and Content)
+        comment = Comment.objects.create(
+            post=post_obj,
+            author=request.user,
+            content=serializer.validated_data['content']
+        )
+        
+        # 4. Serialize the newly created comment (with full author details) to return to UI
+        response_serializer = CommentSerializer(comment, context={'request': request})
+        
+        return Response({
+            "message": "Comment added successfully.",
+            "comment": response_serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+
+class ToggleLikeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, post_id):
+        # 1. Verify post exists
+        post_obj = get_object_or_404(Post, id=post_id)
+        user = request.user
+        
+        # 2. Check if the user already liked the post
+        like_obj = PostLike.objects.filter(post=post_obj, user=user).first()
+        
+        if like_obj:
+            # If it exists, delete it (UNLIKE)
+            like_obj.delete()
+            is_liked_by_me = False
+            message = "Post unliked."
+        else:
+            # If it doesn't exist, create it (LIKE)
+            PostLike.objects.create(post=post_obj, user=user)
+            is_liked_by_me = True
+            message = "Post liked."
+            
+        # 3. Get the updated total count
+        likes_count = post_obj.likes.count()
+        
+        # 4. Return UI-optimized JSON
+        return Response({
+            "message": message,
+            "likes_count": likes_count,
+            "is_liked_by_me": is_liked_by_me
+        }, status=status.HTTP_200_OK)

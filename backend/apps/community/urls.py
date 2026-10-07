@@ -1,9 +1,11 @@
 from django.urls import path
-from .views import UnifiedFeedView, PostOptionsView, CreatePostView, PostDetailView
+from .views import UnifiedFeedView, PostOptionsView, CreatePostView, PostDetailView, CreateCommentView, ToggleLikeView
 
 urlpatterns = [
     path('feed/', UnifiedFeedView.as_view(), name='community-feed'),
     path('posts/options/', PostOptionsView.as_view(), name='post-options'),
     path('posts/', CreatePostView.as_view(), name='create-post'),
     path('posts/<int:post_id>/', PostDetailView.as_view(), name='post-detail'),
+    path('posts/<int:post_id>/comments/', CreateCommentView.as_view(), name='create-comment'),
+    path('posts/<int:post_id>/toggle-like/', ToggleLikeView.as_view(), name='toggle-like'),
 ]
