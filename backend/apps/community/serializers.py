@@ -146,3 +146,16 @@ class CreateCommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['content']
+
+class UpdatePostSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=255, required=False)
+    content = serializers.CharField(required=False)
+    tag_ids = serializers.ListField(
+        child=serializers.IntegerField(), required=False
+    )
+    new_tags = serializers.ListField(
+        child=serializers.CharField(max_length=50), required=False
+    )
+    media_files = serializers.ListField(
+        child=serializers.DictField(), required=False
+    )

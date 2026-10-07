@@ -4,65 +4,42 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import LimitOffsetPagination
-from .models import Post, Tag, PostTag, PostMedia, Comment, PostLike
+from .models import Post, Tag, PostTag, PostMedia, Comment, PostLike, SavedPost
 from apps.opportunities.models import Opportunity
 from apps.announcements.models import Announcement
 from .serializers import PostFeedSerializer, OpportunityFeedSerializer, AnnouncementFeedSerializer
 
-class UnifiedFeedView(APIView):
+from django.db.models import Q
+
+class BaseFeedView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        role_filter = request.query_params.get('role', None)
-        author_id = request.query_params.get('author_id', None)
-
-        # 1. Base Querysets with injected feed_type strings
-        posts_qs = Post.objects.all()
-        opps_qs = Opportunity.objects.filter(status='OPEN')
-        anns_qs = Announcement.objects.filter(is_published=True)
-
-        # Apply Filters dynamically if requested
-        if role_filter:
-            posts_qs = posts_qs.filter(author__role=role_filter)
-            opps_qs = opps_qs.filter(posted_by__role=role_filter)
-            anns_qs = anns_qs.filter(created_by__role=role_filter)
-        if author_id:
-            posts_qs = posts_qs.filter(author_id=author_id)
-            opps_qs = opps_qs.filter(posted_by_id=author_id)
-            anns_qs = anns_qs.filter(created_by_id=author_id)
-
-        # 2. Extract ONLY 3 lightweight columns for the SQL UNION
+    def get_feed_response(self, request, posts_qs, opps_qs, anns_qs):
         posts = posts_qs.annotate(feed_type=Value('POST', output_field=CharField())).values('id', 'created_at', 'feed_type')
         opps = opps_qs.annotate(feed_type=Value('OPPORTUNITY', output_field=CharField())).values('id', 'created_at', 'feed_type')
         anns = anns_qs.annotate(feed_type=Value('ANNOUNCEMENT', output_field=CharField())).values('id', 'created_at', 'feed_type')
 
-        # 3. SQL UNION: Let the database merge and sort all tables instantly!
         feed_queryset = posts.union(opps, anns).order_by('-created_at')
 
-        # 4. Paginate only the lightweight IDs
         paginator = LimitOffsetPagination()
         paginated_feed = paginator.paginate_queryset(feed_queryset, request, view=self)
 
-        # 5. Extract the specific IDs for the current page
         post_ids = [item['id'] for item in paginated_feed if item['feed_type'] == 'POST']
         opp_ids = [item['id'] for item in paginated_feed if item['feed_type'] == 'OPPORTUNITY']
         ann_ids = [item['id'] for item in paginated_feed if item['feed_type'] == 'ANNOUNCEMENT']
 
-        # 6. Fetch Full Objects using Highly Optimized N+1 Query Destroyers
         full_posts = Post.objects.filter(id__in=post_ids).select_related(
             'author', 'author__student_profile__department', 'author__student_profile__batch',
             'author__alumni_profile__current_company', 'company'
         ).prefetch_related('media', 'post_tags__tag', 'likes', 'comments')
-
+        
         full_opps = Opportunity.objects.filter(id__in=opp_ids).select_related('posted_by', 'company').prefetch_related('opportunity_skills__skill')
         full_anns = Announcement.objects.filter(id__in=ann_ids).select_related('created_by')
 
-        # Map them into O(1) lookup dictionaries
         post_dict = {p.id: p for p in full_posts}
         opp_dict = {o.id: o for o in full_opps}
         ann_dict = {a.id: a for a in full_anns}
 
-        # 7. Serialize in exact sorted order
         results = []
         for item in paginated_feed:
             if item['feed_type'] == 'POST' and item['id'] in post_dict:
@@ -73,6 +50,60 @@ class UnifiedFeedView(APIView):
                 results.append(AnnouncementFeedSerializer(ann_dict[item['id']], context={'request': request}).data)
 
         return paginator.get_paginated_response(results)
+
+class UnifiedFeedView(BaseFeedView):
+    def get(self, request):
+        role_filter = request.query_params.get('role', None)
+        author_id = request.query_params.get('author_id', None)
+
+        posts_qs = Post.objects.all()
+        opps_qs = Opportunity.objects.filter(status='OPEN')
+        anns_qs = Announcement.objects.filter(is_published=True)
+
+        if role_filter:
+            posts_qs = posts_qs.filter(author__role=role_filter)
+            opps_qs = opps_qs.filter(posted_by__role=role_filter)
+            anns_qs = anns_qs.filter(created_by__role=role_filter)
+        if author_id:
+            posts_qs = posts_qs.filter(author_id=author_id)
+            opps_qs = opps_qs.filter(posted_by_id=author_id)
+            anns_qs = anns_qs.filter(created_by_id=author_id)
+
+        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs)
+
+class FeedSearchView(BaseFeedView):
+    def post(self, request):
+        search_terms = request.data.get('search_terms', [])
+        tags = request.data.get('tags', [])
+        author_id = request.data.get('author_id', None)
+        
+        posts_qs = Post.objects.all()
+        opps_qs = Opportunity.objects.filter(status='OPEN')
+        anns_qs = Announcement.objects.filter(is_published=True)
+        
+        if author_id:
+            posts_qs = posts_qs.filter(author_id=author_id)
+            opps_qs = opps_qs.filter(posted_by_id=author_id)
+            anns_qs = anns_qs.filter(created_by_id=author_id)
+            
+        if tags:
+            posts_qs = posts_qs.filter(post_tags__tag__name__in=tags).distinct()
+            
+        if search_terms:
+            post_q = Q()
+            opp_q = Q()
+            ann_q = Q()
+            for term in search_terms:
+                term_clean = str(term).strip()
+                post_q &= (Q(title__icontains=term_clean) | Q(content__icontains=term_clean))
+                opp_q &= (Q(title__icontains=term_clean) | Q(description__icontains=term_clean))
+                ann_q &= (Q(title__icontains=term_clean) | Q(content__icontains=term_clean))
+                
+            posts_qs = posts_qs.filter(post_q)
+            opps_qs = opps_qs.filter(opp_q)
+            anns_qs = anns_qs.filter(ann_q)
+            
+        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs)
 
 from django.db import transaction
 from apps.companies.models import Company
@@ -203,6 +234,88 @@ from .serializers import PostDetailSerializer
 class PostDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
+    def patch(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+        
+        # 1. Security Check
+        if request.user != post.author:
+            return Response(
+                {"error": "You do not have permission to edit this post."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        from .serializers import UpdatePostSerializer
+        serializer = UpdatePostSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        validated_data = serializer.validated_data
+        
+        # 2. Update Core Data
+        if 'title' in validated_data:
+            post.title = validated_data['title']
+        if 'content' in validated_data:
+            post.content = validated_data['content']
+        post.save()
+        
+        # 3. Handle Tags (Overwrite Strategy)
+        if 'tag_ids' in validated_data or 'new_tags' in validated_data:
+            PostTag.objects.filter(post=post).delete()
+            tag_ids = validated_data.get('tag_ids', [])
+            new_tags_names = validated_data.get('new_tags', [])
+            
+            final_tags = []
+            if tag_ids:
+                final_tags.extend(list(Tag.objects.filter(id__in=tag_ids)))
+                
+            if new_tags_names:
+                for tag_name in new_tags_names:
+                    tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
+                    final_tags.append(tag_obj)
+                    
+            if final_tags:
+                post_tags_to_create = [PostTag(post=post, tag=tag) for tag in final_tags]
+                PostTag.objects.bulk_create(post_tags_to_create, ignore_conflicts=True)
+                
+        # 4. Handle Media (Overwrite Strategy)
+        if 'media_files' in validated_data:
+            PostMedia.objects.filter(post=post).delete()
+            media_files = validated_data.get('media_files', [])
+            if media_files:
+                media_to_create = [
+                    PostMedia(post=post, media_type=media.get('media_type', 'IMAGE'), file=media.get('file'))
+                    for media in media_files
+                ]
+                PostMedia.objects.bulk_create(media_to_create)
+                
+        # 5. Return Updated Post
+        updated_post = Post.objects.select_related(
+            'author', 'author__student_profile__department', 'author__student_profile__batch',
+            'author__alumni_profile__current_company', 'company'
+        ).prefetch_related('media', 'post_tags__tag', 'likes').get(id=post.id)
+        
+        response_serializer = PostDetailSerializer(updated_post, context={'request': request})
+        return Response({
+            "message": "Post successfully updated.",
+            "post": response_serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request, post_id):
+        # 1. Existence Verification
+        post = get_object_or_404(Post, id=post_id)
+        
+        # 2. Object-Level Permission Check
+        if request.user != post.author:
+            return Response(
+                {"error": "You do not have permission to delete this post."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        # 3. Destruction & Cascade
+        post.delete()
+        return Response({"message": "Post successfully deleted."}, status=status.HTTP_200_OK)
+
     def get(self, request, post_id):
         # Optimized N+1 Query Resolution
         post = get_object_or_404(
@@ -297,3 +410,84 @@ class ToggleLikeView(APIView):
             "likes_count": likes_count,
             "is_liked_by_me": is_liked_by_me
         }, status=status.HTTP_200_OK)
+
+class ManageCommentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, comment_id):
+        comment = get_object_or_404(Comment, id=comment_id)
+        
+        # 1. Security Check
+        if request.user != comment.author:
+            return Response(
+                {"error": "You do not have permission to edit this comment."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        content = request.data.get('content')
+        if not content or not str(content).strip():
+            return Response({"error": "Content cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # 2. Update
+        comment.content = str(content).strip()
+        comment.save()
+        
+        # 3. Return serialized data
+        serializer = CommentSerializer(comment, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def delete(self, request, comment_id):
+        comment = get_object_or_404(Comment, id=comment_id)
+        
+        # 1. Security Check
+        if request.user != comment.author:
+            return Response(
+                {"error": "You do not have permission to delete this comment."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        # 2. Delete
+        comment.delete()
+        return Response({"message": "Comment successfully deleted."}, status=status.HTTP_200_OK)
+
+class ToggleBookmarkView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, post_id):
+        post_obj = get_object_or_404(Post, id=post_id)
+        user = request.user
+        
+        saved_obj = SavedPost.objects.filter(post=post_obj, user=user).first()
+        
+        if saved_obj:
+            saved_obj.delete()
+            is_bookmarked_by_me = False
+            message = "Post removed from bookmarks."
+        else:
+            SavedPost.objects.create(post=post_obj, user=user)
+            is_bookmarked_by_me = True
+            message = "Post bookmarked successfully."
+            
+        return Response({
+            "message": message,
+            "is_bookmarked_by_me": is_bookmarked_by_me
+        }, status=status.HTTP_200_OK)
+
+class BookmarkListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        saved_posts = SavedPost.objects.filter(user=request.user).order_by('-saved_at').select_related(
+            'post', 'post__author', 'post__author__student_profile__department', 
+            'post__author__student_profile__batch', 'post__author__alumni_profile__current_company', 
+            'post__company'
+        ).prefetch_related('post__media', 'post__post_tags__tag', 'post__likes')
+        
+        # Extract the actual Post objects from the SavedPost wrappers
+        posts = [saved.post for saved in saved_posts]
+        
+        paginator = LimitOffsetPagination()
+        paginated_posts = paginator.paginate_queryset(posts, request)
+        
+        serializer = PostFeedSerializer(paginated_posts, many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)

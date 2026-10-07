@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Post, PostMedia, Comment, PostLike, Tag, PostTag
+from .models import Post, PostMedia, Comment, PostLike, Tag, PostTag, SavedPost
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
@@ -40,3 +40,9 @@ class PostTagAdmin(admin.ModelAdmin):
     list_filter = ("tag",)
     search_fields = ("tag__name", "post__title")
     ordering = ("-id",)
+
+@admin.register(SavedPost)
+class SavedPostAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "post", "saved_at")
+    search_fields = ("user__email", "post__title")
+    ordering = ("-saved_at",)

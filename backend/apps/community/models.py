@@ -73,3 +73,14 @@ class PostTag(models.Model):
     
     class Meta:
         constraints = [models.UniqueConstraint(fields=["post", "tag"], name="unique_post_tag")]
+
+class SavedPost(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_posts')
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='saved_by_users')
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'post')
+
+    def __str__(self):
+        return f"{self.user.email} saved {self.post.title}"
