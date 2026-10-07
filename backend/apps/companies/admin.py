@@ -3,8 +3,8 @@ from .models import Company, CompanyRole
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "industry", "company_size", "is_active")
-    list_filter = ("company_size", "is_active", "industry")
+    list_display = ("id", "name", "industry", "company_size", "company_tier", "is_active")
+    list_filter = ("company_size", "company_tier", "is_active", "industry")
     search_fields = ("name", "industry")
     ordering = ("name",)
 

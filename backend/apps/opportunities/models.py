@@ -25,6 +25,13 @@ class Opportunity(models.Model):
     location = models.CharField(max_length=200, blank=True, null=True)
     work_mode = models.CharField(max_length=20, choices=WORK_MODE_CHOICES)
     employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, blank=True, null=True)
+    
+    # Placement Cell Specifics
+    salary_package = models.CharField(max_length=100, blank=True, null=True)
+    min_cgpa = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
+    eligible_departments = models.ManyToManyField("university.Department", related_name="eligible_opportunities", blank=True)
+    eligible_batches = models.ManyToManyField("university.Batch", related_name="eligible_opportunities", blank=True)
+    
     application_url = models.CharField(max_length=500, blank=True, null=True)
     deadline = models.DateTimeField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="DRAFT")

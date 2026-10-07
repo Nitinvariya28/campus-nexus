@@ -1,10 +1,10 @@
 from django.contrib import admin
-from .models import SkillCategory, Skill, UserSkill, SocialLink, UserAIUsage, UserLearningResource
+from .models import SkillCategory, Skill, UserSkill, SocialLink, UserAIUsage, MasterLearningPlatform, UserLearningResource
 
 @admin.register(SkillCategory)
 class SkillCategoryAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "is_active")
-    list_filter = ("is_active",)
+    list_display = ("id", "name", "category_type", "is_active")
+    list_filter = ("category_type", "is_active")
     search_fields = ("name",)
     ordering = ("name",)
 
@@ -34,8 +34,15 @@ class UserAIUsageAdmin(admin.ModelAdmin):
     list_filter = ("ai_tool", "usage_frequency", "usage_purpose")
     search_fields = ("user__email",)
 
+@admin.register(MasterLearningPlatform)
+class MasterLearningPlatformAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "platform_type", "is_active")
+    list_filter = ("platform_type", "is_active")
+    search_fields = ("name",)
+    ordering = ("name",)
+
 @admin.register(UserLearningResource)
 class UserLearningResourceAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "resource_type", "name", "url")
-    list_filter = ("resource_type",)
-    search_fields = ("user__email", "name")
+    list_display = ("id", "user", "platform", "other_platform_name")
+    list_filter = ("platform__platform_type",)
+    search_fields = ("user__email", "platform__name", "other_platform_name")
