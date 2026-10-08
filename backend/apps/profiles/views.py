@@ -263,6 +263,43 @@ class ProfileMeAPIView(APIView):
 
         return Response({"error": "Invalid role."}, status=status.HTTP_403_FORBIDDEN)
 
+    @transaction.atomic
+    def delete(self, request, *args, **kwargs):
+        """
+        DELETE /api/profiles/me/
+        Soft deletes the user via anonymization and hard-deletes PII.
+        """
+        user = request.user
+        import uuid
+        
+        # 1. Hard Delete PII Data (Cascade equivalents)
+        # Safe inline imports to avoid circular logic
+        from apps.notifications.models import Notification
+        from apps.community.models import SavedPost, PostLike
+        from apps.skills.models import UserLearningResource
+        
+        # We already have Resume, UserSkill, SocialLink, UserAIUsage from top imports
+        Resume.objects.filter(user=user).delete()
+        UserSkill.objects.filter(user=user).delete()
+        SocialLink.objects.filter(user=user).delete()
+        UserAIUsage.objects.filter(user=user).delete()
+        UserLearningResource.objects.filter(user=user).delete()
+        
+        # Delete notifications and community interactions
+        Notification.objects.filter(recipient=user).delete()
+        SavedPost.objects.filter(user=user).delete()
+        PostLike.objects.filter(user=user).delete()
+        
+        # 2. Anonymize Base User (Soft Delete)
+        user.first_name = "Deleted"
+        user.last_name = "User"
+        user.email = f"deleted_{uuid.uuid4().hex[:12]}@anonymized.com"
+        user.set_unusable_password()
+        user.is_active = False
+        user.save()
+        
+        return Response({"message": "Profile successfully deleted. All personal data wiped."}, status=status.HTTP_200_OK)
+
 
 class ProfileOptionsAPIView(APIView):
     """
