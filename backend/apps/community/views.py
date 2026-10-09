@@ -92,6 +92,8 @@ class UnifiedFeedView(BaseFeedView):
             opps_qs = opps_qs.filter(posted_by__role=role_filter)
             anns_qs = anns_qs.filter(created_by__role=role_filter)
         if author_id:
+            if author_id.lower() == 'me':
+                author_id = request.user.id
             posts_qs = posts_qs.filter(author_id=author_id)
             opps_qs = opps_qs.filter(posted_by_id=author_id)
             anns_qs = anns_qs.filter(created_by_id=author_id)
