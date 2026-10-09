@@ -1,15 +1,31 @@
-from django.db.models import Value, CharField
+from django.db.models import Value, CharField, Q
+from django.shortcuts import get_object_or_404
+from django.db import transaction
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import LimitOffsetPagination
-from .models import Post, Tag, PostTag, PostMedia, Comment, PostLike, SavedPost
-from apps.opportunities.models import Opportunity
-from apps.announcements.models import Announcement
-from .serializers import PostFeedSerializer, OpportunityFeedSerializer, AnnouncementFeedSerializer
+from rest_framework.exceptions import PermissionDenied
 
-from django.db.models import Q
+# Core Models
+from .models import Post, Tag, PostTag, PostMedia, Comment, PostLike, SavedPost
+from apps.opportunities.models import Opportunity, OpportunitySkill
+from apps.announcements.models import Announcement
+from apps.interviews.models import InterviewExperience, InterviewRound
+from apps.companies.models import Company
+from apps.university.models import Department, Batch
+from apps.skills.models import Skill
+
+# Serializers
+from .serializers import (
+    PostFeedSerializer, OpportunityFeedSerializer, AnnouncementFeedSerializer,
+    StandardPostSerializer, UpdatePostSerializer, PostDetailSerializer,
+    CreateCommentSerializer, CommentSerializer
+)
+from apps.opportunities.serializers import OpportunityCreateSerializer
+from apps.announcements.serializers import AnnouncementCreateSerializer
+from apps.interviews.serializers import InterviewExperienceCreateSerializer
 
 class BaseFeedView(APIView):
     permission_classes = [IsAuthenticated]
@@ -28,28 +44,39 @@ class BaseFeedView(APIView):
         opp_ids = [item['id'] for item in paginated_feed if item['feed_type'] == 'OPPORTUNITY']
         ann_ids = [item['id'] for item in paginated_feed if item['feed_type'] == 'ANNOUNCEMENT']
 
-        full_posts = Post.objects.filter(id__in=post_ids).select_related(
+        posts_data = Post.objects.filter(id__in=post_ids).select_related(
             'author', 'author__student_profile__department', 'author__student_profile__batch',
             'author__alumni_profile__current_company', 'company'
-        ).prefetch_related('media', 'post_tags__tag', 'likes', 'comments')
+        ).prefetch_related('media', 'post_tags__tag', 'likes')
         
-        full_opps = Opportunity.objects.filter(id__in=opp_ids).select_related('posted_by', 'company').prefetch_related('opportunity_skills__skill')
-        full_anns = Announcement.objects.filter(id__in=ann_ids).select_related('created_by')
+        opps_data = Opportunity.objects.filter(id__in=opp_ids).select_related(
+            'company', 'role', 'posted_by'
+        ).prefetch_related('opportunity_skills__skill', 'eligible_departments', 'eligible_batches')
+        
+        anns_data = Announcement.objects.filter(id__in=ann_ids).select_related(
+            'created_by'
+        )
 
-        post_dict = {p.id: p for p in full_posts}
-        opp_dict = {o.id: o for o in full_opps}
-        ann_dict = {a.id: a for a in full_anns}
+        post_serializer = PostFeedSerializer(posts_data, many=True, context={'request': request})
+        opp_serializer = OpportunityFeedSerializer(opps_data, many=True, context={'request': request})
+        ann_serializer = AnnouncementFeedSerializer(anns_data, many=True, context={'request': request})
 
-        results = []
+        combined_data = {
+            'POST': {item['id']: item for item in post_serializer.data},
+            'OPPORTUNITY': {item['id']: item for item in opp_serializer.data},
+            'ANNOUNCEMENT': {item['id']: item for item in ann_serializer.data},
+        }
+
+        final_feed = []
         for item in paginated_feed:
-            if item['feed_type'] == 'POST' and item['id'] in post_dict:
-                results.append(PostFeedSerializer(post_dict[item['id']], context={'request': request}).data)
-            elif item['feed_type'] == 'OPPORTUNITY' and item['id'] in opp_dict:
-                results.append(OpportunityFeedSerializer(opp_dict[item['id']], context={'request': request}).data)
-            elif item['feed_type'] == 'ANNOUNCEMENT' and item['id'] in ann_dict:
-                results.append(AnnouncementFeedSerializer(ann_dict[item['id']], context={'request': request}).data)
+            feed_type = item['feed_type']
+            item_id = item['id']
+            if item_id in combined_data[feed_type]:
+                feed_item = combined_data[feed_type][item_id]
+                feed_item['feed_type'] = feed_type
+                final_feed.append(feed_item)
 
-        return paginator.get_paginated_response(results)
+        return paginator.get_paginated_response(final_feed)
 
 class UnifiedFeedView(BaseFeedView):
     def get(self, request):
@@ -72,252 +99,212 @@ class UnifiedFeedView(BaseFeedView):
         return self.get_feed_response(request, posts_qs, opps_qs, anns_qs)
 
 class FeedSearchView(BaseFeedView):
-    def post(self, request):
-        search_terms = request.data.get('search_terms', [])
-        tags = request.data.get('tags', [])
-        author_id = request.data.get('author_id', None)
-        
-        posts_qs = Post.objects.all()
-        opps_qs = Opportunity.objects.filter(status='OPEN')
-        anns_qs = Announcement.objects.filter(is_published=True)
-        
-        if author_id:
-            posts_qs = posts_qs.filter(author_id=author_id)
-            opps_qs = opps_qs.filter(posted_by_id=author_id)
-            anns_qs = anns_qs.filter(created_by_id=author_id)
-            
-        if tags:
-            posts_qs = posts_qs.filter(post_tags__tag__name__in=tags).distinct()
-            
-        if search_terms:
-            post_q = Q()
-            opp_q = Q()
-            ann_q = Q()
-            for term in search_terms:
-                term_clean = str(term).strip()
-                post_q &= (Q(title__icontains=term_clean) | Q(content__icontains=term_clean))
-                opp_q &= (Q(title__icontains=term_clean) | Q(description__icontains=term_clean))
-                ann_q &= (Q(title__icontains=term_clean) | Q(content__icontains=term_clean))
-                
-            posts_qs = posts_qs.filter(post_q)
-            opps_qs = opps_qs.filter(opp_q)
-            anns_qs = anns_qs.filter(ann_q)
-            
-        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs)
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        if not query:
+            return Response({"error": "Search query 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-from django.db import transaction
-from apps.companies.models import Company
-from .models import Tag, PostTag, PostMedia
-from .serializers import CreatePostSerializer
+        posts_qs = Post.objects.filter(
+            Q(title__icontains=query) |
+            Q(content__icontains=query) |
+            Q(company__name__icontains=query) |
+            Q(post_tags__tag__name__icontains=query)
+        ).distinct()
+
+        opps_qs = Opportunity.objects.filter(
+            Q(title__icontains=query) |
+            Q(description__icontains=query) |
+            Q(company__name__icontains=query) |
+            Q(opportunity_skills__skill__name__icontains=query)
+        ).filter(status='OPEN').distinct()
+
+        anns_qs = Announcement.objects.filter(
+            Q(title__icontains=query) |
+            Q(content__icontains=query)
+        ).filter(is_published=True)
+
+        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs)
 
 class PostOptionsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
+        options = {}
         
-        # 1. Determine Post Types based on Role
-        # All choices: PLACEMENT_EXPERIENCE, INTERVIEW_EXPERIENCE, INTERNSHIP, CAREER_ADVICE, COMPANY_INFO, GENERAL
-        all_choices = dict(Post.POST_TYPE_CHOICES)
-        
-        if user.role == 'PLACEMENT_CELL':
-            allowed_types = ['COMPANY_INFO', 'GENERAL']
-        elif user.role == 'STUDENT':
-            allowed_types = ['INTERNSHIP', 'INTERVIEW_EXPERIENCE', 'GENERAL', 'COMPANY_INFO']
-        elif user.role == 'ALUMNI':
-            allowed_types = ['PLACEMENT_EXPERIENCE', 'INTERVIEW_EXPERIENCE', 'INTERNSHIP', 'CAREER_ADVICE', 'COMPANY_INFO', 'GENERAL']
-        else:
-            allowed_types = ['GENERAL']
+        if user.role == 'STUDENT':
+            options['allowed_entity_types'] = ['STANDARD_POST']
+            options['post_types'] = [{"value": k, "label": dict(Post.POST_TYPE_CHOICES)[k]} for k in ['INTERNSHIP', 'INTERVIEW_EXPERIENCE', 'GENERAL', 'COMPANY_INFO']]
             
-        post_types = [{"value": k, "label": all_choices[k]} for k in allowed_types]
+        elif user.role == 'ALUMNI':
+            options['allowed_entity_types'] = ['STANDARD_POST', 'INTERVIEW_EXPERIENCE']
+            options['post_types'] = [{"value": k, "label": dict(Post.POST_TYPE_CHOICES)[k]} for k in ['PLACEMENT_EXPERIENCE', 'INTERVIEW_EXPERIENCE', 'INTERNSHIP', 'CAREER_ADVICE', 'COMPANY_INFO', 'GENERAL']]
+            options['experience_types'] = [{"value": k, "label": v} for k, v in InterviewExperience.EXPERIENCE_TYPE_CHOICES]
+            options['interview_results'] = [{"value": k, "label": v} for k, v in InterviewExperience.RESULT_CHOICES]
+            options['difficulty_levels'] = [{"value": k, "label": v} for k, v in InterviewExperience.DIFFICULTY_CHOICES]
+            options['round_types'] = [{"value": k, "label": v} for k, v in InterviewRound.ROUND_TYPE_CHOICES]
+            options['round_modes'] = [{"value": k, "label": v} for k, v in InterviewRound.MODE_CHOICES]
+
+        elif user.role == 'PLACEMENT_CELL':
+            options['allowed_entity_types'] = ['OPPORTUNITY', 'ANNOUNCEMENT']
+            options['opportunity_types'] = [{"value": k, "label": v} for k, v in Opportunity.OPPORTUNITY_TYPE_CHOICES]
+            options['work_modes'] = [{"value": k, "label": v} for k, v in Opportunity.WORK_MODE_CHOICES]
+            options['employment_types'] = [{"value": k, "label": v} for k, v in Opportunity.EMPLOYMENT_TYPE_CHOICES]
+            options['announcement_types'] = [{"value": k, "label": v} for k, v in Announcement.ANNOUNCEMENT_TYPE_CHOICES]
+            options['target_audiences'] = [{"value": k, "label": v} for k, v in Announcement.AUDIENCE_CHOICES]
+            
+            # Fetch relational data for Placement Cell
+            options['departments'] = list(Department.objects.values('id', 'name'))
+            options['batches'] = list(Batch.objects.values('id', 'start_year', 'end_year'))
+            options['skills'] = list(Skill.objects.values('id', 'name'))
+            
+        else:
+            return Response({"error": "Role not recognized for posting."}, status=status.HTTP_403_FORBIDDEN)
+            
+        # Common data for everyone
+        options['companies'] = list(Company.objects.filter(is_active=True).values('id', 'name'))
+        options['tags'] = list(Tag.objects.filter(is_active=True).values('id', 'name'))
         
-        # 2. Fetch Active Companies
-        companies = Company.objects.filter(is_active=True).values('id', 'name')
-        
-        # 3. Fetch Active Tags
-        tags = Tag.objects.filter(is_active=True).values('id', 'name')
-        
-        return Response({
-            "post_types": post_types,
-            "companies": list(companies),
-            "tags": list(tags)
-        })
+        return Response(options)
 
 class CreatePostView(APIView):
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def post(self, request):
-        serializer = CreatePostSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
-        validated_data = serializer.validated_data
         user = request.user
-        
-        # 1. Role Validation (Security Check)
-        post_type = validated_data.get('post_type')
-        allowed_types_by_role = {
-            'PLACEMENT_CELL': ['COMPANY_INFO', 'GENERAL'],
-            'STUDENT': ['INTERNSHIP', 'INTERVIEW_EXPERIENCE', 'GENERAL', 'COMPANY_INFO'],
-            'ALUMNI': ['PLACEMENT_EXPERIENCE', 'INTERVIEW_EXPERIENCE', 'INTERNSHIP', 'CAREER_ADVICE', 'COMPANY_INFO', 'GENERAL'],
-        }
-        
-        allowed_for_user = allowed_types_by_role.get(user.role, ['GENERAL'])
-        
-        if post_type not in allowed_for_user:
-            return Response({
-                "error": f"Security Block: Users with role '{user.role}' are not authorized to create '{post_type}' posts."
-            }, status=status.HTTP_403_FORBIDDEN)
-            
-        # 2. Handle Company ("Other" logic)
-        company = None
-        company_id = validated_data.get('company_id')
-        new_company_name = validated_data.get('new_company_name')
-        
-        if company_id:
-            try:
-                company = Company.objects.get(id=company_id)
-            except Company.DoesNotExist:
-                return Response({"error": "Selected company does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-        elif new_company_name:
-            # Create a new unverified company
-            company, _ = Company.objects.get_or_create(name=new_company_name, defaults={"is_active": False})
-            
-        # 3. Create the Post
-        post = Post.objects.create(
-            author=user,
-            company=company,
-            post_type=post_type,
-            title=validated_data.get('title'),
-            content=validated_data.get('content')
-        )
-        
-        # 4. Handle Tags (Multiple Select & "Other")
-        tag_ids = validated_data.get('tag_ids', [])
-        new_tags_names = validated_data.get('new_tags', [])
-        
-        final_tags = []
-        if tag_ids:
-            final_tags.extend(list(Tag.objects.filter(id__in=tag_ids)))
-            
-        if new_tags_names:
-            # Create new tags in bulk (or ignore if exist using get_or_create logic in loop)
-            # For strict performance, we iterate since get_or_create is safer for unique constraints
-            for tag_name in new_tags_names:
-                tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
-                final_tags.append(tag_obj)
-                
-        # Bulk create PostTags
-        if final_tags:
-            post_tags_to_create = [PostTag(post=post, tag=tag) for tag in final_tags]
-            PostTag.objects.bulk_create(post_tags_to_create, ignore_conflicts=True)
-            
-        # 5. Handle Media Attachments
-        media_files = validated_data.get('media_files', [])
-        if media_files:
-            media_to_create = [
-                PostMedia(post=post, media_type=media.get('media_type', 'IMAGE'), file=media.get('file'))
-                for media in media_files
-            ]
-            PostMedia.objects.bulk_create(media_to_create)
-            
-        # Return success with the created post data
-        return Response({
-            "message": "Post created successfully.",
-            "post_id": post.id
-        }, status=status.HTTP_201_CREATED)
+        entity_type = request.data.get('entity_type')
 
-from django.shortcuts import get_object_or_404
-from .serializers import PostDetailSerializer
+        if not entity_type:
+            return Response({"error": "entity_type is required (e.g., STANDARD_POST, OPPORTUNITY, ANNOUNCEMENT, INTERVIEW_EXPERIENCE)"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Role Verification
+        if entity_type == 'STANDARD_POST' and user.role not in ['STUDENT', 'ALUMNI']:
+            return Response({"error": "Only Students and Alumni can create Standard Posts."}, status=status.HTTP_403_FORBIDDEN)
+        if entity_type == 'INTERVIEW_EXPERIENCE' and user.role != 'ALUMNI':
+            return Response({"error": "Only Alumni can create Interview Experiences."}, status=status.HTTP_403_FORBIDDEN)
+        if entity_type in ['OPPORTUNITY', 'ANNOUNCEMENT'] and user.role != 'PLACEMENT_CELL':
+            return Response({"error": "Only Placement Cell can create Opportunities and Announcements."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Dynamic Routing
+        if entity_type == 'STANDARD_POST':
+            serializer = StandardPostSerializer(data=request.data)
+            if serializer.is_valid():
+                post = serializer.save(author=user)
+                return Response({"message": "Standard Post created successfully.", "id": post.id}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        elif entity_type == 'OPPORTUNITY':
+            serializer = OpportunityCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                opp = serializer.save(posted_by=user)
+                return Response({"message": "Opportunity created successfully.", "id": opp.id}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        elif entity_type == 'ANNOUNCEMENT':
+            serializer = AnnouncementCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                ann = serializer.save(created_by=user)
+                return Response({"message": "Announcement created successfully.", "id": ann.id}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        elif entity_type == 'INTERVIEW_EXPERIENCE':
+            serializer = InterviewExperienceCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                ie = serializer.save(author=user)
+                return Response({"message": "Interview Experience created successfully.", "id": ie.id}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({"error": "Invalid entity_type."}, status=status.HTTP_400_BAD_REQUEST)
 
 class PostDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def patch(self, request, post_id):
-        post = get_object_or_404(Post, id=post_id)
+        entity_type = request.query_params.get('type', 'STANDARD_POST')
         
-        # 1. Security Check
-        if request.user != post.author:
-            return Response(
-                {"error": "You do not have permission to edit this post."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
-        from .serializers import UpdatePostSerializer
-        serializer = UpdatePostSerializer(data=request.data)
-        if not serializer.is_valid():
+        if entity_type == 'STANDARD_POST':
+            post = get_object_or_404(Post, id=post_id)
+            if request.user != post.author:
+                raise PermissionDenied("You do not have permission to edit this post.")
+            serializer = UpdatePostSerializer(data=request.data)
+            if serializer.is_valid():
+                if 'title' in serializer.validated_data: post.title = serializer.validated_data['title']
+                if 'content' in serializer.validated_data: post.content = serializer.validated_data['content']
+                post.save()
+                return Response({"message": "Post successfully updated."}, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
-        validated_data = serializer.validated_data
-        
-        # 2. Update Core Data
-        if 'title' in validated_data:
-            post.title = validated_data['title']
-        if 'content' in validated_data:
-            post.content = validated_data['content']
-        post.save()
-        
-        # 3. Handle Tags (Overwrite Strategy)
-        if 'tag_ids' in validated_data or 'new_tags' in validated_data:
-            PostTag.objects.filter(post=post).delete()
-            tag_ids = validated_data.get('tag_ids', [])
-            new_tags_names = validated_data.get('new_tags', [])
-            
-            final_tags = []
-            if tag_ids:
-                final_tags.extend(list(Tag.objects.filter(id__in=tag_ids)))
-                
-            if new_tags_names:
-                for tag_name in new_tags_names:
-                    tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
-                    final_tags.append(tag_obj)
-                    
-            if final_tags:
-                post_tags_to_create = [PostTag(post=post, tag=tag) for tag in final_tags]
-                PostTag.objects.bulk_create(post_tags_to_create, ignore_conflicts=True)
-                
-        # 4. Handle Media (Overwrite Strategy)
-        if 'media_files' in validated_data:
-            PostMedia.objects.filter(post=post).delete()
-            media_files = validated_data.get('media_files', [])
-            if media_files:
-                media_to_create = [
-                    PostMedia(post=post, media_type=media.get('media_type', 'IMAGE'), file=media.get('file'))
-                    for media in media_files
-                ]
-                PostMedia.objects.bulk_create(media_to_create)
-                
-        # 5. Return Updated Post
-        updated_post = Post.objects.select_related(
-            'author', 'author__student_profile__department', 'author__student_profile__batch',
-            'author__alumni_profile__current_company', 'company'
-        ).prefetch_related('media', 'post_tags__tag', 'likes').get(id=post.id)
-        
-        response_serializer = PostDetailSerializer(updated_post, context={'request': request})
-        return Response({
-            "message": "Post successfully updated.",
-            "post": response_serializer.data
-        }, status=status.HTTP_200_OK)
+        elif entity_type == 'OPPORTUNITY':
+            opp = get_object_or_404(Opportunity, id=post_id)
+            if request.user != opp.posted_by:
+                raise PermissionDenied("You do not have permission to edit this opportunity.")
+            serializer = OpportunityCreateSerializer(opp, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Opportunity successfully updated."}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        elif entity_type == 'ANNOUNCEMENT':
+            ann = get_object_or_404(Announcement, id=post_id)
+            if request.user != ann.created_by:
+                raise PermissionDenied("You do not have permission to edit this announcement.")
+            serializer = AnnouncementCreateSerializer(ann, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Announcement successfully updated."}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        elif entity_type == 'INTERVIEW_EXPERIENCE':
+            ie = get_object_or_404(InterviewExperience, id=post_id)
+            if request.user != ie.author:
+                raise PermissionDenied("You do not have permission to edit this interview experience.")
+            serializer = InterviewExperienceCreateSerializer(ie, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Interview Experience successfully updated."}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"error": "Invalid type."}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, post_id):
-        # 1. Existence Verification
-        post = get_object_or_404(Post, id=post_id)
+        entity_type = request.query_params.get('type', 'STANDARD_POST')
         
-        # 2. Object-Level Permission Check
-        if request.user != post.author:
-            return Response(
-                {"error": "You do not have permission to delete this post."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
+        if entity_type == 'STANDARD_POST':
+            post = get_object_or_404(Post, id=post_id)
+            if request.user != post.author:
+                raise PermissionDenied("You do not have permission to delete this post.")
+            post.delete()
             
-        # 3. Destruction & Cascade
-        post.delete()
-        return Response({"message": "Post successfully deleted."}, status=status.HTTP_200_OK)
+        elif entity_type == 'OPPORTUNITY':
+            opp = get_object_or_404(Opportunity, id=post_id)
+            if request.user != opp.posted_by:
+                raise PermissionDenied("You do not have permission to delete this opportunity.")
+            opp.delete()
+            
+        elif entity_type == 'ANNOUNCEMENT':
+            ann = get_object_or_404(Announcement, id=post_id)
+            if request.user != ann.created_by:
+                raise PermissionDenied("You do not have permission to delete this announcement.")
+            ann.delete()
+            
+        elif entity_type == 'INTERVIEW_EXPERIENCE':
+            ie = get_object_or_404(InterviewExperience, id=post_id)
+            if request.user != ie.author:
+                raise PermissionDenied("You do not have permission to delete this interview experience.")
+            ie.delete()
+            
+        else:
+            return Response({"error": "Invalid type."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Successfully deleted."}, status=status.HTTP_200_OK)
 
     def get(self, request, post_id):
-        # Optimized N+1 Query Resolution
+        entity_type = request.query_params.get('type', 'STANDARD_POST')
+        if entity_type != 'STANDARD_POST':
+            return Response({"error": "GET only supported for STANDARD_POST in this endpoint for now."}, status=status.HTTP_400_BAD_REQUEST)
+            
         post = get_object_or_404(
             Post.objects.select_related(
                 'author', 'author__student_profile__department', 'author__student_profile__batch',
@@ -327,126 +314,69 @@ class PostDetailView(APIView):
             ),
             id=post_id
         )
-        
         serializer = PostDetailSerializer(post, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-from .serializers import CreateCommentSerializer, CommentSerializer
 
 class CreateCommentView(APIView):
     permission_classes = [IsAuthenticated]
     pagination_class = LimitOffsetPagination
 
     def get(self, request, post_id):
-        # 1. Verify Post exists
         post_obj = get_object_or_404(Post, id=post_id)
-        
-        # 2. Get all comments ordered by creation date (newest first or oldest first, standard is oldest first for comments)
         comments = Comment.objects.filter(post=post_obj).select_related(
             'author', 'author__student_profile__department', 'author__student_profile__batch', 'author__alumni_profile__current_company'
         ).order_by('created_at')
-        
-        # 3. Paginate
         paginator = self.pagination_class()
         paginated_comments = paginator.paginate_queryset(comments, request)
-        
-        # 4. Serialize and return
         serializer = CommentSerializer(paginated_comments, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request, post_id):
-        # 1. Safety Check: Does the Post still exist?
         post_obj = get_object_or_404(Post, id=post_id)
-        
-        # 2. Validate the incoming text
         serializer = CreateCommentSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
-        # 3. Create the Comment (Link Author, Post, and Content)
         comment = Comment.objects.create(
             post=post_obj,
             author=request.user,
             content=serializer.validated_data['content']
         )
-        
-        # 4. Serialize the newly created comment (with full author details) to return to UI
         response_serializer = CommentSerializer(comment, context={'request': request})
-        
-        return Response({
-            "message": "Comment added successfully.",
-            "comment": response_serializer.data
-        }, status=status.HTTP_201_CREATED)
-
+        return Response({"message": "Comment added successfully.", "comment": response_serializer.data}, status=status.HTTP_201_CREATED)
 
 class ToggleLikeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, post_id):
-        # 1. Verify post exists
         post_obj = get_object_or_404(Post, id=post_id)
         user = request.user
-        
-        # 2. Check if the user already liked the post
         like_obj = PostLike.objects.filter(post=post_obj, user=user).first()
-        
         if like_obj:
-            # If it exists, delete it (UNLIKE)
             like_obj.delete()
-            is_liked_by_me = False
-            message = "Post unliked."
+            return Response({"message": "Post unliked.", "likes_count": post_obj.likes.count(), "is_liked_by_me": False}, status=status.HTTP_200_OK)
         else:
-            # If it doesn't exist, create it (LIKE)
             PostLike.objects.create(post=post_obj, user=user)
-            is_liked_by_me = True
-            message = "Post liked."
-            
-        # 3. Get the updated total count
-        likes_count = post_obj.likes.count()
-        
-        # 4. Return UI-optimized JSON
-        return Response({
-            "message": message,
-            "likes_count": likes_count,
-            "is_liked_by_me": is_liked_by_me
-        }, status=status.HTTP_200_OK)
+            return Response({"message": "Post liked.", "likes_count": post_obj.likes.count(), "is_liked_by_me": True}, status=status.HTTP_200_OK)
 
 class ManageCommentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, comment_id):
         comment = get_object_or_404(Comment, id=comment_id)
-        
-        # 1. Security Check
         if request.user != comment.author:
-            return Response(
-                {"error": "You do not have permission to edit this comment."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
+            raise PermissionDenied("You do not have permission to edit this comment.")
         content = request.data.get('content')
         if not content or not str(content).strip():
             return Response({"error": "Content cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        # 2. Update
         comment.content = str(content).strip()
         comment.save()
-        
-        # 3. Return serialized data
         serializer = CommentSerializer(comment, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, comment_id):
         comment = get_object_or_404(Comment, id=comment_id)
-        
-        # 1. Security Check
         if request.user != comment.author:
-            return Response(
-                {"error": "You do not have permission to delete this comment."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
-        # 2. Delete
+            raise PermissionDenied("You do not have permission to delete this comment.")
         comment.delete()
         return Response({"message": "Comment successfully deleted."}, status=status.HTTP_200_OK)
 
@@ -456,22 +386,13 @@ class ToggleBookmarkView(APIView):
     def post(self, request, post_id):
         post_obj = get_object_or_404(Post, id=post_id)
         user = request.user
-        
         saved_obj = SavedPost.objects.filter(post=post_obj, user=user).first()
-        
         if saved_obj:
             saved_obj.delete()
-            is_bookmarked_by_me = False
-            message = "Post removed from bookmarks."
+            return Response({"message": "Post removed from bookmarks.", "is_bookmarked_by_me": False}, status=status.HTTP_200_OK)
         else:
             SavedPost.objects.create(post=post_obj, user=user)
-            is_bookmarked_by_me = True
-            message = "Post bookmarked successfully."
-            
-        return Response({
-            "message": message,
-            "is_bookmarked_by_me": is_bookmarked_by_me
-        }, status=status.HTTP_200_OK)
+            return Response({"message": "Post bookmarked successfully.", "is_bookmarked_by_me": True}, status=status.HTTP_200_OK)
 
 class BookmarkListView(APIView):
     permission_classes = [IsAuthenticated]
@@ -482,12 +403,8 @@ class BookmarkListView(APIView):
             'post__author__student_profile__batch', 'post__author__alumni_profile__current_company', 
             'post__company'
         ).prefetch_related('post__media', 'post__post_tags__tag', 'post__likes')
-        
-        # Extract the actual Post objects from the SavedPost wrappers
         posts = [saved.post for saved in saved_posts]
-        
         paginator = LimitOffsetPagination()
         paginated_posts = paginator.paginate_queryset(posts, request)
-        
         serializer = PostFeedSerializer(paginated_posts, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
