@@ -34,7 +34,7 @@ class TestAPI13LearningAIAnalytics:
         from apps.companies.models import Company
         c = Company.objects.create(name="Google")
         # Placement for Student 1
-        StudentPlacementRecord.objects.create(student=u1.studentprofile, company=c, placement_year=2024, offer_type="FTE")
+        StudentPlacementRecord.objects.create(student=u1.student_profile, company=c, placement_year=2024, offer_type="FTE")
         
         client = APIClient()
         client.force_authenticate(user=u1)
