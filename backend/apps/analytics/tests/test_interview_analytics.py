@@ -40,7 +40,10 @@ class TestAPI16InterviewAnalytics:
             )
 
         # 3. Setup Placements for B-57 and B-58
-        sp = StudentProfile.objects.create(user=u, department_id=1, batch_id=1) # assuming department 1 exists, we might need it or omit if nullable
+        from apps.university.models import Department, Batch
+        d_test = Department.objects.create(name="CS Dept", code="CS_TEST")
+        b_test = Batch.objects.create(start_year=2022, end_year=2026)
+        sp = StudentProfile.objects.create(user=u, department=d_test, batch=b_test)
         StudentPlacementRecord.objects.create(
             student=sp, company=c2, offer_type="FULL_TIME", placement_year=2026
         )

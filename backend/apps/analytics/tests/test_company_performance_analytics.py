@@ -23,7 +23,7 @@ class TestAPI08CompanyPerformanceAnalytics:
         
         sp1 = StudentProfile.objects.create(user=user1, department=dept, batch=batch)
         sp2 = StudentProfile.objects.create(user=user2, department=dept, batch=batch)
-        AlumniProfile.objects.create(user=alum, current_company=c_outreach)
+        AlumniProfile.objects.create(user=alum, current_company=c_outreach, department=dept, batch=batch)
         
         # Meta: Hired in 2022 (Lapsed)
         StudentPlacementRecord.objects.create(student=sp1, company=c_lapsed, placement_year=2022, offer_type="FTE")

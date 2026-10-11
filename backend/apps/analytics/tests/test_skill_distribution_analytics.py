@@ -32,7 +32,7 @@ class TestAPI11SkillDistributionAnalytics:
         
         # Alumni
         u3 = User.objects.create_user(email="a1@test.com", password="pwd", role="ALUMNI")
-        AlumniProfile.objects.create(user=u3, current_company=c, job_category="Data", years_of_experience=3, batch=batch)
+        AlumniProfile.objects.create(user=u3, current_company=c, job_category="Data", years_of_experience=3, department=dept, batch=batch)
         UserSkill.objects.create(user=u3, skill=s_python, proficiency="ADVANCED")
         
         client = APIClient()

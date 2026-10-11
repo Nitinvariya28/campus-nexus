@@ -17,7 +17,7 @@ class TestAPI13LearningAIAnalytics:
         
         # 1 Alumni
         u2 = User.objects.create_user(email="a1@test.com", password="pwd", role="ALUMNI")
-        AlumniProfile.objects.create(user=u2, years_of_experience=6.0)  # 5+ years band
+        AlumniProfile.objects.create(user=u2, years_of_experience=6, department=dept, batch=batch)  # 5+ years band
         
         # Platforms
         plat1 = MasterLearningPlatform.objects.create(name="LeetCode", platform_type="CODING_PLATFORM")
@@ -34,7 +34,7 @@ class TestAPI13LearningAIAnalytics:
         from apps.companies.models import Company
         c = Company.objects.create(name="Google")
         # Placement for Student 1
-        StudentPlacementRecord.objects.create(student=u1.student_profile, company=c, placement_year=2024, offer_type="FTE")
+        StudentPlacementRecord.objects.create(student=u1.studentprofile, company=c, placement_year=2024, offer_type="FTE")
         
         client = APIClient()
         client.force_authenticate(user=u1)

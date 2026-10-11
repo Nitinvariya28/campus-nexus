@@ -184,9 +184,9 @@ class AlumniRegistrationView(APIView):
             year_str = old_university_email[:2]
             dept_code = old_university_email[2:5].upper()
             
-            department = Department.objects.filter(code=dept_code).first()
+            department = Department.objects.filter(code=dept_code).first() or Department.objects.filter(code={"BCE":"CSE","BEC":"ECE","BME":"ME","BEE":"EE","BCV":"CE"}.get(dept_code)).first() or Department.objects.first()
             start_year = 2000 + int(year_str)
-            batch = Batch.objects.filter(start_year=start_year).first()
+            batch = Batch.objects.filter(start_year=start_year).first() or Batch.objects.get_or_create(start_year=start_year, end_year=start_year+4, defaults={"is_active": True})[0]
             
             AlumniProfile.objects.create(
                 user=user,

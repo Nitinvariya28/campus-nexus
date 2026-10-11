@@ -76,3 +76,30 @@ class AuthenticationAPITest(TestCase):
             "password": "SecurePassword123!"
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access_token', response.data)
+        
+    def test_alumni_registration_invalid_format(self):
+        # Invalid email format (not matching Nirma university regex)
+        response = self.client.post('/api/auth/alumni/register/', {
+            "first_name": "Alumni",
+            "last_name": "Test",
+            "old_university_email": "invalid_alumni@gmail.com",
+            "date_of_birth": "2000-01-01",
+            "personal_email": "alumni.test2@gmail.com",
+            "password": "SecurePassword123!"
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('old_university_email', response.data)
+
+    def test_alumni_registration_dob_mismatch(self):
+        # Correct email format but DOB does not match identity record
+        response = self.client.post('/api/auth/alumni/register/', {
+            "first_name": "Alumni",
+            "last_name": "Test",
+            "old_university_email": "19bce099@nirmauni.ac.in",
+            "date_of_birth": "1995-12-12",
+            "personal_email": "alumni.test3@gmail.com",
+            "password": "SecurePassword123!"
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)

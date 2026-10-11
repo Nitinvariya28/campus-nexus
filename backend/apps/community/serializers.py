@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Post, PostMedia, PostLike, Comment
 from apps.opportunities.models import Opportunity
 from apps.announcements.models import Announcement
+from apps.interviews.models import InterviewExperience, InterviewRound
 from apps.accounts.models import User
 
 class FeedAuthorSerializer(serializers.ModelSerializer):
@@ -95,6 +96,77 @@ class AnnouncementFeedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
         fields = ['feed_type', 'id', 'title', 'content', 'announcement_type', 'target_audience', 'created_at', 'author']
+
+class InterviewExperienceFeedSerializer(serializers.ModelSerializer):
+    feed_type = serializers.CharField(default="INTERVIEW_EXPERIENCE", read_only=True)
+    author = FeedAuthorSerializer()
+    company = serializers.CharField(source='company.name', read_only=True)
+    role_title = serializers.CharField(source='role.role_name', read_only=True)
+    rounds_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InterviewExperience
+        fields = [
+            'feed_type', 'id', 'author', 'company', 'role_title', 'experience_type',
+            'result', 'difficulty', 'experience', 'preparation', 'rounds_count', 'created_at'
+        ]
+
+    def get_rounds_count(self, obj):
+        return obj.rounds.count()
+
+class OpportunityDetailSerializer(serializers.ModelSerializer):
+    feed_type = serializers.CharField(default="OPPORTUNITY", read_only=True)
+    author = FeedAuthorSerializer(source='posted_by', read_only=True)
+    company = serializers.CharField(source='company.name', read_only=True)
+    role_title = serializers.CharField(source='role.role_name', read_only=True)
+    skills = serializers.SerializerMethodField()
+    eligible_departments = serializers.StringRelatedField(many=True, read_only=True)
+    eligible_batches = serializers.StringRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = Opportunity
+        fields = [
+            'feed_type', 'id', 'title', 'description', 'opportunity_type', 'location', 'work_mode',
+            'employment_type', 'salary_package', 'min_cgpa', 'application_url', 'deadline',
+            'status', 'created_at', 'author', 'company', 'role_title', 'skills',
+            'eligible_departments', 'eligible_batches'
+        ]
+
+    def get_skills(self, obj):
+        return [{'name': os.skill.name, 'importance': os.importance} for os in obj.opportunity_skills.all()]
+
+class AnnouncementDetailSerializer(serializers.ModelSerializer):
+    feed_type = serializers.CharField(default="ANNOUNCEMENT", read_only=True)
+    author = FeedAuthorSerializer(source='created_by', read_only=True)
+
+    class Meta:
+        model = Announcement
+        fields = [
+            'feed_type', 'id', 'title', 'content', 'announcement_type', 'target_audience',
+            'deadline', 'is_published', 'published_at', 'created_at', 'author'
+        ]
+
+class InterviewRoundDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InterviewRound
+        fields = [
+            'id', 'round_number', 'round_type', 'mode', 'duration_minutes',
+            'topics', 'description'
+        ]
+
+class InterviewExperienceDetailSerializer(serializers.ModelSerializer):
+    feed_type = serializers.CharField(default="INTERVIEW_EXPERIENCE", read_only=True)
+    author = FeedAuthorSerializer(read_only=True)
+    company = serializers.CharField(source='company.name', read_only=True)
+    role_title = serializers.CharField(source='role.role_name', read_only=True)
+    rounds = InterviewRoundDetailSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = InterviewExperience
+        fields = [
+            'feed_type', 'id', 'author', 'company', 'role_title', 'experience_type',
+            'result', 'difficulty', 'experience', 'preparation', 'rounds', 'created_at'
+        ]
 
 class StandardPostSerializer(serializers.ModelSerializer):
     company_id = serializers.IntegerField(required=False, allow_null=True)

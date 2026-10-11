@@ -23,4 +23,14 @@ urlpatterns = [
     path('api/community/', include('apps.community.urls')),
     path('api/profiles/', include('apps.profiles.urls')),
     path('api/analytics/', include('apps.analytics.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
+    path('api/reports/', include('apps.reports.urls')),
+    path('api/resumes/', include('apps.resumes.urls')),
 ]
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

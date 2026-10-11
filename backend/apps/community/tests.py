@@ -2,7 +2,11 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 from apps.accounts.models import User
-from apps.companies.models import Company
+from apps.companies.models import Company, CompanyRole
+from apps.opportunities.models import Opportunity
+from apps.announcements.models import Announcement
+from apps.interviews.models import InterviewExperience, InterviewRound
+from apps.skills.models import Skill
 from .models import Post, Tag, Comment, PostTag
 
 class CreatePostAPITests(TestCase):
@@ -344,3 +348,142 @@ class CreatePostAPITests(TestCase):
         response2 = self.client.post('/api/community/feed/search/', {"search_terms": ["react", "python"]}, format='json')
         self.assertEqual(response2.data['count'], 1)
         self.assertEqual(response2.data['results'][0]['title'], 'React and Python Guide')
+
+    def test_polymorphic_feed_all_types(self):
+        """Test that the feed returns Post, Opportunity, Announcement, and InterviewExperience unioned together"""
+        self.client.force_authenticate(user=self.student)
+        company = Company.objects.create(name="TCS")
+        role = CompanyRole.objects.create(company=company, role_name="SDE", role_category="SOFTWARE")
+
+        Post.objects.create(author=self.student, post_type='GENERAL', title='Student General Post', content='Hello')
+        Opportunity.objects.create(
+            posted_by=self.placement_cell, company=company, role=role, title='TCS Campus Hiring',
+            description='Hiring drive', opportunity_type='PLACEMENT', work_mode='ON_SITE', employment_type='FULL_TIME',
+            status='OPEN'
+        )
+        Announcement.objects.create(
+            created_by=self.placement_cell, title='Exam Notification', content='Exam scheduled',
+            announcement_type='PLACEMENT', target_audience='ALL', is_published=True
+        )
+        InterviewExperience.objects.create(
+            author=self.alumni, company=company, role=role, experience_type='PLACEMENT',
+            result='SELECTED', difficulty='MEDIUM', experience='Great experience'
+        )
+
+        response = self.client.get('/api/community/feed/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 4)
+        feed_types = {item['feed_type'] for item in response.data['results']}
+        self.assertEqual(feed_types, {'POST', 'OPPORTUNITY', 'ANNOUNCEMENT', 'INTERVIEW_EXPERIENCE'})
+
+    def test_get_opportunity_detail_via_gateway(self):
+        """Test fetching an Opportunity via GET /api/community/posts/<id>/?type=OPPORTUNITY"""
+        self.client.force_authenticate(user=self.student)
+        company = Company.objects.create(name="Microsoft")
+        role = CompanyRole.objects.create(company=company, role_name="Cloud Engineer", role_category="DEVOPS_CLOUD")
+        opp = Opportunity.objects.create(
+            posted_by=self.placement_cell, company=company, role=role, title='Cloud Engineer Hiring',
+            description='Azure team', opportunity_type='PLACEMENT', work_mode='HYBRID', employment_type='FULL_TIME',
+            status='OPEN'
+        )
+
+        response = self.client.get(f'/api/community/posts/{opp.id}/?type=OPPORTUNITY')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['feed_type'], 'OPPORTUNITY')
+        self.assertEqual(response.data['title'], 'Cloud Engineer Hiring')
+        self.assertEqual(response.data['company'], 'Microsoft')
+        self.assertEqual(response.data['role_title'], 'Cloud Engineer')
+
+    def test_get_announcement_detail_via_gateway(self):
+        """Test fetching an Announcement via GET /api/community/posts/<id>/?type=ANNOUNCEMENT"""
+        self.client.force_authenticate(user=self.student)
+        ann = Announcement.objects.create(
+            created_by=self.placement_cell, title='Resume Workshop', content='Attend tomorrow at 10 AM',
+            announcement_type='TRAINING', target_audience='STUDENTS', is_published=True
+        )
+
+        response = self.client.get(f'/api/community/posts/{ann.id}/?type=ANNOUNCEMENT')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['feed_type'], 'ANNOUNCEMENT')
+        self.assertEqual(response.data['title'], 'Resume Workshop')
+        self.assertEqual(response.data['content'], 'Attend tomorrow at 10 AM')
+
+    def test_get_interview_experience_detail_via_gateway(self):
+        """Test fetching an InterviewExperience via GET /api/community/posts/<id>/?type=INTERVIEW_EXPERIENCE"""
+        self.client.force_authenticate(user=self.student)
+        company = Company.objects.create(name="Amazon")
+        role = CompanyRole.objects.create(company=company, role_name="SDE 1", role_category="SOFTWARE")
+        ie = InterviewExperience.objects.create(
+            author=self.alumni, company=company, role=role, experience_type='PLACEMENT',
+            result='SELECTED', difficulty='HARD', experience='Challenging rounds', preparation='LeetCode Hard'
+        )
+        InterviewRound.objects.create(
+            interview_experience=ie, round_number=1, round_type='CODING', mode='ONLINE',
+            duration_minutes=60, topics='Graphs', description='Solved 2 questions'
+        )
+
+        response = self.client.get(f'/api/community/posts/{ie.id}/?type=INTERVIEW_EXPERIENCE')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['feed_type'], 'INTERVIEW_EXPERIENCE')
+        self.assertEqual(response.data['company'], 'Amazon')
+        self.assertEqual(response.data['role_title'], 'SDE 1')
+        self.assertEqual(len(response.data['rounds']), 1)
+        self.assertEqual(response.data['rounds'][0]['round_type'], 'CODING')
+
+    def test_create_opportunity_via_gateway(self):
+        """Test Placement Cell posting an Opportunity through POST /api/community/posts/"""
+        self.client.force_authenticate(user=self.placement_cell)
+        company = Company.objects.create(name="Oracle")
+        payload = {
+            "entity_type": "OPPORTUNITY",
+            "company_id": company.id,
+            "title": "Database Engineer",
+            "description": "SQL and internals",
+            "opportunity_type": "PLACEMENT",
+            "work_mode": "ON_SITE",
+            "employment_type": "FULL_TIME"
+        }
+        response = self.client.post('/api/community/posts/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Opportunity.objects.filter(title="Database Engineer").exists())
+
+    def test_create_announcement_via_gateway(self):
+        """Test Placement Cell posting an Announcement through POST /api/community/posts/"""
+        self.client.force_authenticate(user=self.placement_cell)
+        payload = {
+            "entity_type": "ANNOUNCEMENT",
+            "title": "Pre-Placement Talk",
+            "content": "Oracle PPT on Monday",
+            "announcement_type": "PLACEMENT",
+            "target_audience": "ALL",
+            "is_published": True
+        }
+        response = self.client.post('/api/community/posts/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Announcement.objects.filter(title="Pre-Placement Talk").exists())
+
+    def test_create_interview_experience_via_gateway(self):
+        """Test Alumni posting an Interview Experience through POST /api/community/posts/"""
+        self.client.force_authenticate(user=self.alumni)
+        company = Company.objects.create(name="Goldman Sachs")
+        payload = {
+            "entity_type": "INTERVIEW_EXPERIENCE",
+            "company_id": company.id,
+            "experience_type": "PLACEMENT",
+            "result": "SELECTED",
+            "difficulty": "HARD",
+            "experience": "Math & CS heavy",
+            "rounds": [
+                {
+                    "round_number": 1,
+                    "round_type": "ONLINE_ASSESSMENT",
+                    "mode": "ONLINE",
+                    "duration_minutes": 90,
+                    "topics": "Aptitude & DSA",
+                    "description": "Passed all test cases"
+                }
+            ]
+        }
+        response = self.client.post('/api/community/posts/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(InterviewExperience.objects.filter(experience="Math & CS heavy").exists())

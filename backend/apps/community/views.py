@@ -20,6 +20,8 @@ from apps.skills.models import Skill
 # Serializers
 from .serializers import (
     PostFeedSerializer, OpportunityFeedSerializer, AnnouncementFeedSerializer,
+    InterviewExperienceFeedSerializer, OpportunityDetailSerializer,
+    AnnouncementDetailSerializer, InterviewExperienceDetailSerializer,
     StandardPostSerializer, UpdatePostSerializer, PostDetailSerializer,
     CreateCommentSerializer, CommentSerializer
 )
@@ -30,12 +32,16 @@ from apps.interviews.serializers import InterviewExperienceCreateSerializer
 class BaseFeedView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_feed_response(self, request, posts_qs, opps_qs, anns_qs):
+    def get_feed_response(self, request, posts_qs, opps_qs, anns_qs, interviews_qs=None):
         posts = posts_qs.annotate(feed_type=Value('POST', output_field=CharField())).values('id', 'created_at', 'feed_type')
         opps = opps_qs.annotate(feed_type=Value('OPPORTUNITY', output_field=CharField())).values('id', 'created_at', 'feed_type')
         anns = anns_qs.annotate(feed_type=Value('ANNOUNCEMENT', output_field=CharField())).values('id', 'created_at', 'feed_type')
 
-        feed_queryset = posts.union(opps, anns).order_by('-created_at')
+        if interviews_qs is not None:
+            interviews = interviews_qs.annotate(feed_type=Value('INTERVIEW_EXPERIENCE', output_field=CharField())).values('id', 'created_at', 'feed_type')
+            feed_queryset = posts.union(opps, anns, interviews).order_by('-created_at')
+        else:
+            feed_queryset = posts.union(opps, anns).order_by('-created_at')
 
         paginator = LimitOffsetPagination()
         paginated_feed = paginator.paginate_queryset(feed_queryset, request, view=self)
@@ -43,6 +49,7 @@ class BaseFeedView(APIView):
         post_ids = [item['id'] for item in paginated_feed if item['feed_type'] == 'POST']
         opp_ids = [item['id'] for item in paginated_feed if item['feed_type'] == 'OPPORTUNITY']
         ann_ids = [item['id'] for item in paginated_feed if item['feed_type'] == 'ANNOUNCEMENT']
+        interview_ids = [item['id'] for item in paginated_feed if item['feed_type'] == 'INTERVIEW_EXPERIENCE']
 
         posts_data = Post.objects.filter(id__in=post_ids).select_related(
             'author', 'author__student_profile__department', 'author__student_profile__batch',
@@ -57,21 +64,28 @@ class BaseFeedView(APIView):
             'created_by'
         )
 
+        interviews_data = InterviewExperience.objects.filter(id__in=interview_ids).select_related(
+            'author', 'author__student_profile__department', 'author__student_profile__batch',
+            'author__alumni_profile__current_company', 'company', 'role'
+        ).prefetch_related('rounds')
+
         post_serializer = PostFeedSerializer(posts_data, many=True, context={'request': request})
         opp_serializer = OpportunityFeedSerializer(opps_data, many=True, context={'request': request})
         ann_serializer = AnnouncementFeedSerializer(anns_data, many=True, context={'request': request})
+        interview_serializer = InterviewExperienceFeedSerializer(interviews_data, many=True, context={'request': request})
 
         combined_data = {
             'POST': {item['id']: item for item in post_serializer.data},
             'OPPORTUNITY': {item['id']: item for item in opp_serializer.data},
             'ANNOUNCEMENT': {item['id']: item for item in ann_serializer.data},
+            'INTERVIEW_EXPERIENCE': {item['id']: item for item in interview_serializer.data},
         }
 
         final_feed = []
         for item in paginated_feed:
             feed_type = item['feed_type']
             item_id = item['id']
-            if item_id in combined_data[feed_type]:
+            if item_id in combined_data.get(feed_type, {}):
                 feed_item = combined_data[feed_type][item_id]
                 feed_item['feed_type'] = feed_type
                 final_feed.append(feed_item)
@@ -86,19 +100,23 @@ class UnifiedFeedView(BaseFeedView):
         posts_qs = Post.objects.all()
         opps_qs = Opportunity.objects.filter(status='OPEN')
         anns_qs = Announcement.objects.filter(is_published=True)
+        interviews_qs = InterviewExperience.objects.all()
 
         if role_filter:
             posts_qs = posts_qs.filter(author__role=role_filter)
             opps_qs = opps_qs.filter(posted_by__role=role_filter)
             anns_qs = anns_qs.filter(created_by__role=role_filter)
+            interviews_qs = interviews_qs.filter(author__role=role_filter)
+
         if author_id:
-            if author_id.lower() == 'me':
+            if str(author_id).lower() == 'me':
                 author_id = request.user.id
             posts_qs = posts_qs.filter(author_id=author_id)
             opps_qs = opps_qs.filter(posted_by_id=author_id)
             anns_qs = anns_qs.filter(created_by_id=author_id)
+            interviews_qs = interviews_qs.filter(author_id=author_id)
 
-        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs)
+        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs, interviews_qs)
 
 class FeedSearchView(BaseFeedView):
     def get(self, request):
@@ -125,7 +143,72 @@ class FeedSearchView(BaseFeedView):
             Q(content__icontains=query)
         ).filter(is_published=True)
 
-        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs)
+        interviews_qs = InterviewExperience.objects.filter(
+            Q(company__name__icontains=query) |
+            Q(role__role_name__icontains=query) |
+            Q(experience__icontains=query) |
+            Q(preparation__icontains=query)
+        ).distinct()
+
+        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs, interviews_qs)
+
+    def post(self, request):
+        search_terms = request.data.get('search_terms', [])
+        tags = request.data.get('tags', [])
+        author_id = request.data.get('author_id', None)
+
+        if isinstance(search_terms, str):
+            search_terms = [search_terms]
+
+        posts_qs = Post.objects.all()
+        opps_qs = Opportunity.objects.filter(status='OPEN')
+        anns_qs = Announcement.objects.filter(is_published=True)
+        interviews_qs = InterviewExperience.objects.all()
+
+        for term in search_terms:
+            term = str(term).strip()
+            if term:
+                posts_qs = posts_qs.filter(
+                    Q(title__icontains=term) |
+                    Q(content__icontains=term) |
+                    Q(company__name__icontains=term) |
+                    Q(post_tags__tag__name__icontains=term)
+                )
+                opps_qs = opps_qs.filter(
+                    Q(title__icontains=term) |
+                    Q(description__icontains=term) |
+                    Q(company__name__icontains=term) |
+                    Q(opportunity_skills__skill__name__icontains=term)
+                )
+                anns_qs = anns_qs.filter(
+                    Q(title__icontains=term) |
+                    Q(content__icontains=term)
+                )
+                interviews_qs = interviews_qs.filter(
+                    Q(company__name__icontains=term) |
+                    Q(role__role_name__icontains=term) |
+                    Q(experience__icontains=term) |
+                    Q(preparation__icontains=term)
+                )
+
+        if tags:
+            posts_qs = posts_qs.filter(post_tags__tag__name__in=tags)
+            opps_qs = opps_qs.filter(opportunity_skills__skill__name__in=tags)
+
+        if author_id:
+            if str(author_id).lower() == 'me':
+                author_id = request.user.id
+            posts_qs = posts_qs.filter(author_id=author_id)
+            opps_qs = opps_qs.filter(posted_by_id=author_id)
+            anns_qs = anns_qs.filter(created_by_id=author_id)
+            interviews_qs = interviews_qs.filter(author_id=author_id)
+
+        posts_qs = posts_qs.distinct()
+        opps_qs = opps_qs.distinct()
+        anns_qs = anns_qs.distinct()
+        interviews_qs = interviews_qs.distinct()
+
+        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs, interviews_qs)
 
 class PostOptionsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -175,18 +258,25 @@ class CreatePostView(APIView):
     @transaction.atomic
     def post(self, request):
         user = request.user
-        entity_type = request.data.get('entity_type')
-
-        if not entity_type:
-            return Response({"error": "entity_type is required (e.g., STANDARD_POST, OPPORTUNITY, ANNOUNCEMENT, INTERVIEW_EXPERIENCE)"}, status=status.HTTP_400_BAD_REQUEST)
+        entity_type = request.data.get('entity_type') or 'STANDARD_POST'
 
         # Role Verification
-        if entity_type == 'STANDARD_POST' and user.role not in ['STUDENT', 'ALUMNI']:
-            return Response({"error": "Only Students and Alumni can create Standard Posts."}, status=status.HTTP_403_FORBIDDEN)
-        if entity_type == 'INTERVIEW_EXPERIENCE' and user.role != 'ALUMNI':
-            return Response({"error": "Only Alumni can create Interview Experiences."}, status=status.HTTP_403_FORBIDDEN)
-        if entity_type in ['OPPORTUNITY', 'ANNOUNCEMENT'] and user.role != 'PLACEMENT_CELL':
-            return Response({"error": "Only Placement Cell can create Opportunities and Announcements."}, status=status.HTTP_403_FORBIDDEN)
+        if entity_type == 'STANDARD_POST':
+            if user.role not in ['STUDENT', 'ALUMNI']:
+                return Response({"error": "Only Students and Alumni can create Standard Posts."}, status=status.HTTP_403_FORBIDDEN)
+            post_type = request.data.get('post_type')
+            if user.role == 'STUDENT' and post_type in ['PLACEMENT_EXPERIENCE', 'CAREER_ADVICE']:
+                return Response({"error": "Security Block: Students cannot create placement experience or career advice posts."}, status=status.HTTP_403_FORBIDDEN)
+
+        elif entity_type == 'INTERVIEW_EXPERIENCE':
+            if user.role != 'ALUMNI':
+                return Response({"error": "Only Alumni can create Interview Experiences."}, status=status.HTTP_403_FORBIDDEN)
+
+        elif entity_type in ['OPPORTUNITY', 'ANNOUNCEMENT']:
+            if user.role != 'PLACEMENT_CELL':
+                return Response({"error": "Only Placement Cell can create Opportunities and Announcements."}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            return Response({"error": "Invalid entity_type."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Dynamic Routing
         if entity_type == 'STANDARD_POST':
@@ -229,19 +319,50 @@ class PostDetailView(APIView):
         if entity_type == 'STANDARD_POST':
             post = get_object_or_404(Post, id=post_id)
             if request.user != post.author:
-                raise PermissionDenied("You do not have permission to edit this post.")
+                return Response({"error": "You do not have permission to edit this post."}, status=status.HTTP_403_FORBIDDEN)
             serializer = UpdatePostSerializer(data=request.data)
             if serializer.is_valid():
                 if 'title' in serializer.validated_data: post.title = serializer.validated_data['title']
                 if 'content' in serializer.validated_data: post.content = serializer.validated_data['content']
                 post.save()
-                return Response({"message": "Post successfully updated."}, status=status.HTTP_200_OK)
+
+                if 'tag_ids' in serializer.validated_data or 'new_tags' in serializer.validated_data:
+                    PostTag.objects.filter(post=post).delete()
+                    final_tags = []
+                    tag_ids = serializer.validated_data.get('tag_ids', [])
+                    if tag_ids:
+                        final_tags.extend(list(Tag.objects.filter(id__in=tag_ids)))
+                    new_tags = serializer.validated_data.get('new_tags', [])
+                    for tag_name in new_tags:
+                        tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
+                        final_tags.append(tag_obj)
+                    if final_tags:
+                        PostTag.objects.bulk_create([PostTag(post=post, tag=tag) for tag in final_tags], ignore_conflicts=True)
+
+                if 'media_files' in serializer.validated_data:
+                    PostMedia.objects.filter(post=post).delete()
+                    media_files = serializer.validated_data['media_files']
+                    if media_files:
+                        PostMedia.objects.bulk_create([
+                            PostMedia(post=post, media_type=m.get('media_type', 'IMAGE'), file=m.get('file')) for m in media_files
+                        ])
+
+                updated_post = Post.objects.select_related(
+                    'author', 'author__student_profile__department', 'author__student_profile__batch',
+                    'author__alumni_profile__current_company', 'company'
+                ).prefetch_related('media', 'post_tags__tag', 'likes').get(id=post.id)
+                post_data = PostFeedSerializer(updated_post, context={'request': request}).data
+
+                return Response({
+                    "message": "Post successfully updated.",
+                    "post": post_data
+                }, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
         elif entity_type == 'OPPORTUNITY':
             opp = get_object_or_404(Opportunity, id=post_id)
             if request.user != opp.posted_by:
-                raise PermissionDenied("You do not have permission to edit this opportunity.")
+                return Response({"error": "You do not have permission to edit this opportunity."}, status=status.HTTP_403_FORBIDDEN)
             serializer = OpportunityCreateSerializer(opp, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -251,7 +372,7 @@ class PostDetailView(APIView):
         elif entity_type == 'ANNOUNCEMENT':
             ann = get_object_or_404(Announcement, id=post_id)
             if request.user != ann.created_by:
-                raise PermissionDenied("You do not have permission to edit this announcement.")
+                return Response({"error": "You do not have permission to edit this announcement."}, status=status.HTTP_403_FORBIDDEN)
             serializer = AnnouncementCreateSerializer(ann, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -261,7 +382,7 @@ class PostDetailView(APIView):
         elif entity_type == 'INTERVIEW_EXPERIENCE':
             ie = get_object_or_404(InterviewExperience, id=post_id)
             if request.user != ie.author:
-                raise PermissionDenied("You do not have permission to edit this interview experience.")
+                return Response({"error": "You do not have permission to edit this interview experience."}, status=status.HTTP_403_FORBIDDEN)
             serializer = InterviewExperienceCreateSerializer(ie, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -276,48 +397,83 @@ class PostDetailView(APIView):
         if entity_type == 'STANDARD_POST':
             post = get_object_or_404(Post, id=post_id)
             if request.user != post.author:
-                raise PermissionDenied("You do not have permission to delete this post.")
+                return Response({"error": "You do not have permission to delete this post."}, status=status.HTTP_403_FORBIDDEN)
             post.delete()
             
         elif entity_type == 'OPPORTUNITY':
             opp = get_object_or_404(Opportunity, id=post_id)
             if request.user != opp.posted_by:
-                raise PermissionDenied("You do not have permission to delete this opportunity.")
+                return Response({"error": "You do not have permission to delete this opportunity."}, status=status.HTTP_403_FORBIDDEN)
             opp.delete()
             
         elif entity_type == 'ANNOUNCEMENT':
             ann = get_object_or_404(Announcement, id=post_id)
             if request.user != ann.created_by:
-                raise PermissionDenied("You do not have permission to delete this announcement.")
+                return Response({"error": "You do not have permission to delete this announcement."}, status=status.HTTP_403_FORBIDDEN)
             ann.delete()
             
         elif entity_type == 'INTERVIEW_EXPERIENCE':
             ie = get_object_or_404(InterviewExperience, id=post_id)
             if request.user != ie.author:
-                raise PermissionDenied("You do not have permission to delete this interview experience.")
+                return Response({"error": "You do not have permission to delete this interview experience."}, status=status.HTTP_403_FORBIDDEN)
             ie.delete()
             
         else:
             return Response({"error": "Invalid type."}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"message": "Successfully deleted."}, status=status.HTTP_200_OK)
+        return Response({"message": "Post successfully deleted."}, status=status.HTTP_200_OK)
 
     def get(self, request, post_id):
         entity_type = request.query_params.get('type', 'STANDARD_POST')
-        if entity_type != 'STANDARD_POST':
-            return Response({"error": "GET only supported for STANDARD_POST in this endpoint for now."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        post = get_object_or_404(
-            Post.objects.select_related(
-                'author', 'author__student_profile__department', 'author__student_profile__batch',
-                'author__alumni_profile__current_company', 'company'
-            ).prefetch_related(
-                'media', 'post_tags__tag', 'likes', 'comments'
-            ),
-            id=post_id
-        )
-        serializer = PostDetailSerializer(post, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        if entity_type == 'STANDARD_POST':
+            post = get_object_or_404(
+                Post.objects.select_related(
+                    'author', 'author__student_profile__department', 'author__student_profile__batch',
+                    'author__alumni_profile__current_company', 'company'
+                ).prefetch_related(
+                    'media', 'post_tags__tag', 'likes', 'comments'
+                ),
+                id=post_id
+            )
+            serializer = PostDetailSerializer(post, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif entity_type == 'OPPORTUNITY':
+            opp = get_object_or_404(
+                Opportunity.objects.select_related(
+                    'company', 'role', 'posted_by'
+                ).prefetch_related(
+                    'opportunity_skills__skill', 'eligible_departments', 'eligible_batches'
+                ),
+                id=post_id
+            )
+            serializer = OpportunityDetailSerializer(opp, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif entity_type == 'ANNOUNCEMENT':
+            ann = get_object_or_404(
+                Announcement.objects.select_related(
+                    'created_by'
+                ),
+                id=post_id
+            )
+            serializer = AnnouncementDetailSerializer(ann, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif entity_type == 'INTERVIEW_EXPERIENCE':
+            ie = get_object_or_404(
+                InterviewExperience.objects.select_related(
+                    'author', 'company', 'role'
+                ).prefetch_related(
+                    'rounds'
+                ),
+                id=post_id
+            )
+            serializer = InterviewExperienceDetailSerializer(ie, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response({"error": "Invalid type."}, status=status.HTTP_400_BAD_REQUEST)
 
 class CreateCommentView(APIView):
     permission_classes = [IsAuthenticated]
