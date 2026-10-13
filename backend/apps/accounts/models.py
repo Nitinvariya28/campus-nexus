@@ -47,9 +47,14 @@ class User(AbstractUser):
         return self.email
 
 class OTPVerification(models.Model):
+    PURPOSE_CHOICES = [
+        ("REGISTRATION", "Registration"),
+        ("PASSWORD_RESET", "Password Reset"),
+    ]
     email = models.EmailField()
     otp_code = models.CharField(max_length=6)
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default="REGISTRATION")
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return f"{self.email} - {self.otp_code}"
+        return f"{self.email} - {self.otp_code} ({self.purpose})"

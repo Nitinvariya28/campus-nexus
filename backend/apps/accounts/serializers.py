@@ -83,3 +83,37 @@ class AlumniRegistrationSerializer(serializers.ModelSerializer):
             
         data['identity_record'] = identity_match
         return data
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        return value.lower().strip()
+
+
+class PasswordResetVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp_code = serializers.CharField(max_length=6)
+
+    def validate_email(self, value):
+        return value.lower().strip()
+
+    def validate_otp_code(self, value):
+        value = value.strip()
+        if not re.match(r"^\d{6}$", value):
+            raise serializers.ValidationError("OTP code must be exactly 6 digits.")
+        return value
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    reset_token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
+    confirm_password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
+
+    def validate(self, data):
+        if data.get('new_password') != data.get('confirm_password'):
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        return data
+
+

@@ -1,5 +1,14 @@
 from django.urls import path
-from .views import StudentRegistrationView, VerifyOTPView, LoginView, AlumniRegistrationView, LogoutAPIView
+from .views import (
+    StudentRegistrationView, 
+    VerifyOTPView, 
+    LoginView, 
+    AlumniRegistrationView, 
+    LogoutAPIView,
+    PasswordResetRequestView,
+    PasswordResetVerifyOTPView,
+    PasswordResetConfirmView
+)
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -9,4 +18,10 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', LogoutAPIView.as_view(), name='logout'),
+    
+    # Password Reset Workflow (Public POST APIs)
+    path('password-reset/request/', PasswordResetRequestView.as_view(), name='password-reset-request'),
+    path('password-reset/verify-otp/', PasswordResetVerifyOTPView.as_view(), name='password-reset-verify-otp'),
+    path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
 ]
+

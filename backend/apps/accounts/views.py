@@ -8,7 +8,14 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User, OTPVerification
-from .serializers import StudentRegistrationSerializer, OTPVerificationSerializer, LoginSerializer
+from .serializers import (
+    StudentRegistrationSerializer, 
+    OTPVerificationSerializer, 
+    LoginSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetVerifySerializer,
+    PasswordResetConfirmSerializer
+)
 
 class StudentRegistrationView(APIView):
     permission_classes = [AllowAny]
@@ -37,6 +44,7 @@ class StudentRegistrationView(APIView):
             # 3. Store OTP in Database
             OTPVerification.objects.update_or_create(
                 email=email,
+                purpose='REGISTRATION',
                 defaults={'otp_code': otp_code}
             )
 
@@ -65,6 +73,7 @@ class StudentRegistrationView(APIView):
 
 from django.utils import timezone
 from datetime import timedelta
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from apps.profiles.models import StudentProfile, AlumniProfile
 
 
@@ -78,7 +87,7 @@ class VerifyOTPView(APIView):
             otp_code = serializer.validated_data['otp_code']
 
             # 1. Fetch OTP Record
-            otp_record = OTPVerification.objects.filter(email=email, otp_code=otp_code).first()
+            otp_record = OTPVerification.objects.filter(email=email, otp_code=otp_code, purpose='REGISTRATION').first()
             if not otp_record:
                 return Response({"error": "Invalid OTP code."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -200,6 +209,7 @@ class AlumniRegistrationView(APIView):
             # 4. Store OTP mapped to the personal email
             OTPVerification.objects.update_or_create(
                 email=personal_email,
+                purpose='REGISTRATION',
                 defaults={'otp_code': otp_code}
             )
 
@@ -240,4 +250,161 @@ class LogoutAPIView(APIView):
             return Response({'message': 'Successfully logged out.'}, status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
             return Response({'error': 'Token is invalid or expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            user = User.objects.filter(email=email).first()
+            if not user:
+                return Response(
+                    {"error": "No account found with this email address."}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Generate 6-digit OTP
+            otp_code = f"{random.randint(100000, 999999)}"
+
+            # Store OTP in Database with purpose='PASSWORD_RESET'
+            OTPVerification.objects.update_or_create(
+                email=email,
+                purpose='PASSWORD_RESET',
+                defaults={'otp_code': otp_code}
+            )
+
+            # Send Email via SMTP
+            try:
+                name_greeting = f"Hello {user.first_name}," if user.first_name else "Hello,"
+                send_mail(
+                    subject="AlumiBridge - Password Reset OTP",
+                    message=(
+                        f"{name_greeting}\n\n"
+                        f"We received a request to reset your password for your AlumiBridge account.\n\n"
+                        f"Your 6-digit password reset verification code is:\n\n"
+                        f"{otp_code}\n\n"
+                        f"This code will expire in 10 minutes. If you did not request a password reset, please ignore this email.\n\n"
+                        f"Regards,\nAlumiBridge Security Team"
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+            except Exception:
+                return Response(
+                    {"error": "Failed to send password reset email. Please try again later."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            return Response({
+                "message": "Password reset OTP sent to your email."
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetVerifyOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetVerifySerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            otp_code = serializer.validated_data['otp_code']
+
+            otp_record = OTPVerification.objects.filter(
+                email=email, 
+                otp_code=otp_code, 
+                purpose='PASSWORD_RESET'
+            ).first()
+
+            if not otp_record:
+                return Response(
+                    {"error": "Invalid OTP code."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            expiration_time = otp_record.created_at + timedelta(minutes=10)
+            if timezone.now() > expiration_time:
+                otp_record.delete()
+                return Response(
+                    {"error": "OTP has expired. Please request a new code."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = User.objects.filter(email=email).first()
+            if not user:
+                return Response(
+                    {"error": "User account not found."}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # OTP is verified; delete it to avoid re-use
+            otp_record.delete()
+
+            # Generate short-lived (10 min) tamper-proof reset token tied to current user state
+            signer = TimestampSigner()
+            reset_token = signer.sign(f"{user.id}:{user.password}")
+
+            return Response({
+                "message": "OTP verified successfully. Proceed to reset password.",
+                "reset_token": reset_token
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            reset_token = serializer.validated_data['reset_token']
+            new_password = serializer.validated_data['new_password']
+
+            signer = TimestampSigner()
+            try:
+                # Validates signature and 10-minute expiry (max_age=600 seconds)
+                unsigned_data = signer.unsign(reset_token, max_age=600)
+                user_id_str, old_password_hash = unsigned_data.split(':', 1)
+                user = User.objects.filter(id=int(user_id_str)).first()
+                if not user:
+                    return Response(
+                        {"error": "User account not found."}, 
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                # Single-use check: ensure password hash has not already changed
+                if user.password != old_password_hash:
+                    return Response(
+                        {"error": "Reset token has already been used or is invalid."}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            except SignatureExpired:
+                return Response(
+                    {"error": "Reset token has expired. Please request a new OTP."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            except (BadSignature, ValueError):
+                return Response(
+                    {"error": "Invalid reset token."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Update password
+            user.set_password(new_password)
+            user.save()
+
+            return Response({
+                "message": "Password has been reset successfully. You can now log in with your new password."
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 

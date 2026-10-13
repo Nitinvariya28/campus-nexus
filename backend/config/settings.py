@@ -64,7 +64,6 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.resumes",
     "apps.reports",
-    "apps.analytics",
 ]
 
 MIDDLEWARE = [
@@ -151,9 +150,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 
 # Email Configuration (SMTP)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -187,7 +183,7 @@ REST_FRAMEWORK = {
 # ==========================================
 from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
