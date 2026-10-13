@@ -29,7 +29,7 @@ SECRET_KEY =os.getenv("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.resumes",
     "apps.reports",
+    "apps.analytics",
 ]
 
 MIDDLEWARE = [
@@ -150,6 +151,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Email Configuration (SMTP)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -183,7 +187,7 @@ REST_FRAMEWORK = {
 # ==========================================
 from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -196,6 +200,11 @@ SIMPLE_JWT = {
 # CORS Configuration
 # ==========================================
 CORS_ALLOW_ALL_ORIGINS = True  # For development. Change to CORS_ALLOWED_ORIGINS in prod
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 # ==========================================
 # API Documentation (Swagger)
