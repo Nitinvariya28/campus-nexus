@@ -12,8 +12,9 @@ dist
 dist-ssr
 *.local
 
-# Exclude documentation from Git push
+# Exclude documentation and raw assets from Git push
 documentation/
+photo/
 
 
 # Editor directories and files

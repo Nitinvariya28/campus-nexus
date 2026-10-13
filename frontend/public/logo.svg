@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="capGradient" x1="6" y1="12" x2="42" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="bridgeGradient" x1="8" y1="32" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded soft shield -->
+  <rect x="2" y="2" width="44" height="44" rx="12" fill="#0F172A"/>
+
+  <!-- Academic Graduation Cap Top -->
+  <polygon points="24,10 40,18 24,26 8,18" fill="#F8FAFC"/>
+  <!-- Cap Underbelly & Skullcap -->
+  <path d="M14 21.5V28C14 31 18.5 33.5 24 33.5C29.5 33.5 34 31 34 28V21.5L24 26.5L14 21.5Z" fill="#CBD5E1"/>
+
+  <!-- Tassel Cord & Pendant -->
+  <path d="M38 19V29" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="38" cy="30" r="2" fill="#F59E0B"/>
+
+  <!-- Interconnected Bridge Arc (Alumni to Student) -->
+  <path d="M10 38C16 33 32 33 38 38" stroke="url(#bridgeGradient)" stroke-width="3" stroke-linecap="round"/>
+  <!-- Network Connection Nodes -->
+  <circle cx="12" cy="37.5" r="2.5" fill="#F59E0B"/>
+  <circle cx="24" cy="34" r="2.5" fill="#38BDF8"/>
+  <circle cx="36" cy="37.5" r="2.5" fill="#10B981"/>
+</svg>
