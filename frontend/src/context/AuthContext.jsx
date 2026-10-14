@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import authService from '../services/authService';
 
 const AuthContext = createContext(null);
 
@@ -22,12 +23,15 @@ export const AuthProvider = ({ children }) => {
 
   // Login handler
   const login = (tokens, userData) => {
-    if (tokens?.access) {
-      localStorage.setItem('access_token', tokens.access);
-      setAccessToken(tokens.access);
+    const access = tokens?.access_token || tokens?.access;
+    const refresh = tokens?.refresh_token || tokens?.refresh;
+
+    if (access) {
+      localStorage.setItem('access_token', access);
+      setAccessToken(access);
     }
-    if (tokens?.refresh) {
-      localStorage.setItem('refresh_token', tokens.refresh);
+    if (refresh) {
+      localStorage.setItem('refresh_token', refresh);
     }
     if (userData) {
       localStorage.setItem('user', JSON.stringify(userData));
@@ -38,7 +42,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Logout handler
-  const logout = () => {
+  const logout = async () => {
+    const refresh = localStorage.getItem('refresh_token');
+    if (refresh) {
+      await authService.logout(refresh);
+    }
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');

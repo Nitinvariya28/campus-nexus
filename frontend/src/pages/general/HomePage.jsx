@@ -23,9 +23,7 @@ export default function HomePage() {
   return (
     <div className="py-4 space-y-16">
       
-      {/* =========================================================================
-          SECTION 1: HERO SECTION (Headline, CTAs + Campus Photo)
-         ========================================================================= */}
+      
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-2">
         {/* Left Column: Copy & Actions */}
         <div className="lg:col-span-7 space-y-5">
@@ -286,9 +284,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* =========================================================================
-          SECTION 4: HOW IT WORKS (4 Simple Steps with Flow)
-         ========================================================================= */}
+    
       <section className="space-y-10 pt-2">
         <div className="text-center max-w-xl mx-auto space-y-1.5">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -358,9 +354,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* =========================================================================
-          SECTION 5: METRICS STRIP & TAGLINE
-         ========================================================================= */}
+   
       <section className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-center">
           
@@ -407,9 +401,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* =========================================================================
-          SECTION 6: PRE-FOOTER CALLOUT BANNER (Navy Card)
-         ========================================================================= */}
+   
       <section className="bg-[#0B3954] text-white rounded-2xl sm:rounded-3xl p-8 sm:p-12 shadow-lg">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           {/* Left Info */}

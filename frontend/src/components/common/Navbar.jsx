@@ -1,20 +1,29 @@
 import React, { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
+  Home,
   Users, 
   BarChart3, 
   Bell, 
   LogIn, 
+  LogOut,
   Menu, 
-  X,
-  ToggleLeft,
-  ToggleRight
+  X
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { isAuthenticated, user, toggleDevAuth } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isLoginPage = location.pathname === '/login';
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   // Derive user initials if avatar is not present
   const initials = user
@@ -54,6 +63,21 @@ export default function Navbar() {
           {isAuthenticated && (
             <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
               <NavLink
+                to="/"
+                end
+                className={({ isActive }) =>
+                  `flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? 'text-blue-600 bg-blue-50/80 font-semibold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                  }`
+                }
+              >
+                <Home className="w-4 h-4" />
+                <span>Home</span>
+              </NavLink>
+
+              <NavLink
                 to="/community"
                 className={({ isActive }) =>
                   `flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -85,26 +109,6 @@ export default function Navbar() {
 
           {/* RIGHT: Actions */}
           <div className="hidden md:flex items-center space-x-3">
-            
-            {/* Dev Mode Auth Switch */}
-            <button
-              onClick={toggleDevAuth}
-              title={`Click to switch to ${isAuthenticated ? 'Guest (Logged Out)' : 'Authenticated (Logged In)'} mode`}
-              className="flex items-center space-x-1.5 px-2.5 py-1 text-xs font-mono rounded-md border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
-            >
-              {isAuthenticated ? (
-                <>
-                  <ToggleRight className="w-4 h-4 text-emerald-600" />
-                  <span className="text-emerald-700 font-semibold">Dev: Logged In</span>
-                </>
-              ) : (
-                <>
-                  <ToggleLeft className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-500">Dev: Guest</span>
-                </>
-              )}
-            </button>
-
             {isAuthenticated ? (
               <>
                 {/* Notification Bell */}
@@ -148,30 +152,33 @@ export default function Navbar() {
                     {user?.first_name || 'Profile'}
                   </span>
                 </NavLink>
+
+                {/* Sign Out Button */}
+                <button
+                  onClick={handleLogout}
+                  title="Sign Out"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
               </>
             ) : (
-              /* Unauthenticated Guest State: Exactly 1 CTA Button (Login) */
-              <Link
-                to="/login"
-                className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-              >
-                <LogIn className="w-4 h-4 text-slate-900" />
-                <span>Login</span>
-              </Link>
+              /* Unauthenticated Guest State: Exactly 1 CTA Button (Login) - Hidden when already on /login */
+              !isLoginPage && (
+                <Link
+                  to="/login"
+                  className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <LogIn className="w-4 h-4 text-slate-900" />
+                  <span>Login</span>
+                </Link>
+              )
             )}
           </div>
 
           {/* MOBILE: Hamburger Button */}
           <div className="flex md:hidden items-center space-x-2">
-            {/* Quick dev switch on mobile */}
-            <button
-              onClick={toggleDevAuth}
-              className="p-1.5 text-xs rounded border border-slate-200 bg-slate-50 text-slate-600"
-              title="Toggle Auth State"
-            >
-              {isAuthenticated ? 'Dev:In' : 'Dev:Out'}
-            </button>
-
             {isAuthenticated && (
               <NavLink
                 to="/notifications"
@@ -223,6 +230,20 @@ export default function Navbar() {
               <div className="border-t border-slate-100 my-1"></div>
 
               <NavLink
+                to="/"
+                end
+                onClick={closeMobile}
+                className={({ isActive }) =>
+                  `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                    isActive ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                  }`
+                }
+              >
+                <Home className="w-5 h-5" />
+                <span>Home</span>
+              </NavLink>
+
+              <NavLink
                 to="/community"
                 onClick={closeMobile}
                 className={({ isActive }) =>
@@ -247,17 +268,41 @@ export default function Navbar() {
                 <BarChart3 className="w-5 h-5" />
                 <span>Analytics</span>
               </NavLink>
+
+              <div className="border-t border-slate-100 my-1"></div>
+
+              <button
+                onClick={() => {
+                  closeMobile();
+                  handleLogout();
+                }}
+                className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors text-left"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Sign Out</span>
+              </button>
             </>
           ) : (
-            <div className="pt-2">
+            <div className="pt-2 space-y-2">
               <Link
-                to="/login"
+                to="/"
                 onClick={closeMobile}
-                className="w-full flex items-center justify-center space-x-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm"
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100"
               >
-                <LogIn className="w-4 h-4 text-slate-900" />
-                <span>Login to AlumiBridge</span>
+                <Home className="w-5 h-5" />
+                <span>Home</span>
               </Link>
+
+              {!isLoginPage && (
+                <Link
+                  to="/login"
+                  onClick={closeMobile}
+                  className="w-full flex items-center justify-center space-x-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm"
+                >
+                  <LogIn className="w-4 h-4 text-slate-900" />
+                  <span>Login to AlumiBridge</span>
+                </Link>
+              )}
             </div>
           )}
         </div>

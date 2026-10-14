@@ -1,33 +1,87 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import AuthSplitLayout from '../../components/auth/AuthSplitLayout';
-import { Eye, EyeOff, Lock, Mail, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
+import authService from '../../services/authService';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
+  
   const [formData, setFormData] = useState({
-    email: '',
+    email: location.state?.email || '',
     password: '',
     rememberMe: false
   });
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (apiError) setApiError('');
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
   };
 
-  const handleMockSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.email || !formData.password) {
+
+    if (!formData.email.trim() || !formData.password) {
       toast.error('Please enter both email and password.');
       return;
     }
-    toast.success('Form design verified! (Backend API will be connected next)');
+
+    setIsLoading(true);
+    setApiError('');
+
+    try {
+      // 1. Call DRF Login Endpoint POST /api/auth/login/
+      const data = await authService.login({
+        email: formData.email,
+        password: formData.password
+      });
+
+      // 2. Update Global Auth State (Stores tokens and user info in localStorage)
+      login(
+        {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        },
+        data.user
+      );
+
+      toast.success(`Welcome back, ${data.user?.first_name || 'User'}!`);
+
+      // 3. Navigate directly to Community Feed on login
+      navigate('/community');
+    } catch (err) {
+      const parsedMessage = authService.parseApiError(err);
+      setApiError(parsedMessage);
+
+      // Handle specific backend case: Account exists but not verified (is_verified=False)
+      if (
+        parsedMessage.toLowerCase().includes('not verified') ||
+        parsedMessage.toLowerCase().includes('otp verification')
+      ) {
+        toast.error('Account not verified. Redirecting to OTP verification...', { duration: 4000 });
+        setTimeout(() => {
+          navigate('/verify-otp', {
+            state: { email: formData.email.trim().toLowerCase() }
+          });
+        }, 1500);
+      } else {
+        toast.error(parsedMessage);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,7 +110,18 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={handleMockSubmit} className="space-y-4">
+        {/* API Error Alert Banner */}
+        {apiError && (
+          <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs leading-relaxed animate-in fade-in duration-200">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold">Sign in failed</p>
+              <p className="text-red-600 mt-0.5">{apiError}</p>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email Field */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
@@ -69,7 +134,8 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="student@nirmauni.ac.in or alumni@gmail.com"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition-all placeholder:text-slate-400"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition-all placeholder:text-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed"
                 required
               />
               <Mail className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5 pointer-events-none" />
@@ -96,13 +162,15 @@ export default function LoginPage() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition-all placeholder:text-slate-400 pr-10"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition-all placeholder:text-slate-400 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition-colors"
+                disabled={isLoading}
+                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50"
                 aria-label="Toggle password visibility"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -118,7 +186,8 @@ export default function LoginPage() {
                 name="rememberMe"
                 checked={formData.rememberMe}
                 onChange={handleChange}
-                className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500"
+                disabled={isLoading}
+                className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 disabled:cursor-not-allowed"
               />
               <span>Remember me on this device</span>
             </label>
@@ -127,10 +196,24 @@ export default function LoginPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm py-3 rounded-xl shadow-xs transition-all flex items-center justify-center space-x-2 transform active:scale-98"
+            disabled={isLoading}
+            className={`w-full mt-2 text-white font-semibold text-sm py-3 rounded-xl shadow-xs transition-all flex items-center justify-center space-x-2 ${
+              isLoading
+                ? 'bg-blue-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 transform active:scale-98'
+            }`}
           >
-            <span>Sign In</span>
-            <ArrowRight className="w-4 h-4" />
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Signing in...</span>
+              </>
+            ) : (
+              <>
+                <span>Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 

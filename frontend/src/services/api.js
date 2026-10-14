@@ -27,7 +27,15 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // If 401 Unauthorized and not already retrying
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const requestUrl = originalRequest?.url || '';
+    const isAuthEndpoint =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/refresh') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/verify-otp') ||
+      requestUrl.includes('/auth/password-reset');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       const refreshToken = localStorage.getItem('refresh_token');
 
