@@ -1,6 +1,54 @@
 import api from '../api';
 
 /**
+ * Normalizes filter parameters between frontend UI names and backend ORM parameters.
+ * Ensures filters like year, department, batch, and date range map 1:1 to backend queries.
+ */
+export const normalizeFilters = (filters = {}) => {
+  const normalized = { ...filters };
+
+  // Map common filter keys to backend query parameter names
+  if (normalized.year && !normalized.placement_year) {
+    normalized.placement_year = normalized.year;
+  }
+  if (normalized.department && !normalized.department_id) {
+    normalized.department_id = normalized.department;
+  }
+  if (normalized.batch && !normalized.batch_id) {
+    normalized.batch_id = normalized.batch;
+  }
+
+  // Handle date range conversion to date_from ISO strings
+  if (normalized.range && !normalized.date_from) {
+    const now = new Date();
+    if (normalized.range === '30d') {
+      const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      normalized.date_from = past.toISOString().split('T')[0];
+    } else if (normalized.range === '6m') {
+      const past = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+      normalized.date_from = past.toISOString().split('T')[0];
+    } else if (normalized.range === '12m') {
+      const past = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      normalized.date_from = past.toISOString().split('T')[0];
+    }
+  }
+
+  // Strip empty strings, null, undefined, and non-query keys
+  Object.keys(normalized).forEach((key) => {
+    if (
+      normalized[key] === '' ||
+      normalized[key] === null ||
+      normalized[key] === undefined ||
+      normalized[key] === 'all'
+    ) {
+      delete normalized[key];
+    }
+  });
+
+  return normalized;
+};
+
+/**
  * Universal Analytics Dashboard API Gateway
  * Consumes GET /api/analytics/dashboard/
  *
@@ -14,15 +62,8 @@ import api from '../api';
 export const fetchDashboardData = async (view = 'common', filters = {}, signal = null) => {
   const params = {
     view,
-    ...filters,
+    ...normalizeFilters(filters),
   };
-
-  // Remove empty/null/undefined filter parameters to keep query strings clean
-  Object.keys(params).forEach((key) => {
-    if (params[key] === '' || params[key] === null || params[key] === undefined) {
-      delete params[key];
-    }
-  });
 
   const response = await api.get('/analytics/dashboard/', {
     params,
@@ -33,5 +74,6 @@ export const fetchDashboardData = async (view = 'common', filters = {}, signal =
 };
 
 export default {
+  normalizeFilters,
   fetchDashboardData,
 };

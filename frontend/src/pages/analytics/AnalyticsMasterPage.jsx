@@ -38,9 +38,7 @@ const INITIAL_FILTER_STATE = {
  * 1. Synchronized navigation across the 4 modular dashboards
  * 2. Active contextual filter staging & applying
  * 3. Dedicated vertical scrolling layout with zero horizontal overflow
- *
- * NOTE: As requested for this phase, NO backend API calls are executed.
- * Each dashboard renders its clean, responsive analysis workspace.
+ * 4. Passes applied filters to active dashboards to trigger live data updates
  */
 export default function AnalyticsMasterPage() {
   const location = useLocation();
@@ -80,6 +78,7 @@ export default function AnalyticsMasterPage() {
   // Filter state management (Staging, applying, and resetting per dashboard)
   const {
     stagedFilters,
+    appliedFilters,
     setFilterValue,
     applyFilters,
     resetFilters,
@@ -88,14 +87,14 @@ export default function AnalyticsMasterPage() {
   const renderActiveDashboard = () => {
     switch (activeDashboard) {
       case 'student':
-        return <StudentDashboard />;
+        return <StudentDashboard filters={appliedFilters} />;
       case 'alumni':
-        return <AlumniDashboard />;
+        return <AlumniDashboard filters={appliedFilters} />;
       case 'placement_cell':
-        return <PlacementDashboard />;
+        return <PlacementDashboard filters={appliedFilters} />;
       case 'common':
       default:
-        return <OverviewDashboard />;
+        return <OverviewDashboard filters={appliedFilters} />;
     }
   };
 
