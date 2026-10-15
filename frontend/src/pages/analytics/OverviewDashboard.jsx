@@ -2,15 +2,22 @@ import React from 'react';
 import { LayoutDashboard, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAnalyticsData } from '../../hooks/analytics/useAnalyticsData';
 import OverviewKPIGrid from '../../components/analytics/kpi/OverviewKPIGrid';
+import PopulationCensusChart from '../../components/analytics/charts/PopulationCensusChart';
+import GrowthTrajectoryChart from '../../components/analytics/charts/GrowthTrajectoryChart';
 
 /**
  * OverviewDashboard View Component (View 1)
- * Displays the Overview Dashboard with live 6 Executive KPI metric cards and contextual filters.
+ * Displays the Overview Dashboard with:
+ * - Row 1: 6 Master Executive KPI Cards
+ * - Row 2: Visual 1 (Population Census Donut) & Visual 2 (Growth Trajectory Area Chart)
+ * - Stationary filter bar integration & live API synchronization
  *
  * @param {object} filters - Active applied filters from FilterBar
  */
 export default function OverviewDashboard({ filters = {} }) {
   const { data, loading, error, refetch } = useAnalyticsData('common', filters);
+
+  const payload = data?.data || data;
 
   return (
     <div className="space-y-6">
@@ -63,16 +70,24 @@ export default function OverviewDashboard({ filters = {} }) {
 
       {/* Row 1: Executive 6 Master KPI Counter Cards */}
       <section aria-label="Executive KPI Metrics">
-        <OverviewKPIGrid data={data?.data || data} loading={loading} filters={filters} />
+        <OverviewKPIGrid data={payload} loading={loading} filters={filters} />
       </section>
 
-      {/* Subparts Preview Notice (Next Step) */}
+      {/* Row 2: Platform Population Census & Onboarding Growth */}
+      <section aria-label="Population and Growth Visualizations">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PopulationCensusChart data={payload} loading={loading} />
+          <GrowthTrajectoryChart data={payload} loading={loading} />
+        </div>
+      </section>
+
+      {/* Rows 3 to 6 Preview Notice (Upcoming in Next Steps) */}
       <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-8 text-center">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          Visualizations & Analysis Section
+          Compensation, Placement & Corporate Analysis (Rows 3 to 6)
         </p>
         <p className="text-xs text-slate-400 mt-1">
-          The 6 executive KPIs above are live and responsive to the filter bar. Visualizations (Donut, Area, and Column Charts) will be integrated in the upcoming subpart.
+          Row 1 (Executive KPIs) and Row 2 (Population Donut & Growth Area Charts) are active and responsive to filters. Row 3 (Package Distribution & Multi-Line YoY Trends) will be integrated in Step 2.
         </p>
       </div>
     </div>

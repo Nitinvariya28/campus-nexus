@@ -6,6 +6,7 @@ import { CHART_PALETTE } from '../../../constants/analytics/chartTheme';
 /**
  * Distribution Donut Chart Component
  * Used for platform census, industry breakdown, and skill cluster distributions.
+ * Supports custom slice colors via item.color with fallback to CHART_PALETTE.primary.
  */
 export default function DistributionDonutChart({ data = [], centerLabel = 'Total' }) {
   const total = data.reduce((acc, curr) => acc + (curr.value || 0), 0);
@@ -24,10 +25,10 @@ export default function DistributionDonutChart({ data = [], centerLabel = 'Total
             dataKey="value"
             nameKey="name"
           >
-            {data.map((_, index) => (
+            {data.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={CHART_PALETTE.primary[index % CHART_PALETTE.primary.length]}
+                fill={entry.color || CHART_PALETTE.primary[index % CHART_PALETTE.primary.length]}
                 stroke="#FFFFFF"
                 strokeWidth={2}
               />
