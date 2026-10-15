@@ -33,11 +33,7 @@ import CreatePostPage from '../pages/community/CreatePostPage';
 import BookmarksPage from '../pages/community/BookmarksPage';
 
 // Analytics Pages (Protected)
-import AnalyticsDashboardPage from '../pages/analytics/AnalyticsDashboardPage';
-import PlacementAnalyticsPage from '../pages/analytics/PlacementAnalyticsPage';
-import CompanyAnalyticsPage from '../pages/analytics/CompanyAnalyticsPage';
-import SkillsAnalyticsPage from '../pages/analytics/SkillsAnalyticsPage';
-import AlumniAnalyticsPage from '../pages/analytics/AlumniAnalyticsPage';
+import AnalyticsMasterPage from '../pages/analytics/AnalyticsMasterPage';
 
 // Profile Pages (Protected)
 import ProfilePage from '../pages/profile/ProfilePage';
@@ -76,12 +72,12 @@ export default function AppRoutes() {
           <Route path="community/bookmarks" element={<BookmarksPage />} />
 
           {/* Analytics Module */}
-          <Route path="analytics" element={<AnalyticsDashboardPage />} />
-          <Route path="analytics/overview" element={<AnalyticsDashboardPage />} />
-          <Route path="analytics/placements" element={<PlacementAnalyticsPage />} />
-          <Route path="analytics/companies" element={<CompanyAnalyticsPage />} />
-          <Route path="analytics/skills" element={<SkillsAnalyticsPage />} />
-          <Route path="analytics/alumni" element={<AlumniAnalyticsPage />} />
+          <Route path="analytics" element={<AnalyticsMasterPage />} />
+          <Route path="analytics/overview" element={<AnalyticsMasterPage />} />
+          <Route path="analytics/student" element={<AnalyticsMasterPage />} />
+          <Route path="analytics/alumni" element={<AnalyticsMasterPage />} />
+          <Route path="analytics/placement" element={<AnalyticsMasterPage />} />
+          <Route path="analytics/*" element={<AnalyticsMasterPage />} />
 
           {/* Profile Module */}
           <Route path="profile" element={<ProfilePage />} />

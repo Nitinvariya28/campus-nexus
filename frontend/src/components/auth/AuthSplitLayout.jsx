@@ -66,7 +66,7 @@ export default function AuthSplitLayout({
       {/* Bottom: University Trust Footer */}
       <div className="relative z-10 pt-6 border-t border-white/10 flex items-center justify-between text-xs text-blue-200/70">
         <span>Campus Placement & Alumni Gateway</span>
-        <span>Est. 2026</span>
+        
       </div>
     </div>
   );
