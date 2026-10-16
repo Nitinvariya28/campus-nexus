@@ -62,7 +62,7 @@ def get_placement_summary_analytics(filters):
     elif n % 2 == 1:
         median_lpa = float(packages[n//2])
     else:
-        median_lpa = float((packages[n//2 - 1] + packages[n//2]) / 2.0)
+        median_lpa = float((packages[n//2 - 1] + packages[n//2]) / 2)
         
     avg_lpa = round(float(package_aggs['avg']), 2) if package_aggs['avg'] else None
     min_lpa = round(float(package_aggs['min']), 2) if package_aggs['min'] else None
