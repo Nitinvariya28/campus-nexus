@@ -39,6 +39,7 @@ def get_dashboard_analytics(user, view=None, requested_sections=None, filters=No
         'learning_and_ai': lambda: get_learning_ai_analytics(filters),
         'interview_prep': lambda: get_interview_analytics(filters),
         'my_resume_health': lambda: get_personal_resume_analytics(user, filters.get('resume_id')),
+        'resume_cohort_health': lambda: get_cohort_resume_readiness(filters),
     }
 
     alumni_builders = {
@@ -85,32 +86,54 @@ def get_dashboard_analytics(user, view=None, requested_sections=None, filters=No
     role_data = {}
     role_key = user.role.lower()
 
-    if user.role == 'STUDENT':
+    # Support explicit view parameter for all authenticated roles
+    active_view = view.lower() if view and view in ['student', 'alumni', 'placement_cell', 'placement'] else user.role.lower()
+
+    if active_view == 'student':
         for section_name, builder in student_builders.items():
             if is_selected(section_name):
                 try:
                     role_data[section_name] = builder()
                 except Exception as e:
                     role_data[section_name] = {"error": str(e)}
+        return {
+            "role_detected": user.role,
+            "view": "student",
+            "common": common_data,
+            "student": role_data,
+        }
 
-    elif user.role == 'ALUMNI':
+    elif active_view == 'alumni':
         for section_name, builder in alumni_builders.items():
             if is_selected(section_name):
                 try:
                     role_data[section_name] = builder()
                 except Exception as e:
                     role_data[section_name] = {"error": str(e)}
+        return {
+            "role_detected": user.role,
+            "view": "alumni",
+            "common": common_data,
+            "alumni": role_data,
+        }
 
-    elif user.role == 'PLACEMENT_CELL':
+    elif active_view in ['placement_cell', 'placement']:
         for section_name, builder in placement_cell_builders.items():
             if is_selected(section_name):
                 try:
                     role_data[section_name] = builder()
                 except Exception as e:
                     role_data[section_name] = {"error": str(e)}
+        return {
+            "role_detected": user.role,
+            "view": "placement_cell",
+            "common": common_data,
+            "placement_cell": role_data,
+        }
 
     return {
         "role_detected": user.role,
+        "view": active_view,
         "common": common_data,
-        role_key: role_data
+        role_key: role_data,
     }

@@ -14,20 +14,35 @@ import ChartCard from './ChartCard';
 import ChartEmptyState from './ChartEmptyState';
 import { CHART_PALETTE } from '../../../constants/analytics/chartTheme';
 
-const BAND_COLORS = {
-  '< 3 LPA': '#2563EB',    // Blue
-  '3-5 LPA': '#6366F1',    // Indigo
-  '5-8 LPA': '#7C3AED',    // Violet
-  '8-12 LPA': '#0D9488',   // Teal
-  '12-20 LPA': '#D97706',  // Amber
-  '> 20 LPA': '#E11D48',   // Rose
+const BAND_COLOR_MAP = {
+  '< 5 LPA': '#2563EB',
+  '< 3 LPA': '#2563EB',
+  '3-5 LPA': '#3B82F6',
+  '5 - 10 LPA': '#6366F1',
+  '5-8 LPA': '#6366F1',
+  '8-12 LPA': '#7C3AED',
+  '10 - 20 LPA': '#7C3AED',
+  '12-20 LPA': '#9333EA',
+  '20+ LPA': '#D97706',
+  '> 20 LPA': '#D97706',
 };
 
-const ORDERED_BANDS = ['< 3 LPA', '3-5 LPA', '5-8 LPA', '8-12 LPA', '12-20 LPA', '> 20 LPA'];
+const SORT_PRIORITY = {
+  '< 3 LPA': 1,
+  '< 5 LPA': 2,
+  '3-5 LPA': 3,
+  '5 - 10 LPA': 4,
+  '5-8 LPA': 5,
+  '8-12 LPA': 6,
+  '10 - 20 LPA': 7,
+  '12-20 LPA': 8,
+  '20+ LPA': 9,
+  '> 20 LPA': 10,
+};
 
 /**
  * PackageDistributionChart Component (Visual 3)
- * Renders the Placement Package Distribution Column Bar Chart across 6 salary tiers.
+ * Renders the Placement Package Distribution Column Bar Chart across salary tiers.
  * Strictly consumes live API data. Zero mock fallback arrays.
  * Backed by data.common.placement_snapshot.package_bands
  *
@@ -43,10 +58,10 @@ export default function PackageDistributionChart({ data, loading = false }) {
           <div className="h-3 w-64 bg-slate-100 rounded" />
         </div>
         <div className="flex items-end justify-between h-44 px-3 pt-6 gap-2">
-          {[...Array(6)].map((_, i) => (
+          {[...Array(4)].map((_, i) => (
             <div
               key={i}
-              className="w-1/6 bg-slate-100 rounded-t"
+              className="w-1/4 bg-slate-100 rounded-t"
               style={{ height: `${30 + (i % 3) * 25}%` }}
             />
           ))}
@@ -58,36 +73,37 @@ export default function PackageDistributionChart({ data, loading = false }) {
 
   const rawBands = data?.common?.placement_snapshot?.package_bands || [];
 
+  // Group raw items by cleaned band string
   const bandMap = {};
   rawBands.forEach((item) => {
-    if (item.band) {
+    if (item && item.band) {
       const cleanBand = item.band.trim().replace(/\s+/g, ' ');
-      bandMap[cleanBand] = Number(item.count) || 0;
+      bandMap[cleanBand] = (bandMap[cleanBand] || 0) + (Number(item.count) || 0);
     }
   });
 
   const totalOffers = Object.values(bandMap).reduce((acc, c) => acc + c, 0);
 
-  const chartData = ORDERED_BANDS.map((band) => {
-    let count = bandMap[band] || 0;
-    if (count === 0) {
-      if (band === '< 3 LPA') count = bandMap['< 5 LPA'] || 0;
-      else if (band === '3-5 LPA') count = bandMap['5 - 10 LPA'] || 0;
-      else if (band === '12-20 LPA') count = bandMap['10 - 20 LPA'] || 0;
-      else if (band === '> 20 LPA') count = bandMap['20+ LPA'] || 0;
-    }
+  // Sort bands logically from lowest to highest tier
+  const sortedBandKeys = Object.keys(bandMap).sort((a, b) => {
+    const prioA = SORT_PRIORITY[a] || 99;
+    const prioB = SORT_PRIORITY[b] || 99;
+    return prioA - prioB;
+  });
 
+  const chartData = sortedBandKeys.map((band) => {
+    const count = bandMap[band] || 0;
     const pct = totalOffers > 0 ? ((count / totalOffers) * 100).toFixed(1) : '0.0';
     return {
       band,
       Offers: count,
       percentage: pct,
-      color: BAND_COLORS[band],
+      color: BAND_COLOR_MAP[band] || '#6366F1',
     };
   });
 
   // If no data returned from API, render empty state
-  if (totalOffers === 0 || chartData.every((d) => d.Offers === 0)) {
+  if (totalOffers === 0 || chartData.length === 0) {
     return (
       <ChartCard
         title="Placement Package Distribution"
@@ -139,23 +155,26 @@ export default function PackageDistributionChart({ data, loading = false }) {
                       </div>
                       <div className="flex items-center justify-between gap-3 text-slate-600">
                         <span>Offers:</span>
-                        <strong className="text-slate-900 font-bold">{item.Offers}</strong>
+                        <span className="font-bold text-slate-900 font-mono">
+                          {item.Offers}
+                        </span>
                       </div>
-                      <div className="flex items-center justify-between gap-3 text-slate-500 mt-0.5 text-[11px]">
+                      <div className="flex items-center justify-between gap-3 text-slate-500 text-[11px] mt-0.5">
                         <span>Share:</span>
-                        <span className="font-semibold text-indigo-600">{item.percentage}%</span>
+                        <span className="font-medium text-indigo-600">
+                          {item.percentage}%
+                        </span>
                       </div>
                     </div>
                   );
                 }}
               />
-              <Bar dataKey="Offers" radius={[4, 4, 0, 0]} maxBarSize={28}>
+              <Bar dataKey="Offers" radius={[4, 4, 0, 0]}>
                 <LabelList
                   dataKey="Offers"
                   position="top"
-                  fill="#64748B"
-                  fontSize={10}
-                  fontWeight={600}
+                  style={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
+                  formatter={(val) => (val > 0 ? val : '')}
                 />
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
@@ -165,10 +184,12 @@ export default function PackageDistributionChart({ data, loading = false }) {
           </ResponsiveContainer>
         </div>
 
-        {/* Bottom indicator */}
-        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1.5 border-t border-slate-100">
-          <span>{totalOffers} Total Offers</span>
-          <span className="font-medium text-slate-500">6 Salary Bands</span>
+        {/* Footer Metrics */}
+        <div className="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+          <span>Total Extended Offers:</span>
+          <span className="font-bold text-slate-700 font-mono">
+            {totalOffers.toLocaleString()} Offers
+          </span>
         </div>
       </div>
     </ChartCard>

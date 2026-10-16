@@ -1,5 +1,5 @@
-import React from 'react';
-import { Cpu } from 'lucide-react';
+import React, { useState } from 'react';
+import { Cpu, BarChart2, Cloud } from 'lucide-react';
 import ChartCard from './ChartCard';
 import ChartEmptyState from './ChartEmptyState';
 
@@ -28,14 +28,16 @@ const PILL_BADGE_CLASSES = [
 
 /**
  * TechStackPulseChart Component (Visual 8)
- * Dual-panel skill ecosystem: Ranked horizontal bars on left + interactive skill cloud on right.
+ * Skill ecosystem: Interactive toggle between full-width Ranked Progress Bars and Skill Cloud.
  * Strictly consumes live API data. Zero mock fallback arrays.
- * Backed by data.common.skills_pulse.top_skills (supports skill__name, skill_name, name)
+ * Backed by data.common.skills_pulse.top_skills
  *
  * @param {object} data - Analytics payload
  * @param {boolean} loading - Loading indicator
  */
 export default function TechStackPulseChart({ data, loading = false }) {
+  const [viewMode, setViewMode] = useState('bars'); // 'bars' | 'cloud'
+
   if (loading) {
     return (
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-80 animate-pulse">
@@ -43,17 +45,10 @@ export default function TechStackPulseChart({ data, loading = false }) {
           <div className="h-4 w-48 bg-slate-200 rounded" />
           <div className="h-3 w-72 bg-slate-100 rounded" />
         </div>
-        <div className="grid grid-cols-2 gap-4 my-auto">
-          <div className="space-y-2.5">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-3 bg-slate-100 rounded" />
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-6 w-16 bg-slate-100 rounded-full" />
-            ))}
-          </div>
+        <div className="space-y-3 my-auto px-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-3 bg-slate-100 rounded" />
+          ))}
         </div>
         <div className="h-3 w-32 bg-slate-100 rounded" />
       </div>
@@ -114,68 +109,107 @@ export default function TechStackPulseChart({ data, loading = false }) {
     );
   }
 
-  const pills = rankedSkills;
+  // Toggle buttons in header slot
+  const actionSlot = (
+    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+      <button
+        type="button"
+        onClick={() => setViewMode('bars')}
+        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
+          viewMode === 'bars'
+            ? 'bg-white text-indigo-700 shadow-2xs'
+            : 'text-slate-500 hover:text-slate-800'
+        }`}
+        title="View ranked adoption bars"
+      >
+        <BarChart2 className="w-3 h-3" />
+        <span>Bars</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setViewMode('cloud')}
+        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
+          viewMode === 'cloud'
+            ? 'bg-white text-indigo-700 shadow-2xs'
+            : 'text-slate-500 hover:text-slate-800'
+        }`}
+        title="View skill cloud badges"
+      >
+        <Cloud className="w-3 h-3" />
+        <span>Cloud</span>
+      </button>
+    </div>
+  );
 
   return (
     <ChartCard
       title="Campus Tech Stack Pulse"
-      subtitle="Most declared competencies across students & alumni cohorts"
+      subtitle="Most declared competencies across cohorts"
+      actionSlot={actionSlot}
       heightClass="h-64"
     >
       <div className="h-full flex flex-col justify-between">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 flex-1 min-h-0 pt-1">
-          {/* Left: Ranked Progress Bars */}
-          <div className="md:col-span-6 space-y-2 pr-2 border-r border-slate-100 overflow-y-auto">
-            {rankedSkills.map((skill) => (
-              <div key={skill.name} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex-1 min-h-0 pt-1 overflow-hidden">
+          {viewMode === 'bars' ? (
+            /* Mode 1: Full-width Scrollable Ranked Progress Bars */
+            <div className="h-full space-y-2.5 pr-2 overflow-y-auto scrollbar-thin">
+              {rankedSkills.map((skill) => (
+                <div key={skill.name} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: skill.color }}
+                      />
+                      <span className="font-semibold text-slate-800 truncate" title={skill.name}>
+                        {skill.name}
+                      </span>
+                    </div>
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: skill.color }}
-                    />
-                    <span className="font-semibold text-slate-800 truncate" title={skill.name}>
-                      {skill.name}
+                      className="font-mono text-[11px] font-semibold text-slate-700 shrink-0"
+                      title={`${skill.count} verified declarations (${skill.pct}% campus adoption)`}
+                    >
+                      {skill.count}{' '}
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        ({skill.pct}%)
+                      </span>
                     </span>
                   </div>
-                  <span
-                    className="font-mono text-[11px] font-semibold text-slate-700 shrink-0"
-                    title={`${skill.count} verified declarations (${skill.pct}% campus adoption)`}
-                  >
-                    {skill.count} <span className="text-[10px] text-slate-400 font-normal">({skill.pct}%)</span>
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${skill.bar}`}
+                      style={{ width: `${skill.barWidth}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Mode 2: Interactive Skill Cloud Badges */
+            <div className="h-full flex flex-wrap content-start gap-1.5 overflow-y-auto scrollbar-thin pr-1">
+              {rankedSkills.map((pill) => (
+                <span
+                  key={pill.name}
+                  title={`${pill.name}: ${pill.count} verified declarations (${pill.pct}%)`}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors hover:shadow-xs cursor-default ${pill.bg}`}
+                >
+                  <span>{pill.name}</span>
+                  <span className="text-[9px] font-bold opacity-75 font-mono">
+                    {pill.count}
                   </span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full bg-gradient-to-r ${skill.bar}`}
-                    style={{ width: `${skill.barWidth}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Right: Interactive Skill Badges / Cloud */}
-          <div className="md:col-span-6 flex flex-wrap content-start gap-1.5 overflow-y-auto pl-1 pr-1">
-            {pills.map((pill) => (
-              <span
-                key={pill.name}
-                title={`${pill.name}: ${pill.count} verified declarations`}
-                className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors hover:shadow-xs cursor-default ${pill.bg}`}
-              >
-                {pill.name}
-              </span>
-            ))}
-          </div>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Footer Note */}
         <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 shrink-0">
           <span className="flex items-center gap-1">
             <Cpu className="w-3 h-3 text-slate-400" />
-            Verified skill declarations
+            Verified declarations
           </span>
-          <span className="font-medium text-slate-500">
+          <span className="font-medium text-slate-600 font-mono">
             {rankedSkills.length} Tracked Skills
           </span>
         </div>

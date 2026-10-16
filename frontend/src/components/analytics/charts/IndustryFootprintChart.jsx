@@ -134,8 +134,8 @@ export default function IndustryFootprintChart({ data, loading = false }) {
                 iconType="circle"
                 wrapperStyle={{ fontSize: 9, paddingBottom: 4 }}
               />
-              <Bar dataKey="Alumni Employed" name="Alumni Employed" fill="#2563EB" radius={[3, 3, 0, 0]} maxBarSize={14} />
-              <Bar dataKey="Recent Placements" name="Recent Placements" fill="#059669" radius={[3, 3, 0, 0]} maxBarSize={14} />
+              <Bar dataKey="Alumni Employed" name="Alumni Employed" fill="#6366F1" radius={[3, 3, 0, 0]} maxBarSize={14} />
+              <Bar dataKey="Recent Placements" name="Recent Placements" fill="#EA580C" radius={[3, 3, 0, 0]} maxBarSize={14} />
             </BarChart>
           </ResponsiveContainer>
         </div>

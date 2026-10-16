@@ -31,7 +31,8 @@ function getShortDeptName(name = '') {
 
 /**
  * DepartmentPlacementChart Component (Visual 5)
- * Dual-axis grouped bar chart comparing Total Offers and Average LPA across engineering branches.
+ * Dual-axis grouped bar chart comparing Total Offers (Royal Indigo) and Average LPA (Warm Amber/Gold).
+ * Distinct color contrast eliminates repetitive blue/green palette.
  * Backed by data.common.placement_snapshot.department_outcomes
  *
  * @param {object} data - Analytics payload
@@ -63,15 +64,40 @@ export default function DepartmentPlacementChart({ data, loading = false }) {
 
   const rawOutcomes = data?.common?.placement_snapshot?.department_outcomes || [];
 
-  const chartData = rawOutcomes
-    .filter((d) => d && d.student__department__name)
-    .map((d) => ({
-      deptFull: d.student__department__name,
-      deptShort: getShortDeptName(d.student__department__name),
-      Offers: Number(d.total_offers) || 0,
-      'Average LPA': d.average_lpa ? Number(d.average_lpa) : 0,
-      peakLpa: d.maximum_lpa ? Number(d.maximum_lpa) : 0,
-    }));
+  // Consolidate duplicate branch aliases (e.g. Mechanical Eng. and Mechanical Engineering)
+  const deptMap = {};
+  rawOutcomes.forEach((d) => {
+    if (!d || !d.student__department__name) return;
+    const shortName = getShortDeptName(d.student__department__name);
+    const offers = Number(d.total_offers) || 0;
+    const avg = d.average_lpa ? Number(d.average_lpa) : 0;
+    const max = d.maximum_lpa ? Number(d.maximum_lpa) : 0;
+
+    if (!deptMap[shortName]) {
+      deptMap[shortName] = {
+        deptShort: shortName,
+        deptFull: d.student__department__name,
+        Offers: offers,
+        totalLpaWeighted: avg * offers,
+        peakLpa: max,
+      };
+    } else {
+      deptMap[shortName].Offers += offers;
+      deptMap[shortName].totalLpaWeighted += avg * offers;
+      deptMap[shortName].peakLpa = Math.max(deptMap[shortName].peakLpa, max);
+    }
+  });
+
+  const chartData = Object.values(deptMap)
+    .map((item) => ({
+      deptShort: item.deptShort,
+      deptFull: item.deptFull,
+      Offers: item.Offers,
+      'Average LPA': item.Offers > 0 ? Number((item.totalLpaWeighted / item.Offers).toFixed(2)) : 0,
+      peakLpa: Number(item.peakLpa.toFixed(2)),
+    }))
+    .filter((d) => d.Offers > 0)
+    .sort((a, b) => b.Offers - a.Offers);
 
   // If no data returned from API, render empty state
   if (chartData.length === 0) {
@@ -104,18 +130,18 @@ export default function DepartmentPlacementChart({ data, loading = false }) {
             tickLine={false}
             axisLine={{ stroke: CHART_PALETTE.grid }}
           />
-          {/* Left Axis: Total Offers */}
+          {/* Left Axis: Total Offers (Indigo) */}
           <YAxis
             yAxisId="left"
             tick={{ fontSize: 11, fill: '#4F46E5' }}
             tickLine={false}
             axisLine={{ stroke: CHART_PALETTE.grid }}
           />
-          {/* Right Axis: Average Package LPA */}
+          {/* Right Axis: Average Package LPA (Warm Amber/Gold) */}
           <YAxis
             yAxisId="right"
             orientation="right"
-            tick={{ fontSize: 11, fill: '#059669' }}
+            tick={{ fontSize: 11, fill: '#D97706' }}
             tickLine={false}
             axisLine={{ stroke: CHART_PALETTE.grid }}
             tickFormatter={(val) => `₹${val}`}
@@ -139,17 +165,22 @@ export default function DepartmentPlacementChart({ data, loading = false }) {
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="flex items-center gap-1.5 text-slate-500">
-                        <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                         <span>Average LPA:</span>
                       </span>
-                      <strong className="text-emerald-600 font-bold">₹ {item['Average LPA']} LPA</strong>
+                      <strong className="text-amber-700 font-bold font-mono">
+                        ₹{item['Average LPA']} LPA
+                      </strong>
                     </div>
-                    {item.peakLpa > 0 && (
-                      <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 text-slate-400">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-1.5 text-slate-500">
+                        <span className="w-2 h-2 rounded-full bg-purple-600 shrink-0" />
                         <span>Peak LPA:</span>
-                        <span className="font-semibold text-rose-600">₹ {item.peakLpa} LPA</span>
-                      </div>
-                    )}
+                      </span>
+                      <strong className="text-purple-700 font-bold font-mono">
+                        ₹{item.peakLpa} LPA
+                      </strong>
+                    </div>
                   </div>
                 </div>
               );
@@ -158,24 +189,23 @@ export default function DepartmentPlacementChart({ data, loading = false }) {
           <Legend
             verticalAlign="top"
             align="right"
-            iconType="circle"
-            wrapperStyle={{ fontSize: 11, paddingBottom: 6 }}
+            wrapperStyle={{ paddingBottom: '8px', fontSize: '11px' }}
           />
           <Bar
             yAxisId="left"
             dataKey="Offers"
-            name="Offers Extended"
+            name="Total Offers"
             fill="#4F46E5"
             radius={[4, 4, 0, 0]}
-            maxBarSize={22}
+            maxBarSize={40}
           />
           <Bar
             yAxisId="right"
             dataKey="Average LPA"
-            name="Avg Package (LPA)"
-            fill="#059669"
+            name="Average LPA (₹)"
+            fill="#D97706"
             radius={[4, 4, 0, 0]}
-            maxBarSize={22}
+            maxBarSize={40}
           />
         </BarChart>
       </ResponsiveContainer>

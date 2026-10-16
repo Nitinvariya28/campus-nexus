@@ -158,7 +158,7 @@ export default function CommunityEngagementChart({ data, loading = false }) {
                 iconType="circle"
                 iconSize={8}
               />
-              <Bar dataKey="Posts" name="Posts" fill="#2563EB" radius={[3, 3, 0, 0]} maxBarSize={16}>
+              <Bar dataKey="Posts" name="Posts" fill="#7C3AED" radius={[3, 3, 0, 0]} maxBarSize={16}>
                 <LabelList
                   dataKey="Posts"
                   position="top"
@@ -168,7 +168,7 @@ export default function CommunityEngagementChart({ data, loading = false }) {
                   fontWeight={600}
                 />
               </Bar>
-              <Bar dataKey="Comments" name="Comments" fill="#1E40AF" radius={[3, 3, 0, 0]} maxBarSize={16}>
+              <Bar dataKey="Comments" name="Comments" fill="#0284C7" radius={[3, 3, 0, 0]} maxBarSize={16}>
                 <LabelList
                   dataKey="Comments"
                   position="top"
@@ -178,7 +178,7 @@ export default function CommunityEngagementChart({ data, loading = false }) {
                   fontWeight={600}
                 />
               </Bar>
-              <Bar dataKey="Likes" name="Likes" fill="#059669" radius={[3, 3, 0, 0]} maxBarSize={16}>
+              <Bar dataKey="Likes" name="Likes" fill="#F43F5E" radius={[3, 3, 0, 0]} maxBarSize={16}>
                 <LabelList
                   dataKey="Likes"
                   position="top"

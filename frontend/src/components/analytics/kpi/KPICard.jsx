@@ -27,6 +27,7 @@ export default function KPICard({
   customBadge,
   subtitle,
   customFooter,
+  valueClassName,
 }) {
   const colorToken = SEMANTIC_COLORS[accentColor] || SEMANTIC_COLORS.blue;
 
@@ -57,7 +58,9 @@ export default function KPICard({
       {value !== undefined && (
         <div className="my-1.5">
           <div
-            className="text-2xl font-bold tracking-tight text-slate-900 truncate whitespace-nowrap"
+            className={`font-bold tracking-tight text-slate-900 truncate whitespace-nowrap ${
+              valueClassName || 'text-2xl'
+            }`}
             title={typeof value === 'number' ? value.toLocaleString() : value}
           >
             {typeof value === 'number' ? value.toLocaleString() : value}
