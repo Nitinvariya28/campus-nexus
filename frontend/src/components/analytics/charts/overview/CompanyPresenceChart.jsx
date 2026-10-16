@@ -10,9 +10,9 @@ import {
   LabelList,
   Cell,
 } from 'recharts';
-import ChartCard from './ChartCard';
-import ChartEmptyState from './ChartEmptyState';
-import { CHART_PALETTE } from '../../../constants/analytics/chartTheme';
+import ChartCard from '../ChartCard';
+import ChartEmptyState from '../ChartEmptyState';
+import { CHART_PALETTE } from '../../../../constants/analytics/chartTheme';
 
 /**
  * CompanyPresenceChart Component (Visual 6)

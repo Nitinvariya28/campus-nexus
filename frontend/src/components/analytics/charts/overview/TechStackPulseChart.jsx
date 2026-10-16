@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Cpu, BarChart2, Cloud } from 'lucide-react';
-import ChartCard from './ChartCard';
-import ChartEmptyState from './ChartEmptyState';
+import ChartCard from '../ChartCard';
+import ChartEmptyState from '../ChartEmptyState';
 
 const BAR_THEMES = [
   { color: '#2563EB', bar: 'from-blue-600 to-blue-500' },

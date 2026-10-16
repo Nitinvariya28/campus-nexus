@@ -23,6 +23,15 @@ class DashboardAssemblerAPIView(APIView):
             'company_id': request.query_params.get('company_id'),
             'placement_year': request.query_params.get('placement_year'),
             'resume_id': request.query_params.get('resume_id'),
+            'company_tier': request.query_params.get('company_tier'),
+            'industry': request.query_params.get('industry'),
+            'location': request.query_params.get('location'),
+            'job_category': request.query_params.get('job_category'),
+            'experience_min': request.query_params.get('experience_min'),
+            'experience_max': request.query_params.get('experience_max'),
+            'skill_id': request.query_params.get('skill_id'),
+            'offer_type': request.query_params.get('offer_type'),
+            'salary_band': request.query_params.get('salary_band'),
         }
 
         data = get_dashboard_analytics(

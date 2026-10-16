@@ -23,12 +23,12 @@ export default function ChartCard({
     <div
       className={`bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between ${className}`}
     >
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-slate-900 truncate">{title}</h3>
+          {subtitle && <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{subtitle}</p>}
         </div>
-        {actionSlot && <div className="text-xs">{actionSlot}</div>}
+        {actionSlot && <div className="text-xs shrink-0 self-start sm:self-auto">{actionSlot}</div>}
       </div>
 
       <div className={`w-full ${heightClass}`}>

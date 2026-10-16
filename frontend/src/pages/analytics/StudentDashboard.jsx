@@ -2,19 +2,45 @@ import React from 'react';
 import { GraduationCap, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAnalyticsData } from '../../hooks/analytics/useAnalyticsData';
 import StudentKPIGrid from '../../components/analytics/kpi/StudentKPIGrid';
+import {
+  CohortATSReadinessDonutChart,
+  DepartmentATSBenchmarkChart,
+  UnplacedMissingSkillsChart,
+  MarketDemandSupplyGapChart,
+  SkillPlacementCorrelationChart,
+  InstitutionalReadinessRadarChart,
+  InterviewIntelligenceChart,
+  LearningPlatformsChart,
+  AIToolAdoptionChart,
+  HighPayingTechnologiesChart,
+  ActiveDrivesSkillScarcityChart,
+} from '../../components/analytics/charts/student';
 
 /**
  * StudentDashboard View Component (View 2)
- * Macro-level student career readiness and technical intelligence engine.
- * Matches official AlumiBridge visual design specification.
+ * Macro-level student career readiness, skill intelligence, and recruitment analytics.
+ * 100% General Institutional Analytics across the student population.
+ * Strictly consumes live API data from GET /api/analytics/dashboard/?view=student.
+ * Zero hardcoded or mock fallback numbers.
  *
- * Layout Architecture:
- * - Top: 6 Master Cohort Readiness KPI Cards (StudentKPIGrid)
- * - Row 2: Cohort ATS Health Distribution & Missing Resume Keywords
- * - Row 3: Market Demand vs Student Supply Gap (Butterfly Chart)
- * - Row 4: Skill-to-Placement Correlation & 6-Axis Cohort Readiness
- * - Row 5: Interview Prep & Upskilling Platform Adoption
- * - Row 6: Live Campus Recruitment Drives Directory
+ * Modern Dynamic Grid Layout ("Some Full, Some Two, Some Three"):
+ * - Row 1: 6 Master Headline Readiness KPI Cards (StudentKPIGrid)
+ * - Row 2: [THREE COLUMNS (4+4+4 cols)] Resume Screening Health & Department Benchmarks
+ *   - Cohort ATS Readiness Distribution (Donut Chart)
+ *   - Department ATS Screening Benchmark (Horizontal Bars)
+ *   - Unplaced Cohort Missing Technical Skills (Ranked Bar Chart)
+ * - Row 3: [TWO COLUMNS (6+6 cols)] Market Demand vs Student Supply & Placement Correlation
+ *   - Market Demand vs Student Supply Gap (Paired Bar Chart)
+ *   - Skill-to-Placement Correlation (Dual-Axis Composed Chart)
+ * - Row 4: [ONE FULL-WIDTH (12 cols)] Campus Recruitment Drive Talent Scarcity Executive Matrix
+ *   - Active Drives Skill Scarcity Matrix (Hero Paired Bars & Critical Supply Flags)
+ * - Row 5: [THREE COLUMNS (4+4+4 cols)] Student Upskilling, Platforms & AI Adoption Ecosystem
+ *   - 6-Axis Placement Readiness Radar (Spider Hexagonal Radar)
+ *   - Upskilling Platforms by Domain (Interactive Hub: Coding/DSA, Web Dev, Courses)
+ *   - AI Assistant Adoption & Daily Study Hours (Interactive Hub: Why Used, Hours, Tools)
+ * - Row 6: [TWO COLUMNS (5+7 cols)] Campus Interview Intelligence & High-Paying Tech Specializations
+ *   - Campus Interview Preparation Intelligence (Difficulty Donut & Multi-Round Stages)
+ *   - High-Paying Tech Specializations (Average LPA vs Peak CTC Dual Horizontal Bars)
  *
  * @param {object} filters - Active applied filters from FilterBar
  */
@@ -35,7 +61,7 @@ export default function StudentDashboard({ filters = {} }) {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Macro cohort technical readiness, resume ATS distribution, and market skill gap analytics.
+            Institutional cohort technical readiness, resume ATS distribution, market skill deficits, and recruitment scarcity.
           </p>
         </div>
 
@@ -72,9 +98,58 @@ export default function StudentDashboard({ filters = {} }) {
         </div>
       )}
 
-      {/* Row 1: Executive 6 Master Cohort Readiness KPI Cards */}
+      {/* Row 1: Executive 6 Master Cohort Readiness Headline KPI Cards */}
       <section aria-label="Student Cohort Readiness KPIs">
         <StudentKPIGrid data={payload} loading={loading} filters={filters} />
+      </section>
+
+      {/* Row 2: [THREE COLUMNS (4+4+4 cols)] Resume Screening Health & Department Benchmarks */}
+      <section aria-label="Resume Screening Health & Department Benchmarks">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <CohortATSReadinessDonutChart data={payload} loading={loading} />
+          <DepartmentATSBenchmarkChart data={payload} loading={loading} />
+          <UnplacedMissingSkillsChart data={payload} loading={loading} />
+        </div>
+      </section>
+
+      {/* Row 3: [TWO COLUMNS (6+6 cols)] Skills Deficit & Market Supply Gap */}
+      <section aria-label="Skills Deficit & Market Supply Gap">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-6">
+            <MarketDemandSupplyGapChart data={payload} loading={loading} />
+          </div>
+          <div className="lg:col-span-6">
+            <SkillPlacementCorrelationChart data={payload} loading={loading} />
+          </div>
+        </div>
+      </section>
+
+      {/* Row 4: [ONE FULL-WIDTH (12 cols)] Campus Recruitment Drive Talent Scarcity Executive Matrix */}
+      <section aria-label="Campus Recruitment Drive Talent Scarcity Executive Matrix">
+        <div className="w-full">
+          <ActiveDrivesSkillScarcityChart data={payload} loading={loading} />
+        </div>
+      </section>
+
+      {/* Row 5: [THREE COLUMNS (4+4+4 cols)] Student Upskilling, Platforms & AI Adoption Ecosystem */}
+      <section aria-label="Learning Platforms & AI Study Time Hub">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <InstitutionalReadinessRadarChart data={payload} loading={loading} />
+          <LearningPlatformsChart data={payload} loading={loading} />
+          <AIToolAdoptionChart data={payload} loading={loading} />
+        </div>
+      </section>
+
+      {/* Row 6: [TWO COLUMNS (5+7 cols)] Interview Preparation & Tech Specialization Packages */}
+      <section aria-label="Interview Prep Intelligence & Compensation Specializations">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-5">
+            <InterviewIntelligenceChart data={payload} loading={loading} />
+          </div>
+          <div className="lg:col-span-7">
+            <HighPayingTechnologiesChart data={payload} loading={loading} />
+          </div>
+        </div>
       </section>
     </div>
   );

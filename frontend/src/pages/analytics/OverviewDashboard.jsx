@@ -2,15 +2,17 @@ import React from 'react';
 import { LayoutDashboard, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAnalyticsData } from '../../hooks/analytics/useAnalyticsData';
 import OverviewKPIGrid from '../../components/analytics/kpi/OverviewKPIGrid';
-import PopulationCensusChart from '../../components/analytics/charts/PopulationCensusChart';
-import GrowthTrajectoryChart from '../../components/analytics/charts/GrowthTrajectoryChart';
-import PackageDistributionChart from '../../components/analytics/charts/PackageDistributionChart';
-import PackageTrendsChart from '../../components/analytics/charts/PackageTrendsChart';
-import CompanyPresenceChart from '../../components/analytics/charts/CompanyPresenceChart';
-import DepartmentPlacementChart from '../../components/analytics/charts/DepartmentPlacementChart';
-import TechStackPulseChart from '../../components/analytics/charts/TechStackPulseChart';
-import CommunityEngagementChart from '../../components/analytics/charts/CommunityEngagementChart';
-import IndustryFootprintChart from '../../components/analytics/charts/IndustryFootprintChart';
+import {
+  PopulationCensusChart,
+  GrowthTrajectoryChart,
+  PackageDistributionChart,
+  PackageTrendsChart,
+  CompanyPresenceChart,
+  DepartmentPlacementChart,
+  TechStackPulseChart,
+  CommunityEngagementChart,
+  IndustryFootprintChart,
+} from '../../components/analytics/charts/overview';
 
 /**
  * OverviewDashboard View Component (View 1)

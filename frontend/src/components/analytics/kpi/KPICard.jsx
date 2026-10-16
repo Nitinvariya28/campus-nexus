@@ -49,7 +49,9 @@ export default function KPICard({
           >
             {React.isValidElement(icon)
               ? React.cloneElement(icon, { className: 'w-3.5 h-3.5' })
-              : icon}
+              : typeof icon === 'function' || (typeof icon === 'object' && icon !== null && icon.$$typeof)
+              ? React.createElement(icon, { className: 'w-3.5 h-3.5' })
+              : null}
           </div>
         ) : null}
       </div>

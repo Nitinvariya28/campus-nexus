@@ -10,9 +10,9 @@ import {
   Legend,
   LabelList,
 } from 'recharts';
-import ChartCard from './ChartCard';
-import ChartEmptyState from './ChartEmptyState';
-import { CHART_PALETTE } from '../../../constants/analytics/chartTheme';
+import ChartCard from '../ChartCard';
+import ChartEmptyState from '../ChartEmptyState';
+import { CHART_PALETTE } from '../../../../constants/analytics/chartTheme';
 
 /**
  * Custom formatter for bar top labels (e.g. 1200 -> 1.2K)

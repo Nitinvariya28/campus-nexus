@@ -2,15 +2,24 @@ import React from 'react';
 import {
   ACADEMIC_YEARS,
   DEPARTMENTS,
+  GRADUATION_BATCHES,
   STUDENT_SEMESTERS,
-  SKILL_CATEGORIES,
-  OPPORTUNITY_TYPES,
-  WORK_MODES,
+  PLACEMENT_STATUSES,
 } from '../../../constants/analytics/filterOptions';
 
 /**
- * Student Dashboard Contextual Filters
- * Fields: Academic Year, Department, Current Semester, Skill Category, Opportunity Type, Work Mode
+ * Student Dashboard Contextual Filter Bar
+ * Focuses strictly on student-specific cohort dimensions:
+ * 1. Academic Year
+ * 2. Graduation Batch (e.g. Batch 2021-2025, Batch 2022-2026)
+ * 3. Academic Department (e.g. CSE, AI&DS, IT, ECE)
+ * 4. Current Semester (Sem 1 to Sem 8)
+ * 5. Placement Status (All Cohorts, Placed, Unplaced)
+ *
+ * All unrelated/clutter filters (Opportunity Type, Work Mode) have been deleted.
+ *
+ * @param {object} filters - Active filter states
+ * @param {function} onChange - (key, value) => void
  */
 export default function StudentFilters({ filters = {}, onChange }) {
   const handleChange = (key, value) => {
@@ -19,7 +28,7 @@ export default function StudentFilters({ filters = {}, onChange }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {/* Academic Year */}
+      {/* 1. Academic Year */}
       <select
         value={filters.year || ''}
         onChange={(e) => handleChange('year', e.target.value)}
@@ -33,7 +42,21 @@ export default function StudentFilters({ filters = {}, onChange }) {
         ))}
       </select>
 
-      {/* Department */}
+      {/* 2. Graduation Batch */}
+      <select
+        value={filters.batch || ''}
+        onChange={(e) => handleChange('batch', e.target.value)}
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        aria-label="Graduation Batch"
+      >
+        {GRADUATION_BATCHES.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+
+      {/* 3. Department */}
       <select
         value={filters.department || ''}
         onChange={(e) => handleChange('department', e.target.value)}
@@ -47,7 +70,7 @@ export default function StudentFilters({ filters = {}, onChange }) {
         ))}
       </select>
 
-      {/* Current Semester */}
+      {/* 4. Current Semester */}
       <select
         value={filters.semester || ''}
         onChange={(e) => handleChange('semester', e.target.value)}
@@ -61,42 +84,14 @@ export default function StudentFilters({ filters = {}, onChange }) {
         ))}
       </select>
 
-      {/* Skill Category */}
+      {/* 5. Placement Status */}
       <select
-        value={filters.skill_category || ''}
-        onChange={(e) => handleChange('skill_category', e.target.value)}
+        value={filters.placed_status || ''}
+        onChange={(e) => handleChange('placed_status', e.target.value)}
         className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
-        aria-label="Skill Category"
+        aria-label="Placement Status"
       >
-        {SKILL_CATEGORIES.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-
-      {/* Opportunity Type */}
-      <select
-        value={filters.opportunity_type || ''}
-        onChange={(e) => handleChange('opportunity_type', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
-        aria-label="Opportunity Type"
-      >
-        {OPPORTUNITY_TYPES.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-
-      {/* Work Mode */}
-      <select
-        value={filters.work_mode || ''}
-        onChange={(e) => handleChange('work_mode', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
-        aria-label="Work Mode"
-      >
-        {WORK_MODES.map((opt) => (
+        {PLACEMENT_STATUSES.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>

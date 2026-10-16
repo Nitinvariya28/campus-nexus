@@ -10,9 +10,9 @@ import {
   Tooltip,
   LabelList,
 } from 'recharts';
-import ChartCard from './ChartCard';
-import ChartEmptyState from './ChartEmptyState';
-import { CHART_PALETTE } from '../../../constants/analytics/chartTheme';
+import ChartCard from '../ChartCard';
+import ChartEmptyState from '../ChartEmptyState';
+import { CHART_PALETTE } from '../../../../constants/analytics/chartTheme';
 
 const BAND_COLOR_MAP = {
   '< 5 LPA': '#2563EB',

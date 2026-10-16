@@ -9,9 +9,9 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import ChartCard from './ChartCard';
-import ChartEmptyState from './ChartEmptyState';
-import { CHART_PALETTE } from '../../../constants/analytics/chartTheme';
+import ChartCard from '../ChartCard';
+import ChartEmptyState from '../ChartEmptyState';
+import { CHART_PALETTE } from '../../../../constants/analytics/chartTheme';
 
 /**
  * Shortens formal department names for clean X-axis display.

@@ -9,10 +9,10 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import ChartCard from './ChartCard';
-import ChartTooltip from './ChartTooltip';
-import ChartEmptyState from './ChartEmptyState';
-import { CHART_PALETTE } from '../../../constants/analytics/chartTheme';
+import ChartCard from '../ChartCard';
+import ChartTooltip from '../ChartTooltip';
+import ChartEmptyState from '../ChartEmptyState';
+import { CHART_PALETTE } from '../../../../constants/analytics/chartTheme';
 
 /**
  * GrowthTrajectoryChart Component (Visual 2)

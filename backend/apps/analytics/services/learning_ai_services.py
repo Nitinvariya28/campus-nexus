@@ -44,6 +44,13 @@ def get_learning_ai_analytics(filters):
     # --- Learning Platforms ---
     global_preferences = build_platform_list(learning_qs)
     
+    # Categorized by technical domain: Coding / DSA, Web & Project Channels, Structured Course Platforms
+    by_platform_type = {
+        "coding_platforms": build_platform_list(learning_qs.filter(platform__platform_type='CODING_PLATFORM'), limit=10),
+        "web_and_youtube": build_platform_list(learning_qs.filter(platform__platform_type='YOUTUBE_CHANNEL'), limit=10),
+        "course_websites": build_platform_list(learning_qs.filter(platform__platform_type='COURSE_WEBSITE'), limit=10),
+    }
+
     by_role = []
     for r in ['STUDENT', 'ALUMNI']:
         by_role.append({
@@ -54,6 +61,7 @@ def get_learning_ai_analytics(filters):
     # --- AI Usage ---
     tools_overview = list(ai_qs.values('ai_tool').annotate(distinct_users=Count('user', distinct=True)).order_by('-distinct_users')[:20])
     purposes_overview = list(ai_qs.values('usage_purpose').annotate(distinct_users=Count('user', distinct=True)).order_by('-distinct_users')[:20])
+    time_range_overview = list(ai_qs.values('daily_time_range').annotate(distinct_users=Count('user', distinct=True)).order_by('-distinct_users')[:20])
     
     tool_by_purpose_matrix = []
     top_tools = ai_qs.values('ai_tool').annotate(count=Count('user', distinct=True)).order_by('-count')[:5]
@@ -161,12 +169,14 @@ def get_learning_ai_analytics(filters):
     return {
         "learning_platforms": {
             "global_preferences": global_preferences,
-            "by_role": by_role
+            "by_role": by_role,
+            "by_platform_type": by_platform_type,
         },
         "ai_usage": {
             "tools_overview": tools_overview,
             "purposes_overview": purposes_overview,
-            "tool_by_purpose_matrix": tool_by_purpose_matrix
+            "time_range_overview": time_range_overview,
+            "tool_by_purpose_matrix": tool_by_purpose_matrix,
         },
         "student_insights": {
             "learning_by_department": learning_by_department,

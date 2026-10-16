@@ -96,6 +96,12 @@ def get_alumni_career_analytics(filters):
         "by_experience_band": list(alumni_qs.values('experience_band').annotate(count=Count('id')).order_by('-count')),
         "by_department": list(alumni_qs.values('department__name').annotate(count=Count('id')).order_by('-count')),
         "by_batch": list(alumni_qs.values('batch__start_year').annotate(count=Count('id')).order_by('-count')),
+        "top_skills": list(
+            UserSkill.objects.filter(user_id__in=alumni_qs.values_list('user_id', flat=True))
+            .values('skill__name', 'skill__category__name')
+            .annotate(alumni_count=Count('id'))
+            .order_by('-alumni_count')[:15]
+        ),
     }
 
     # Section 3: Company Insights

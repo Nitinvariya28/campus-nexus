@@ -64,6 +64,12 @@ export const STUDENT_SEMESTERS = [
   { value: '1-2', label: 'Semester 1 & 2 (1st Year)' },
 ];
 
+export const PLACEMENT_STATUSES = [
+  { value: '', label: 'All Cohorts (Placed & Unplaced)' },
+  { value: 'PLACED', label: 'Placed Students' },
+  { value: 'UNPLACED', label: 'Unplaced Candidates' },
+];
+
 export const SKILL_CATEGORIES = [
   { value: '', label: 'All Skill Categories' },
   { value: 'PROGRAMMING_LANGUAGE', label: 'Programming Languages' },
@@ -125,6 +131,14 @@ export const COMPANY_SIZES = [
   { value: 'MEDIUM', label: 'Medium (51–250)' },
   { value: 'LARGE', label: 'Large (251–1000)' },
   { value: 'ENTERPRISE', label: 'Enterprise (1000+)' },
+];
+
+export const ALUMNI_INDUSTRIES = [
+  { value: '', label: 'All Industries' },
+  { value: 'Finance', label: 'Finance & Banking' },
+  { value: 'Healthcare', label: 'Healthcare & MedTech' },
+  { value: 'IT', label: 'Information Technology' },
+  { value: 'Consulting', label: 'Consulting' },
 ];
 
 export const EXPERIENCE_BRACKETS = [

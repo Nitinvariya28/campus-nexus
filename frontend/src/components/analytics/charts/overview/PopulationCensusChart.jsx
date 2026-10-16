@@ -1,8 +1,8 @@
 import React from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
-import ChartCard from './ChartCard';
-import ChartTooltip from './ChartTooltip';
-import ChartEmptyState from './ChartEmptyState';
+import ChartCard from '../ChartCard';
+import ChartTooltip from '../ChartTooltip';
+import ChartEmptyState from '../ChartEmptyState';
 
 /**
  * PopulationCensusChart Component (Visual 1)

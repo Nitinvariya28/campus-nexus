@@ -1,16 +1,23 @@
 import React from 'react';
 import {
-  ALUMNI_BATCH_RANGES,
+  GRADUATION_BATCHES,
   DEPARTMENTS,
   ALUMNI_JOB_CATEGORIES,
+  ALUMNI_INDUSTRIES,
   COMPANY_TIERS,
-  COMPANY_SIZES,
-  EXPERIENCE_BRACKETS,
 } from '../../../constants/analytics/filterOptions';
 
 /**
- * Alumni Dashboard Contextual Filters
- * Fields: Batch Range, Department, Job Category, Company Tier, Company Size, Experience Bracket
+ * Alumni Dashboard Contextual Filter Bar
+ * Focuses strictly on alumni-relevant dimensions:
+ * 1. Graduation Batch (e.g. Batch 2016-2020, 2017-2021)
+ * 2. Academic Department (e.g. CSE, AIDS, IT, ECE)
+ * 3. Career Job Category (Software, DevOps, Data Science, Product, Security)
+ * 4. Industry Sector (Finance, Healthcare, IT, Consulting)
+ * 5. Company Tier (Super Dream, Dream, Unicorn, Regular)
+ *
+ * @param {object} filters - Active filter states
+ * @param {function} onChange - (key, value) => void
  */
 export default function AlumniFilters({ filters = {}, onChange }) {
   const handleChange = (key, value) => {
@@ -19,21 +26,21 @@ export default function AlumniFilters({ filters = {}, onChange }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {/* Batch Range */}
+      {/* 1. Graduation Batch */}
       <select
-        value={filters.batch_range || ''}
-        onChange={(e) => handleChange('batch_range', e.target.value)}
+        value={filters.batch || ''}
+        onChange={(e) => handleChange('batch', e.target.value)}
         className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
-        aria-label="Graduation Period"
+        aria-label="Graduation Batch"
       >
-        {ALUMNI_BATCH_RANGES.map((opt) => (
+        {GRADUATION_BATCHES.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
         ))}
       </select>
 
-      {/* Department */}
+      {/* 2. Department */}
       <select
         value={filters.department || ''}
         onChange={(e) => handleChange('department', e.target.value)}
@@ -47,7 +54,7 @@ export default function AlumniFilters({ filters = {}, onChange }) {
         ))}
       </select>
 
-      {/* Job Category */}
+      {/* 3. Job Category */}
       <select
         value={filters.job_category || ''}
         onChange={(e) => handleChange('job_category', e.target.value)}
@@ -61,7 +68,21 @@ export default function AlumniFilters({ filters = {}, onChange }) {
         ))}
       </select>
 
-      {/* Company Tier */}
+      {/* 4. Industry Sector */}
+      <select
+        value={filters.industry || ''}
+        onChange={(e) => handleChange('industry', e.target.value)}
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        aria-label="Industry Sector"
+      >
+        {ALUMNI_INDUSTRIES.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+
+      {/* 5. Company Tier */}
       <select
         value={filters.company_tier || ''}
         onChange={(e) => handleChange('company_tier', e.target.value)}
@@ -69,34 +90,6 @@ export default function AlumniFilters({ filters = {}, onChange }) {
         aria-label="Company Tier"
       >
         {COMPANY_TIERS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-
-      {/* Company Size */}
-      <select
-        value={filters.company_size || ''}
-        onChange={(e) => handleChange('company_size', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
-        aria-label="Company Size"
-      >
-        {COMPANY_SIZES.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-
-      {/* Experience Bracket */}
-      <select
-        value={filters.experience_years || ''}
-        onChange={(e) => handleChange('experience_years', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
-        aria-label="Experience Bracket"
-      >
-        {EXPERIENCE_BRACKETS.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>

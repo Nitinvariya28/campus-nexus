@@ -7,6 +7,7 @@ import OverviewDashboard from './OverviewDashboard';
 import StudentDashboard from './StudentDashboard';
 import AlumniDashboard from './AlumniDashboard';
 import PlacementDashboard from './PlacementDashboard';
+import AnalyticsErrorBoundary from '../../components/analytics/common/AnalyticsErrorBoundary';
 
 const INITIAL_FILTER_STATE = {
   // Common / Overview
@@ -25,6 +26,7 @@ const INITIAL_FILTER_STATE = {
   company_tier: '',
   company_size: '',
   experience_years: '',
+  industry: '',
   // Placement Cell (Hiring Mode excluded per project scope)
   placement_year: '',
   offer_type: '',
@@ -107,7 +109,9 @@ export default function AnalyticsMasterPage() {
       onApplyFilters={applyFilters}
       onResetFilters={resetFilters}
     >
-      {renderActiveDashboard()}
+      <AnalyticsErrorBoundary key={activeDashboard}>
+        {renderActiveDashboard()}
+      </AnalyticsErrorBoundary>
     </DashboardLayout>
   );
 }
