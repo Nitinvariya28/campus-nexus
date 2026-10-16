@@ -13,10 +13,15 @@ export function useDashboardFilters(initialFilters = {}) {
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
 
   const setFilterValue = useCallback((key, value) => {
-    setStagedFilters((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setStagedFilters((prev) => {
+      const next = {
+        ...prev,
+        [key]: value,
+      };
+      // Auto-apply immediately so that dropdown changes trigger live chart re-hydration
+      setAppliedFilters(next);
+      return next;
+    });
   }, []);
 
   const applyFilters = useCallback(() => {

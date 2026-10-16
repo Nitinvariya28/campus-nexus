@@ -1,5 +1,41 @@
 import api from '../api';
 
+const DEPARTMENT_MAP = {
+  'bce': 22,
+  'bec': 23,
+  'bme': 24,
+  'bee': 25,
+  'bcv': 26,
+  'cse': 27,
+  'it': 28,
+  'ece': 29,
+  'ee': 30,
+  'me': 31,
+  'mech': 31,
+  'ce': 32,
+  'civil': 32,
+  'aids': 33,
+  'ai&ds': 33,
+  'bam': 34,
+  'bch': 35,
+  'chem': 35,
+};
+
+const BATCH_MAP = {
+  '2016-2020': 38,
+  '2017-2021': 39,
+  '2018-2022': 40,
+  '2019-2023': 41,
+  '2020-2024': 42,
+  '2021-2025': 43,
+  '2022-2026': 44,
+  '2023-2027': 45,
+  '2024-2028': 46,
+  '2025-2029': 47,
+  '2026-2030': 48,
+  '2027-2031': 49,
+};
+
 /**
  * Normalizes filter parameters between frontend UI names and backend ORM parameters.
  * Ensures filters like year, department, batch, and date range map 1:1 to backend queries.
@@ -7,16 +43,43 @@ import api from '../api';
 export const normalizeFilters = (filters = {}) => {
   const normalized = { ...filters };
 
-  // Map common filter keys to backend query parameter names
-  if (normalized.year && !normalized.placement_year) {
-    normalized.placement_year = normalized.year;
+  // Normalize Department ID (convert string codes or names to database integer IDs)
+  const rawDept = normalized.department ?? normalized.department_id;
+  if (rawDept && rawDept !== 'all') {
+    const strDept = String(rawDept).toLowerCase().trim();
+    if (DEPARTMENT_MAP[strDept]) {
+      normalized.department_id = DEPARTMENT_MAP[strDept];
+    } else if (!isNaN(Number(strDept)) && Number(strDept) > 0) {
+      normalized.department_id = Number(strDept);
+    } else {
+      normalized.department_id = rawDept;
+    }
   }
-  if (normalized.department && !normalized.department_id) {
-    normalized.department_id = normalized.department;
+  delete normalized.department;
+
+  // Normalize Batch ID (convert batch ranges to database integer IDs)
+  const rawBatch = normalized.batch ?? normalized.batch_id;
+  if (rawBatch && rawBatch !== 'all') {
+    const strBatch = String(rawBatch).trim();
+    if (BATCH_MAP[strBatch]) {
+      normalized.batch_id = BATCH_MAP[strBatch];
+    } else if (!isNaN(Number(strBatch)) && Number(strBatch) > 0) {
+      normalized.batch_id = Number(strBatch);
+    } else {
+      normalized.batch_id = rawBatch;
+    }
   }
-  if (normalized.batch && !normalized.batch_id) {
-    normalized.batch_id = normalized.batch;
+  delete normalized.batch;
+
+  // Normalize Year / Placement Year
+  const rawYear = normalized.placement_year ?? normalized.year;
+  if (rawYear && rawYear !== 'all') {
+    const numYear = Number(rawYear);
+    if (!isNaN(numYear) && numYear > 0) {
+      normalized.placement_year = numYear;
+    }
   }
+  delete normalized.year;
 
   // Handle date range conversion to date_from ISO strings
   if (normalized.range && !normalized.date_from) {
@@ -32,6 +95,7 @@ export const normalizeFilters = (filters = {}) => {
       normalized.date_from = past.toISOString().split('T')[0];
     }
   }
+  delete normalized.range;
 
   // Strip empty strings, null, undefined, and non-query keys
   Object.keys(normalized).forEach((key) => {

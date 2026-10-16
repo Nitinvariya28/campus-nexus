@@ -8,32 +8,41 @@
 // 1. Overview & Common Filters
 export const ACADEMIC_YEARS = [
   { value: '', label: 'All Years' },
-  { value: '2026', label: '2026 (Current Cycle)' },
-  { value: '2025', label: '2025' },
+  { value: '2025', label: '2025 (Current Cycle)' },
   { value: '2024', label: '2024' },
   { value: '2023', label: '2023' },
   { value: '2022', label: '2022' },
+  { value: '2021', label: '2021' },
+  { value: '2020', label: '2020' },
 ];
 
 export const DEPARTMENTS = [
   { value: '', label: 'All Departments' },
-  { value: 'bce', label: 'Computer Science (CSE)' },
-  { value: 'it', label: 'Information Technology (IT)' },
-  { value: 'bec', label: 'Electronics & Comm (ECE)' },
-  { value: 'bme', label: 'Mechanical Engineering (MECH)' },
-  { value: 'bcv', label: 'Civil Engineering (CIVIL)' },
-  { value: 'bch', label: 'Chemical Engineering (CHEM)' },
-  { value: 'bee', label: 'Electrical Engineering (EE)' },
-  { value: 'bam', label: 'AI & Data Science (AI&DS)' },
+  { value: '27', label: 'Computer Science & Engineering (CSE)' },
+  { value: '28', label: 'Information Technology (IT)' },
+  { value: '29', label: 'Electronics & Communication (ECE)' },
+  { value: '31', label: 'Mechanical Engineering (ME)' },
+  { value: '32', label: 'Civil Engineering (CE)' },
+  { value: '30', label: 'Electrical Engineering (EE)' },
+  { value: '33', label: 'AI & Data Science (AIDS)' },
+  { value: '35', label: 'Chemical Engineering (BCH)' },
+  { value: '22', label: 'Computer Engineering (BCE)' },
+  { value: '23', label: 'Electronics & Comm. (BEC)' },
+  { value: '24', label: 'Mechanical Eng. (BME)' },
+  { value: '25', label: 'Electrical Eng. (BEE)' },
+  { value: '26', label: 'Civil Eng. (BCV)' },
+  { value: '34', label: 'Automobile Engineering (BAM)' },
 ];
 
 export const GRADUATION_BATCHES = [
   { value: '', label: 'All Batches' },
-  { value: '2022-2026', label: 'Batch 2022 – 2026' },
-  { value: '2021-2025', label: 'Batch 2021 – 2025' },
-  { value: '2020-2024', label: 'Batch 2020 – 2024' },
-  { value: '2019-2023', label: 'Batch 2019 – 2023' },
-  { value: '2018-2022', label: 'Batch 2018 – 2022' },
+  { value: '44', label: 'Batch 2022 – 2026' },
+  { value: '43', label: 'Batch 2021 – 2025' },
+  { value: '42', label: 'Batch 2020 – 2024' },
+  { value: '41', label: 'Batch 2019 – 2023' },
+  { value: '40', label: 'Batch 2018 – 2022' },
+  { value: '39', label: 'Batch 2017 – 2021' },
+  { value: '38', label: 'Batch 2016 – 2020' },
 ];
 
 export const DATE_RANGES = [
@@ -129,10 +138,12 @@ export const EXPERIENCE_BRACKETS = [
 // 4. Placement Cell Dashboard Filters (Hiring Mode excluded per requirements)
 export const PLACEMENT_YEARS = [
   { value: '', label: 'All Multi-Year Cycles' },
-  { value: '2026', label: '2026 (Active Cycle)' },
-  { value: '2025', label: '2025' },
-  { value: '2024', label: '2024' },
-  { value: '2023', label: '2023' },
+  { value: '2025', label: 'Batch 2025 (Active Cycle)' },
+  { value: '2024', label: 'Batch 2024' },
+  { value: '2023', label: 'Batch 2023' },
+  { value: '2022', label: 'Batch 2022' },
+  { value: '2021', label: 'Batch 2021' },
+  { value: '2020', label: 'Batch 2020' },
 ];
 
 export const PLACEMENT_OFFER_TYPES = [

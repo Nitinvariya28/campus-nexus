@@ -4,13 +4,25 @@ import { useAnalyticsData } from '../../hooks/analytics/useAnalyticsData';
 import OverviewKPIGrid from '../../components/analytics/kpi/OverviewKPIGrid';
 import PopulationCensusChart from '../../components/analytics/charts/PopulationCensusChart';
 import GrowthTrajectoryChart from '../../components/analytics/charts/GrowthTrajectoryChart';
+import PackageDistributionChart from '../../components/analytics/charts/PackageDistributionChart';
+import PackageTrendsChart from '../../components/analytics/charts/PackageTrendsChart';
+import CompanyPresenceChart from '../../components/analytics/charts/CompanyPresenceChart';
+import DepartmentPlacementChart from '../../components/analytics/charts/DepartmentPlacementChart';
+import TechStackPulseChart from '../../components/analytics/charts/TechStackPulseChart';
+import CommunityEngagementChart from '../../components/analytics/charts/CommunityEngagementChart';
+import IndustryFootprintChart from '../../components/analytics/charts/IndustryFootprintChart';
 
 /**
  * OverviewDashboard View Component (View 1)
- * Displays the Overview Dashboard with:
- * - Row 1: 6 Master Executive KPI Cards
- * - Row 2: Visual 1 (Population Census Donut) & Visual 2 (Growth Trajectory Area Chart)
- * - Stationary filter bar integration & live API synchronization
+ * High-density enterprise campus analytics dashboard.
+ * Matches official AlumiBridge visual design specification.
+ *
+ * Layout Architecture:
+ * - Row 1: 6 Executive Master KPI Cards (Gauge on verification, role breakdown chips)
+ * - Row 2: User Population Donut (with side table) & 12-Month Onboarding Growth
+ * - Row 3: 3-Column Placement & Recruiter Benchmarks (Distribution, YoY Trends, Recruiter Rankings)
+ * - Row 4: Academic Disciplines & Department Placement Performance
+ * - Row 5: 3-Column Skills, Community & Industry Footprint (Tech Stack, Community Pulse, Industry Footprint)
  *
  * @param {object} filters - Active applied filters from FilterBar
  */
@@ -31,7 +43,7 @@ export default function OverviewDashboard({ filters = {} }) {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Macro-level institutional census, overarching placement benchmarks, and partner footprint.
+            Unified view of our community, opportunities, and platform growth.
           </p>
         </div>
 
@@ -51,7 +63,7 @@ export default function OverviewDashboard({ filters = {} }) {
         </div>
       </div>
 
-      {/* Error Feedback Banner (if API error occurs) */}
+      {/* Error Feedback Banner */}
       {error && (
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -73,23 +85,40 @@ export default function OverviewDashboard({ filters = {} }) {
         <OverviewKPIGrid data={payload} loading={loading} filters={filters} />
       </section>
 
-      {/* Row 2: Platform Population Census & Onboarding Growth */}
+      {/* Row 2: Population Census & Onboarding Growth (5:7 Split) */}
       <section aria-label="Population and Growth Visualizations">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PopulationCensusChart data={payload} loading={loading} />
-          <GrowthTrajectoryChart data={payload} loading={loading} />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-5">
+            <PopulationCensusChart data={payload} loading={loading} />
+          </div>
+          <div className="lg:col-span-7">
+            <GrowthTrajectoryChart data={payload} loading={loading} />
+          </div>
         </div>
       </section>
 
-      {/* Rows 3 to 6 Preview Notice (Upcoming in Next Steps) */}
-      <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-8 text-center">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          Compensation, Placement & Corporate Analysis (Rows 3 to 6)
-        </p>
-        <p className="text-xs text-slate-400 mt-1">
-          Row 1 (Executive KPIs) and Row 2 (Population Donut & Growth Area Charts) are active and responsive to filters. Row 3 (Package Distribution & Multi-Line YoY Trends) will be integrated in Step 2.
-        </p>
-      </div>
+      {/* Row 3: 3-Column Placement & Recruiter Benchmarks Grid */}
+      <section aria-label="Placement and Recruiter Benchmarks">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <PackageDistributionChart data={payload} loading={loading} />
+          <PackageTrendsChart data={payload} loading={loading} />
+          <CompanyPresenceChart data={payload} loading={loading} />
+        </div>
+      </section>
+
+      {/* Row 4: Academic Disciplines & Department Placement Performance */}
+      <section aria-label="Academic Disciplines Analysis">
+        <DepartmentPlacementChart data={payload} loading={loading} />
+      </section>
+
+      {/* Row 5: 3-Column Skills, Community & Industry Footprint */}
+      <section aria-label="Skills, Community and Industry Analysis">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <TechStackPulseChart data={payload} loading={loading} />
+          <CommunityEngagementChart data={payload} loading={loading} />
+          <IndustryFootprintChart data={payload} loading={loading} />
+        </div>
+      </section>
     </div>
   );
 }
