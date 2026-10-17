@@ -67,7 +67,7 @@ export default function UnplacedMissingSkillsChart({ data, loading = false }) {
   }));
 
   const maxCount = chartData[0]?.count || 1;
-  const topDeficitSkill = chartData[0]?.skill || 'DevOps';
+  const topDeficitSkill = chartData[0]?.skill || '—';
 
   return (
     <ChartCard

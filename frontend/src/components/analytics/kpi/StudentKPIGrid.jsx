@@ -126,22 +126,22 @@ export default function StudentKPIGrid({ data, loading = false, filters = {} }) 
   const avgLpaVal = commonData.placement_snapshot?.package_statistics?.average_lpa;
   const avgLpa = avgLpaVal != null ? Number(avgLpaVal).toFixed(1) : '—';
   const medianLpaVal = commonData.placement_snapshot?.package_statistics?.median_lpa;
-  const medianLpa = medianLpaVal != null ? Number(medianLpaVal).toFixed(1) : '9.0';
+  const medianLpa = medianLpaVal != null ? Number(medianLpaVal).toFixed(1) : '—';
   const maxLpaVal = commonData.placement_snapshot?.package_statistics?.maximum_lpa;
-  const maxLpa = maxLpaVal != null ? Number(maxLpaVal).toFixed(1) : '27.6';
+  const maxLpa = maxLpaVal != null ? Number(maxLpaVal).toFixed(1) : '—';
 
   // 4. Top In-Demand Skill (Hero value: prominent skill name)
   const topRequiredList = studentData.market_skill_gaps?.market_demand_overview?.top_required_skills || [];
   const commonDemandList = commonData.skills_pulse?.top_in_demand_skills || [];
   const topDemandItem = topRequiredList[0] || commonDemandList[0] || {};
-  const topDemandSkillName = topDemandItem.skill__name || topDemandItem.name || 'System Design';
+  const topDemandSkillName = topDemandItem.skill__name || topDemandItem.name || '—';
   const topDemandDrives = topDemandItem.opportunities_requiring_skill || topDemandItem.count || null;
 
   // 5. Highest Paying Skill (Hero value: prominent skill name)
   const pkgAssoc = studentData.market_skill_gaps?.package_associations || [];
   const topPayingItem = pkgAssoc[0] || {};
-  const topPayingSkillName = topPayingItem.skill__name || 'CouchDB';
-  const topPayingAvgLpa = topPayingItem.average_package_lpa != null ? Number(topPayingItem.average_package_lpa).toFixed(1) : '13.5';
+  const topPayingSkillName = topPayingItem.skill__name || '—';
+  const topPayingAvgLpa = topPayingItem.average_package_lpa != null ? Number(topPayingItem.average_package_lpa).toFixed(1) : '—';
   const topPayingMaxLpa = topPayingItem.max_package_lpa != null ? Number(topPayingItem.max_package_lpa).toFixed(1) : null;
 
   // 6. Active Campus Drives
@@ -175,8 +175,6 @@ export default function StudentKPIGrid({ data, loading = false, filters = {} }) 
             ? `${placedCount} of ${eligibleCount} students placed`
             : 'Graduating cohort placement rate'
         }
-        deltaText="+6.2% vs previous batch"
-        isPositive={true}
         accentColor="emerald"
         icon={<Award />}
       />
@@ -185,7 +183,11 @@ export default function StudentKPIGrid({ data, loading = false, filters = {} }) 
       <KPICard
         title="Campus Average Package"
         value={avgLpa !== '—' ? `₹ ${avgLpa} LPA` : '—'}
-        subtitle={`Median: ₹ ${medianLpa} · Peak: ₹ ${maxLpa} LPA`}
+        subtitle={
+          medianLpa !== '—' && maxLpa !== '—'
+            ? `Median: ₹ ${medianLpa} · Peak: ₹ ${maxLpa} LPA`
+            : 'Institutional compensation benchmarks'
+        }
         accentColor="amber"
         icon={<TrendingUp />}
       />
@@ -209,9 +211,11 @@ export default function StudentKPIGrid({ data, loading = false, filters = {} }) 
         title="Highest Paying Skill"
         value={topPayingSkillName}
         subtitle={
-          topPayingMaxLpa
-            ? `₹ ${topPayingAvgLpa} LPA Avg · Peak: ₹ ${topPayingMaxLpa} LPA`
-            : `₹ ${topPayingAvgLpa} LPA campus average package`
+          topPayingAvgLpa !== '—'
+            ? topPayingMaxLpa
+              ? `₹ ${topPayingAvgLpa} LPA Avg · Peak: ₹ ${topPayingMaxLpa} LPA`
+              : `₹ ${topPayingAvgLpa} LPA campus average package`
+            : 'High-compensation specialization'
         }
         accentColor="purple"
         icon={<Zap />}

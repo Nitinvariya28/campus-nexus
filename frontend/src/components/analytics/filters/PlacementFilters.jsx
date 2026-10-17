@@ -25,12 +25,12 @@ export default function PlacementFilters({ filters = {}, onChange }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex items-center gap-2 flex-nowrap shrink-0">
       {/* 1. Placement Year / Cycle */}
       <select
         value={filters.placement_year || ''}
         onChange={(e) => handleChange('placement_year', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Placement Cycle"
       >
         {PLACEMENT_YEARS.map((opt) => (
@@ -44,7 +44,7 @@ export default function PlacementFilters({ filters = {}, onChange }) {
       <select
         value={filters.department || ''}
         onChange={(e) => handleChange('department', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Department"
       >
         {DEPARTMENTS.map((opt) => (
@@ -58,7 +58,7 @@ export default function PlacementFilters({ filters = {}, onChange }) {
       <select
         value={filters.offer_type || ''}
         onChange={(e) => handleChange('offer_type', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Offer Type"
       >
         {PLACEMENT_OFFER_TYPES.map((opt) => (
@@ -72,7 +72,7 @@ export default function PlacementFilters({ filters = {}, onChange }) {
       <select
         value={filters.salary_band || ''}
         onChange={(e) => handleChange('salary_band', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Salary Band"
       >
         {SALARY_BANDS.map((opt) => (
@@ -86,7 +86,7 @@ export default function PlacementFilters({ filters = {}, onChange }) {
       <select
         value={filters.company_tier || ''}
         onChange={(e) => handleChange('company_tier', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Company Tier"
       >
         {COMPANY_TIERS.map((opt) => (

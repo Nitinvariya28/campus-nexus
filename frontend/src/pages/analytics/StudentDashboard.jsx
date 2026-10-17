@@ -108,7 +108,9 @@ export default function StudentDashboard({ filters = {} }) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <CohortATSReadinessDonutChart data={payload} loading={loading} />
           <DepartmentATSBenchmarkChart data={payload} loading={loading} />
-          <UnplacedMissingSkillsChart data={payload} loading={loading} />
+          <div className="md:col-span-2 xl:col-span-1">
+            <UnplacedMissingSkillsChart data={payload} loading={loading} />
+          </div>
         </div>
       </section>
 
@@ -136,7 +138,9 @@ export default function StudentDashboard({ filters = {} }) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <InstitutionalReadinessRadarChart data={payload} loading={loading} />
           <LearningPlatformsChart data={payload} loading={loading} />
-          <AIToolAdoptionChart data={payload} loading={loading} />
+          <div className="md:col-span-2 xl:col-span-1">
+            <AIToolAdoptionChart data={payload} loading={loading} />
+          </div>
         </div>
       </section>
 

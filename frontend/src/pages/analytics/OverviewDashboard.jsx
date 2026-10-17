@@ -101,10 +101,12 @@ export default function OverviewDashboard({ filters = {} }) {
 
       {/* Row 3: 3-Column Placement & Recruiter Benchmarks Grid */}
       <section aria-label="Placement and Recruiter Benchmarks">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           <PackageDistributionChart data={payload} loading={loading} />
           <PackageTrendsChart data={payload} loading={loading} />
-          <CompanyPresenceChart data={payload} loading={loading} />
+          <div className="md:col-span-2 xl:col-span-1">
+            <CompanyPresenceChart data={payload} loading={loading} />
+          </div>
         </div>
       </section>
 
@@ -115,10 +117,12 @@ export default function OverviewDashboard({ filters = {} }) {
 
       {/* Row 5: 3-Column Skills, Community & Industry Footprint */}
       <section aria-label="Skills, Community and Industry Analysis">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           <TechStackPulseChart data={payload} loading={loading} />
           <CommunityEngagementChart data={payload} loading={loading} />
-          <IndustryFootprintChart data={payload} loading={loading} />
+          <div className="md:col-span-2 xl:col-span-1">
+            <IndustryFootprintChart data={payload} loading={loading} />
+          </div>
         </div>
       </section>
     </div>

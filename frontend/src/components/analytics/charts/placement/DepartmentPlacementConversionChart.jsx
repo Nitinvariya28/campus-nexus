@@ -79,7 +79,7 @@ export default function DepartmentPlacementConversionChart({ data, loading = fal
   const chartData = rawDepts.slice(0, 7).map((item) => {
     const fullName = item.department__name || item.student__department__name || 'Unknown';
     const shortName = DEPT_ABBR[fullName] || fullName.split(' ')[0];
-    const eligible = item.eligible_students || 100;
+    const eligible = item.eligible_students || 0;
     const placed = item.placed_students || item.total_offers || 0;
     const rate = item.coverage_pct != null
       ? Number(item.coverage_pct)

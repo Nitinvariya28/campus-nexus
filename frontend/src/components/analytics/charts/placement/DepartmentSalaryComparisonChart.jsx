@@ -75,7 +75,7 @@ export default function DepartmentSalaryComparisonChart({ data, loading = false 
     );
   }
 
-  const chartData = rawDepts.slice(0, 6).map((item) => {
+  const chartData = rawDepts.slice(0, 8).map((item) => {
     const fullName = item.student__department__name || item.department__name || 'Unknown';
     const shortName = DEPT_ABBR[fullName] || fullName.split(' ')[0];
     const avgLpa = item.average_lpa != null ? Number(item.average_lpa) : 0;
@@ -96,7 +96,7 @@ export default function DepartmentSalaryComparisonChart({ data, loading = false 
   return (
     <ChartCard
       title="Department CTC Benchmark"
-      subtitle="Average vs peak packages achieved across branches"
+      subtitle="Average vs peak packages achieved across academic engineering branches"
       heightClass="h-auto"
       actionSlot={
         <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-[10px] font-medium">
@@ -138,7 +138,7 @@ export default function DepartmentSalaryComparisonChart({ data, loading = false 
     >
       <div className="flex flex-col gap-3">
         {/* Dual Horizontal Bar Chart */}
-        <div className="h-60 w-full">
+        <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}

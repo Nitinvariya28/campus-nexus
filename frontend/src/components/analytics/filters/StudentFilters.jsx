@@ -27,12 +27,12 @@ export default function StudentFilters({ filters = {}, onChange }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex items-center gap-2 flex-nowrap shrink-0">
       {/* 1. Academic Year */}
       <select
         value={filters.year || ''}
         onChange={(e) => handleChange('year', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Academic Year"
       >
         {ACADEMIC_YEARS.map((opt) => (
@@ -46,7 +46,7 @@ export default function StudentFilters({ filters = {}, onChange }) {
       <select
         value={filters.batch || ''}
         onChange={(e) => handleChange('batch', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Graduation Batch"
       >
         {GRADUATION_BATCHES.map((opt) => (
@@ -60,7 +60,7 @@ export default function StudentFilters({ filters = {}, onChange }) {
       <select
         value={filters.department || ''}
         onChange={(e) => handleChange('department', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Department"
       >
         {DEPARTMENTS.map((opt) => (
@@ -74,7 +74,7 @@ export default function StudentFilters({ filters = {}, onChange }) {
       <select
         value={filters.semester || ''}
         onChange={(e) => handleChange('semester', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Current Semester"
       >
         {STUDENT_SEMESTERS.map((opt) => (
@@ -88,7 +88,7 @@ export default function StudentFilters({ filters = {}, onChange }) {
       <select
         value={filters.placed_status || ''}
         onChange={(e) => handleChange('placed_status', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Placement Status"
       >
         {PLACEMENT_STATUSES.map((opt) => (

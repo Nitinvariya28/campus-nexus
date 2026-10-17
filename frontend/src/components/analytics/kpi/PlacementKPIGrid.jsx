@@ -106,15 +106,22 @@ export default function PlacementKPIGrid({ data, loading = false, filters = {} }
   // 3. Institutional Average Package (CTC)
   const avgLpaRaw = packageStats.average_lpa;
   const avgLpa = avgLpaRaw != null ? `₹ ${Number(avgLpaRaw).toFixed(1)} LPA` : '—';
-  const medianLpa = packageStats.median_lpa != null ? Number(packageStats.median_lpa).toFixed(1) : '9.0';
-  const maxLpa = packageStats.maximum_lpa != null ? Number(packageStats.maximum_lpa).toFixed(1) : '27.6';
+  const medianLpa = packageStats.median_lpa != null ? Number(packageStats.median_lpa).toFixed(1) : '—';
+  const maxLpa = packageStats.maximum_lpa != null ? Number(packageStats.maximum_lpa).toFixed(1) : '—';
 
   // 4. Distinct Hiring Corporate Partners
   const yearlySummary = trends.yearly_summary || [];
   const latestYearRecruiters = yearlySummary.length > 0
     ? yearlySummary[yearlySummary.length - 1]?.distinct_companies
     : null;
-  const distinctCompanies = latestYearRecruiters || recruiterHealth.company_outcomes?.length || 48;
+  const calculatedActiveRecruiters =
+    (recruiterHealth.recruiter_health?.repeat_recruiters?.length || 0) +
+    (recruiterHealth.recruiter_health?.new_recruiters?.length || 0);
+  const distinctCompanies =
+    latestYearRecruiters ??
+    (recruiterHealth.company_outcomes?.length > 0 ? recruiterHealth.company_outcomes.length : null) ??
+    (calculatedActiveRecruiters > 0 ? calculatedActiveRecruiters : null);
+  const distinctCompaniesDisplay = distinctCompanies != null ? `${distinctCompanies} Companies` : '—';
   const newRecruitersCount = recruiterHealth.recruiter_health?.new_recruiters?.length || 0;
 
   // 5. Tier-1 & Dream Share (%)
@@ -131,14 +138,14 @@ export default function PlacementKPIGrid({ data, loading = false, filters = {} }
   });
   const tier1Share = totalTierOffers > 0
     ? `${((tier1Count / totalTierOffers) * 100).toFixed(1)}%`
-    : '46.2%';
+    : '—';
 
   // 6. PPO & Internship-to-FTE Conversion Rate
   const internConv = recruiterHealth.internship_conversion || {};
   const convRateRaw = internConv.conversion_rate_pct;
-  const ppoRate = convRateRaw != null ? `${Number(convRateRaw).toFixed(1)}%` : '52.4%';
-  const convertedCount = internConv.converted_to_ppo_or_fte ?? 22;
-  const eligibleInterns = internConv.eligible_internships ?? 42;
+  const ppoRate = convRateRaw != null ? `${Number(convRateRaw).toFixed(1)}%` : '—';
+  const convertedCount = internConv.converted_to_ppo_or_fte ?? 0;
+  const eligibleInterns = internConv.eligible_internships ?? 0;
 
   return (
     <KPIGrid>
@@ -153,8 +160,6 @@ export default function PlacementKPIGrid({ data, loading = false, filters = {} }
         }
         accentColor="emerald"
         customBadge={placementGauge}
-        deltaText="+6.2% vs previous batch"
-        isPositive={true}
       />
 
       {/* KPI 2: Total Offers Extended */}
@@ -176,13 +181,17 @@ export default function PlacementKPIGrid({ data, loading = false, filters = {} }
         value={avgLpa}
         icon={<TrendingUp />}
         accentColor="indigo"
-        subtitle={`Median: ₹ ${medianLpa} · Peak: ₹ ${maxLpa} LPA`}
+        subtitle={
+          medianLpa !== '—' && maxLpa !== '—'
+            ? `Median: ₹ ${medianLpa} · Peak: ₹ ${maxLpa} LPA`
+            : 'Institutional compensation benchmarks'
+        }
       />
 
       {/* KPI 4: Distinct Hiring Corporate Partners */}
       <KPICard
         title="Active Hiring Partners"
-        value={`${distinctCompanies} Companies`}
+        value={distinctCompaniesDisplay}
         icon={<Building2 />}
         accentColor="purple"
         subtitle={
@@ -207,7 +216,11 @@ export default function PlacementKPIGrid({ data, loading = false, filters = {} }
         value={ppoRate}
         icon={<Zap />}
         accentColor="rose"
-        subtitle={`${convertedCount} of ${eligibleInterns} interns converted to FTE`}
+        subtitle={
+          convertedCount > 0 && eligibleInterns > 0
+            ? `${convertedCount} of ${eligibleInterns} interns converted to FTE`
+            : 'Internship-to-FTE conversion'
+        }
       />
     </KPIGrid>
   );

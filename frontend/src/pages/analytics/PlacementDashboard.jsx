@@ -24,24 +24,25 @@ import {
  * Strictly consumes live API data from GET /api/analytics/dashboard/?view=placement_cell.
  * Zero hardcoded or mock fallback numbers.
  *
- * Modern Dynamic Grid Layout ("Some Full, Some Two, Some Three"):
+ * Modern Dynamic Grid Layout ("Alternating Visual Rhythm & Generous Space"):
  * - Row 1: 6 Master Headline Placement KPI Cards (PlacementKPIGrid)
- * - Row 2: [THREE COLUMNS (4+4+4 cols)] Department Conversion & Package Tiers
- *   - Visual 1: Department Placement Conversion Benchmark (Horizontal Bars with Target Toggles)
- *   - Visual 2: Recruiter Compensation Tier Distribution (Recharts Donut + 4 Tiers)
- *   - Visual 3: Placement Offer Type Split (FTE vs PPO vs Internship Donut)
- * - Row 3: [TWO COLUMNS (6+6 cols)] Package Distribution & Longitudinal Trajectory
- *   - Visual 4: Salary Package Brackets Histogram (CTC Brackets with Median Callout)
- *   - Visual 5: Multi-Year Placement Conversion Trajectory (Dual-Axis Composed Chart 2020-2025)
+ * - Row 2: [ALTERNATING PAIR (7+5 cols)] Department Conversion & Compensation Tiers
+ *   - Visual 1: Department Placement Conversion Benchmark (Horizontal Bars with Target Toggles - 7 cols)
+ *   - Visual 2: Recruiter Compensation Tier Distribution (Recharts Donut + 4 Tiers - 5 cols)
+ * - Row 3: [ALTERNATING PAIR (5+7 cols)] Offer Types & Multi-Year Trajectory
+ *   - Visual 3: Placement Offer Type Split (FTE vs PPO vs Internship Donut - 5 cols)
+ *   - Visual 4: Multi-Year Placement Conversion Trajectory (Dual-Axis Composed Chart 2020-2025 - 7 cols)
  * - Row 4: [ONE FULL-WIDTH (12 cols)] Corporate Recruiter Talent Absorption Hero Matrix
- *   - Visual 6: Recruiter Absorption Hero Matrix (Paired Bars with Interactive Tier Filter Tabs)
- * - Row 5: [THREE COLUMNS (4+4+4 cols)] Compensation Spread & Recruiter Pipeline Health
- *   - Visual 7: Department CTC Spread Benchmark (Average vs Highest LPA Comparison)
- *   - Visual 8: Hiring Industry Sector Distribution (Finance, IT, Consulting, Healthcare)
- *   - Visual 9: Recruiter Retention & Pipeline Health (Repeat, First-Time, Lapsed with Drill-Down)
- * - Row 6: [TWO COLUMNS (5+7 cols)] Recruiter Concentration & Department Unplaced Backlog
- *   - Visual 10: Top Recruiting Employers by Headcount (Donut Chart + Leaderboard)
- *   - Visual 11: Department Eligibility vs Placed Candidates (TPO Operational Inventory)
+ *   - Visual 5: Recruiter Absorption Hero Matrix (Paired Bars with Interactive Tier Filter Tabs - 12 cols)
+ * - Row 5: [THREE COLUMNS (4+4+4 cols, 3rd spans 2 on tablet)] CTC Histogram, Industry & Retention
+ *   - Visual 6: Salary Package Brackets Histogram (CTC Brackets with Median Callout - 4 cols)
+ *   - Visual 7: Hiring Industry Sector Distribution (Finance, IT, Consulting, Healthcare - 4 cols)
+ *   - Visual 8: Recruiter Retention & Pipeline Health (Repeat, First-Time, Lapsed with Drill-Down - 4 cols / md:col-span-2)
+ * - Row 6: [ALTERNATING PAIR (5+7 cols)] Recruiter Concentration & Department Unplaced Backlog
+ *   - Visual 9: Top Recruiting Employers by Headcount (Donut Chart + Leaderboard - 5 cols)
+ *   - Visual 10: Department Eligibility vs Placed Candidates (TPO Operational Inventory - 7 cols)
+ * - Row 7: [ONE FULL-WIDTH (12 cols)] Department CTC Spread Benchmark
+ *   - Visual 11: Department CTC Spread Benchmark (Average vs Highest LPA Comparison with generous breathing room - 12 cols)
  *
  * @param {object} filters - Active applied filters from FilterBar
  */
@@ -104,22 +105,25 @@ export default function PlacementDashboard({ filters = {} }) {
         <PlacementKPIGrid data={payload} loading={loading} filters={filters} />
       </section>
 
-      {/* Row 2: [THREE COLUMNS (4+4+4 cols)] Department Conversion & Package Tiers */}
-      <section aria-label="Department Conversion & Compensation Tier Breakdown">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <DepartmentPlacementConversionChart data={payload} loading={loading} />
-          <RecruiterCompensationTierDonutChart data={payload} loading={loading} />
-          <PlacementOfferTypeSplitChart data={payload} loading={loading} />
+      {/* Row 2: [ALTERNATING PAIR (7+5 cols)] Department Conversion & Compensation Tiers */}
+      <section aria-label="Department Placement Conversion & Compensation Tier Distribution">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-7">
+            <DepartmentPlacementConversionChart data={payload} loading={loading} />
+          </div>
+          <div className="lg:col-span-5">
+            <RecruiterCompensationTierDonutChart data={payload} loading={loading} />
+          </div>
         </div>
       </section>
 
-      {/* Row 3: [TWO COLUMNS (6+6 cols)] Package Distribution & Longitudinal Trajectory */}
-      <section aria-label="Salary Distribution & Multi-Year Trajectory">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-6">
-            <SalaryPackageHistogramChart data={payload} loading={loading} />
+      {/* Row 3: [ALTERNATING PAIR (5+7 cols)] Offer Types & Multi-Year Trajectory */}
+      <section aria-label="Placement Offer Type Split & Longitudinal Conversion Trajectory">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-5">
+            <PlacementOfferTypeSplitChart data={payload} loading={loading} />
           </div>
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-7">
             <MultiYearPlacementTrajectoryChart data={payload} loading={loading} />
           </div>
         </div>
@@ -127,27 +131,38 @@ export default function PlacementDashboard({ filters = {} }) {
 
       {/* Row 4: [ONE FULL-WIDTH (12 cols)] Corporate Recruiter Talent Absorption Hero Matrix */}
       <section aria-label="Corporate Recruiter Talent Absorption Hero Matrix">
-        <RecruiterAbsorptionHeroMatrixChart data={payload} loading={loading} />
-      </section>
-
-      {/* Row 5: [THREE COLUMNS (4+4+4 cols)] Compensation Spread & Recruiter Pipeline Health */}
-      <section aria-label="Department CTC Benchmark & Recruiter Pipeline Health">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <DepartmentSalaryComparisonChart data={payload} loading={loading} />
-          <HiringIndustrySectorShareChart data={payload} loading={loading} />
-          <RecruiterLoyaltyCohortChart data={payload} loading={loading} />
+        <div className="w-full">
+          <RecruiterAbsorptionHeroMatrixChart data={payload} loading={loading} />
         </div>
       </section>
 
-      {/* Row 6: [TWO COLUMNS (5+7 cols)] Recruiter Concentration & Department Unplaced Backlog */}
+      {/* Row 5: [THREE COLUMNS (4+4+4 cols)] CTC Histogram, Industry Sector & Recruiter Retention */}
+      <section aria-label="Salary Distribution, Industry Sectors & Recruiter Retention Health">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <SalaryPackageHistogramChart data={payload} loading={loading} />
+          <HiringIndustrySectorShareChart data={payload} loading={loading} />
+          <div className="md:col-span-2 xl:col-span-1">
+            <RecruiterLoyaltyCohortChart data={payload} loading={loading} />
+          </div>
+        </div>
+      </section>
+
+      {/* Row 6: [ALTERNATING PAIR (5+7 cols)] Recruiter Concentration & Department Unplaced Backlog */}
       <section aria-label="Top Employers & Departmental Eligibility Inventory">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <div className="lg:col-span-5">
             <TopHiringOrganizationsDonutChart data={payload} loading={loading} />
           </div>
           <div className="lg:col-span-7">
             <DepartmentEligibilityVsPlacedChart data={payload} loading={loading} />
           </div>
+        </div>
+      </section>
+
+      {/* Row 7: [ONE FULL-WIDTH (12 cols)] Department CTC Spread Benchmark */}
+      <section aria-label="Department CTC Spread Benchmark">
+        <div className="w-full">
+          <DepartmentSalaryComparisonChart data={payload} loading={loading} />
         </div>
       </section>
     </div>

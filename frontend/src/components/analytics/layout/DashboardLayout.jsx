@@ -116,11 +116,13 @@ export default function DashboardLayout({
         />
 
         {/* Dedicated Analysis Area (Scrollable ONLY vertically, NEVER horizontally) */}
-        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-6 scroll-smooth bg-slate-50">
-          <div className="w-full max-w-7xl mx-auto space-y-6">
-            {children}
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-6 scroll-smooth bg-slate-50 flex flex-col">
+          <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col justify-between space-y-6">
+            <div className="space-y-6">
+              {children}
+            </div>
 
-            {/* In-flow Footer at bottom of scrollable analysis content */}
+            {/* In-flow Footer permanently anchored at bottom of stream */}
             <Footer />
           </div>
         </main>

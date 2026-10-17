@@ -34,10 +34,10 @@ import {
  *   - Career Evolution Across Batches (Stacked Bar / Area)
  * - Row 4: [ONE FULL-WIDTH (12 cols)] Campus Recruitment & Alumni Hiring Bridge Executive Matrix
  *   - Alumni Campus Hiring Bridge Hero Matrix (Open Corporate Drives vs Alumni Inside)
- * - Row 5: [THREE COLUMNS (4+4+4 cols)] Giving Back & Mentorship Ecosystem
- *   - Giving Back & Top Contributors (Ranked Leaderboard)
+ * - Row 5: [THREE COLUMNS (4+4+4 cols)] Technical Stack, Department Alignment & Seniority Hierarchy
+ *   - Production Tech Stack (Ranked Horizontal Bars)
  *   - Academic Department Career Alignment (Grouped Bars)
- *   - Community Impact & Engagement Pulse (Likes, Comments, Saves)
+ *   - Job Titles & Seniority Progression (Ranked Bars)
  * - Row 6: [TWO COLUMNS (5+7 cols)] Corporate Tiers & Employer Footprint
  *   - Employer Corporate Tier Breakdown (Donut Chart)
  *   - Top Employer Organizations Hub (Horizontal Dual-Bars)
@@ -108,7 +108,9 @@ export default function AlumniDashboard({ filters = {} }) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <AlumniGeographicFootprintChart data={payload} loading={loading} />
           <AlumniIndustryDomainChart data={payload} loading={loading} />
-          <AlumniJobCategoryDonutChart data={payload} loading={loading} />
+          <div className="md:col-span-2 xl:col-span-1">
+            <AlumniJobCategoryDonutChart data={payload} loading={loading} />
+          </div>
         </div>
       </section>
 
@@ -136,7 +138,9 @@ export default function AlumniDashboard({ filters = {} }) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <AlumniTechCompetencyChart data={payload} loading={loading} />
           <AlumniDepartmentCareerAlignmentChart data={payload} loading={loading} />
-          <AlumniSeniorityHierarchyChart data={payload} loading={loading} />
+          <div className="md:col-span-2 xl:col-span-1">
+            <AlumniSeniorityHierarchyChart data={payload} loading={loading} />
+          </div>
         </div>
       </section>
 

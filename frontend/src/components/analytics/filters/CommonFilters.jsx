@@ -16,12 +16,12 @@ export default function CommonFilters({ filters = {}, onChange }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex items-center gap-2 flex-nowrap shrink-0">
       {/* Academic Year */}
       <select
         value={filters.year || ''}
         onChange={(e) => handleChange('year', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Academic Year"
       >
         {ACADEMIC_YEARS.map((opt) => (
@@ -35,7 +35,7 @@ export default function CommonFilters({ filters = {}, onChange }) {
       <select
         value={filters.department || ''}
         onChange={(e) => handleChange('department', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Department"
       >
         {DEPARTMENTS.map((opt) => (
@@ -49,7 +49,7 @@ export default function CommonFilters({ filters = {}, onChange }) {
       <select
         value={filters.batch || ''}
         onChange={(e) => handleChange('batch', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Graduation Batch"
       >
         {GRADUATION_BATCHES.map((opt) => (
@@ -63,7 +63,7 @@ export default function CommonFilters({ filters = {}, onChange }) {
       <select
         value={filters.range || '12m'}
         onChange={(e) => handleChange('range', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs"
+        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
         aria-label="Date Range"
       >
         {DATE_RANGES.map((opt) => (

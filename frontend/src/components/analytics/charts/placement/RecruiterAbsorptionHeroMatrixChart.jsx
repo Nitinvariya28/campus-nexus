@@ -149,8 +149,8 @@ export default function RecruiterAbsorptionHeroMatrixChart({ data, loading = fal
       }
     >
       <div className="flex flex-col gap-3">
-        {/* Paired Bar Chart */}
-        <div className="h-72 w-full">
+        {/* Paired Bar Chart with generous breathing room */}
+        <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
@@ -170,7 +170,7 @@ export default function RecruiterAbsorptionHeroMatrixChart({ data, loading = fal
                 tick={{ fill: '#334155', fontSize: 11, fontWeight: 500 }}
                 axisLine={false}
                 tickLine={false}
-                width={120}
+                width={150}
               />
               <Tooltip
                 content={({ active, payload }) => {
