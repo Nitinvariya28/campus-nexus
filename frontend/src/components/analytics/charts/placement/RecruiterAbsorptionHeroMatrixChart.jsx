@@ -27,6 +27,9 @@ const TIER_COLORS = {
  * volume of students hired, recruiter compensation tiers, and average CTC extended.
  * Strictly consumes live API data from data.placement_cell.recruiter_health.company_outcomes.
  *
+ * Designed with generous vertical & horizontal breathing room (460px height, full-width)
+ * to ensure high-density recruitment matrix data is crisp, legible, and uncluttered.
+ *
  * @param {object} data - Aggregated dashboard payload
  * @param {boolean} loading - Loading indicator
  */
@@ -35,20 +38,20 @@ export default function RecruiterAbsorptionHeroMatrixChart({ data, loading = fal
 
   if (loading) {
     return (
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[420px] animate-pulse">
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[480px] animate-pulse">
         <div className="space-y-2">
           <div className="h-4 w-72 bg-slate-200 rounded" />
           <div className="h-3 w-96 bg-slate-100 rounded" />
         </div>
-        <div className="space-y-3 my-auto">
-          {[...Array(6)].map((_, i) => (
+        <div className="space-y-4 my-auto">
+          {[...Array(8)].map((_, i) => (
             <div key={i} className="flex items-center gap-4">
-              <div className="h-3 w-32 bg-slate-200 rounded" />
+              <div className="h-3.5 w-36 bg-slate-200 rounded" />
               <div className="h-4 bg-slate-100 rounded flex-1" />
             </div>
           ))}
         </div>
-        <div className="h-3 bg-slate-100 rounded w-1/3" />
+        <div className="h-4 bg-slate-100 rounded w-1/3" />
       </div>
     );
   }
@@ -63,11 +66,11 @@ export default function RecruiterAbsorptionHeroMatrixChart({ data, loading = fal
       <ChartCard
         title="Corporate Recruiter Absorption Matrix"
         subtitle="Recruiter hiring volume & average compensation packages"
-        heightClass="h-[420px]"
+        heightClass="h-[460px]"
       >
         <ChartEmptyState
           title="Recruiter Matrix Unavailable"
-          message="Technical issue: Corporate recruiter outcomes data is not available."
+          message="Corporate recruiter outcomes data is currently not available for the selected filters."
         />
       </ChartCard>
     );
@@ -124,7 +127,7 @@ export default function RecruiterAbsorptionHeroMatrixChart({ data, loading = fal
       subtitle="Cross-analyzing corporate recruiters, campus hires, company tier, and average compensation"
       heightClass="h-auto"
       actionSlot={
-        <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-[10px] font-medium">
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-medium">
           {[
             { id: 'ALL', label: 'All Tiers' },
             { id: 'SUPER_DREAM', label: 'Super Dream (>12L)' },
@@ -136,10 +139,10 @@ export default function RecruiterAbsorptionHeroMatrixChart({ data, loading = fal
               key={tab.id}
               type="button"
               onClick={() => setSelectedTier(tab.id)}
-              className={`px-2 py-0.5 rounded transition-all ${
+              className={`px-2.5 py-1 rounded-lg transition-all text-xs ${
                 selectedTier === tab.id
-                  ? 'bg-white text-indigo-700 font-semibold shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-white text-indigo-700 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               {tab.label}
@@ -148,19 +151,20 @@ export default function RecruiterAbsorptionHeroMatrixChart({ data, loading = fal
         </div>
       }
     >
-      <div className="flex flex-col gap-3">
-        {/* Paired Bar Chart with generous breathing room */}
-        <div className="h-80 w-full">
+      <div className="flex flex-col gap-4">
+        {/* Paired Bar Chart with generous 460px height & breathing room */}
+        <div className="h-[460px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               layout="vertical"
-              margin={{ top: 8, right: 35, left: 20, bottom: 0 }}
+              barGap={4}
+              margin={{ top: 12, right: 35, left: 10, bottom: 8 }}
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
               <XAxis
                 type="number"
-                tick={{ fill: '#64748B', fontSize: 10 }}
+                tick={{ fill: '#64748B', fontSize: 11 }}
                 axisLine={{ stroke: '#E2E8F0' }}
                 tickLine={false}
               />
@@ -170,31 +174,31 @@ export default function RecruiterAbsorptionHeroMatrixChart({ data, loading = fal
                 tick={{ fill: '#334155', fontSize: 11, fontWeight: 500 }}
                 axisLine={false}
                 tickLine={false}
-                width={150}
+                width={170}
               />
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const item = payload[0].payload;
                   return (
-                    <div className="bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md rounded-lg p-2.5 text-xs">
-                      <div className="font-semibold text-slate-800 border-b border-slate-100 pb-1 mb-1.5 flex items-center justify-between gap-3">
-                        <span>{item.name}</span>
+                    <div className="bg-white/95 backdrop-blur-xs border border-slate-200 shadow-lg rounded-xl p-3 text-xs min-w-52">
+                      <div className="font-semibold text-slate-800 border-b border-slate-100 pb-1.5 mb-2 flex items-center justify-between gap-3">
+                        <span className="font-bold text-slate-900">{item.name}</span>
                         <span
-                          className="text-[9px] px-1.5 py-0.5 rounded text-white font-semibold"
+                          className="text-[9px] px-2 py-0.5 rounded-full text-white font-bold"
                           style={{ backgroundColor: item.tierColor }}
                         >
                           {item.tier.replace(/_/g, ' ')}
                         </span>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-4 text-slate-600">
                           <span>Students Placed:</span>
-                          <strong className="text-indigo-600">{item.students} candidates</strong>
+                          <strong className="text-indigo-600 font-bold">{item.students} candidates</strong>
                         </div>
                         <div className="flex items-center justify-between gap-4 text-slate-600">
                           <span>Average CTC:</span>
-                          <strong className="text-emerald-600">₹ {item.avgLpa} LPA</strong>
+                          <strong className="text-emerald-600 font-bold">₹ {item.avgLpa} LPA</strong>
                         </div>
                       </div>
                     </div>
@@ -204,24 +208,24 @@ export default function RecruiterAbsorptionHeroMatrixChart({ data, loading = fal
               <Legend
                 verticalAlign="top"
                 align="right"
-                iconSize={8}
-                wrapperStyle={{ fontSize: 11, paddingBottom: 6 }}
+                iconSize={10}
+                wrapperStyle={{ fontSize: 12, paddingBottom: 10 }}
               />
-              <Bar dataKey="students" name="Students Hired" fill="#4F46E5" radius={[0, 4, 4, 0]} barSize={12} />
-              <Bar dataKey="avgLpa" name="Average Package (₹ LPA)" fill="#10B981" radius={[0, 4, 4, 0]} barSize={12} />
+              <Bar dataKey="students" name="Students Hired" fill="#4F46E5" radius={[0, 4, 4, 0]} barSize={14} />
+              <Bar dataKey="avgLpa" name="Average Package (₹ LPA)" fill="#10B981" radius={[0, 4, 4, 0]} barSize={14} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* Footer Insight Callout Banner */}
-        <div className="p-2.5 rounded-lg bg-indigo-50/70 border border-indigo-100 flex items-center justify-between text-xs">
+        <div className="p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-indigo-800 min-w-0">
             <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
             <span className="truncate">
-              Lead Corporate Partner: <strong className="text-indigo-900">{topRecruiter?.name}</strong> ({topRecruiter?.students} hires at ₹ {topRecruiter?.avgLpa} LPA).
+              Lead Corporate Partner: <strong className="text-indigo-950 font-bold">{topRecruiter?.name}</strong> ({topRecruiter?.students} hires at ₹ {topRecruiter?.avgLpa} LPA).
             </span>
           </div>
-          <span className="font-bold text-indigo-700 shrink-0">
+          <span className="font-bold text-indigo-700 shrink-0 bg-white/70 px-2.5 py-1 rounded-lg border border-indigo-200/50">
             {totalHiredInView} Total Hires in View
           </span>
         </div>
