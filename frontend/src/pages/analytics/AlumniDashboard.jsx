@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, RefreshCw, AlertCircle, Users } from 'lucide-react';
+import { Briefcase, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAnalyticsData } from '../../hooks/analytics/useAnalyticsData';
 import AlumniKPIGrid from '../../components/analytics/kpi/AlumniKPIGrid';
 import {
@@ -23,24 +23,25 @@ import {
  * Strictly consumes live API data from GET /api/analytics/dashboard/?view=alumni.
  * Zero hardcoded or mock fallback numbers.
  *
- * Modern Dynamic Grid Layout ("Some Full, Some Two, Some Three"):
+ * Alternating Visual Rhythm & Generous Space Grid:
  * - Row 1: 6 Master Headline Readiness KPI Cards (AlumniKPIGrid)
- * - Row 2: [THREE COLUMNS (4+4+4 cols)] Demographics, Sectors & Roles Core Triad
- *   - Global Geographic Footprint (Donut of 6 Hubs)
- *   - Industry Sector Representation (Horizontal Bars)
- *   - Career Specialization Bands (Donut of 6 Domains)
- * - Row 3: [TWO COLUMNS (6+6 cols)] Experience Tiers & Career Trajectories
- *   - Experience by Corporate Tier & Domain (Grouped Bars + Tabs)
- *   - Career Evolution Across Batches (Stacked Bar / Area)
- * - Row 4: [ONE FULL-WIDTH (12 cols)] Campus Recruitment & Alumni Hiring Bridge Executive Matrix
- *   - Alumni Campus Hiring Bridge Hero Matrix (Open Corporate Drives vs Alumni Inside)
- * - Row 5: [THREE COLUMNS (4+4+4 cols)] Technical Stack, Department Alignment & Seniority Hierarchy
- *   - Production Tech Stack (Ranked Horizontal Bars)
- *   - Academic Department Career Alignment (Grouped Bars)
- *   - Job Titles & Seniority Progression (Ranked Bars)
- * - Row 6: [TWO COLUMNS (5+7 cols)] Corporate Tiers & Employer Footprint
- *   - Employer Corporate Tier Breakdown (Donut Chart)
- *   - Top Employer Organizations Hub (Horizontal Dual-Bars)
+ * - Row 2: [ALTERNATING PAIR (7+5 cols)]
+ *   - Visual 1: Industry Sector Representation (Horizontal Bars - 7 cols)
+ *   - Visual 2: Global Geographic Footprint (Donut 1 - 5 cols)
+ * - Row 3: [ALTERNATING PAIR (7+5 cols) - ZERO DONUTS]
+ *   - Visual 3: Career Evolution Across Batches (Stacked Area / Trajectory - 7 cols)
+ *   - Visual 4: Experience by Corporate Tier & Domain (Grouped Bars + Tabs - 5 cols)
+ * - Row 4: [FULL-WIDTH (12 cols) - SPACIOUS HERO MATRIX]
+ *   - Visual 5: Alumni Campus Hiring Bridge Hero Matrix (Executive Referral Network - 12 cols)
+ * - Row 5: [ALTERNATING PAIR (5+7 cols)]
+ *   - Visual 6: Career Specialization Bands (Donut 2 - 5 cols)
+ *   - Visual 7: Academic Department Career Alignment (Grouped Bars - 7 cols)
+ * - Row 6: [ALTERNATING PAIR (7+5 cols)]
+ *   - Visual 8: Production Tech Stack Pulse (Ranked Horizontal Bars - 7 cols)
+ *   - Visual 9: Employer Corporate Tier Breakdown (Donut 3 - 5 cols)
+ * - Row 7: [ALTERNATING PAIR (5+7 cols) - ZERO DONUTS]
+ *   - Visual 10: Job Titles & Seniority Progression (Ranked Progression Bars - 5 cols)
+ *   - Visual 11: Top Employer Organizations Hub (Horizontal Dual-Bars - 7 cols)
  *
  * @param {object} filters - Active applied filters from FilterBar
  */
@@ -103,52 +104,66 @@ export default function AlumniDashboard({ filters = {} }) {
         <AlumniKPIGrid data={payload} loading={loading} filters={filters} />
       </section>
 
-      {/* Row 2: [THREE COLUMNS (4+4+4 cols)] Demographics, Sectors & Roles Core Triad */}
-      <section aria-label="Demographics, Sectors and Role Specializations">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <AlumniGeographicFootprintChart data={payload} loading={loading} />
-          <AlumniIndustryDomainChart data={payload} loading={loading} />
-          <div className="md:col-span-2 xl:col-span-1">
-            <AlumniJobCategoryDonutChart data={payload} loading={loading} />
+      {/* Row 2: [ALTERNATING PAIR (7+5 cols)] Industry Sectors & Geographic Hubs */}
+      <section aria-label="Industry Sectors and Geographic Footprint">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-7">
+            <AlumniIndustryDomainChart data={payload} loading={loading} />
+          </div>
+          <div className="lg:col-span-5">
+            <AlumniGeographicFootprintChart data={payload} loading={loading} />
           </div>
         </div>
       </section>
 
-      {/* Row 3: [TWO COLUMNS (6+6 cols)] Experience Tiers & Career Evolution */}
-      <section aria-label="Experience Thresholds and Career Evolution">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-6">
-            <AlumniExperienceTierMatrixChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-6">
+      {/* Row 3: [ALTERNATING PAIR (7+5 cols) - ZERO DONUTS] Career Evolution & Experience Matrix */}
+      <section aria-label="Career Evolution Across Batches and Experience Tiers">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-7">
             <AlumniBatchCareerEvolutionChart data={payload} loading={loading} />
           </div>
+          <div className="lg:col-span-5">
+            <AlumniExperienceTierMatrixChart data={payload} loading={loading} />
+          </div>
         </div>
       </section>
 
-      {/* Row 4: [ONE FULL-WIDTH (12 cols)] Campus Recruitment & Alumni Hiring Bridge */}
+      {/* Row 4: [FULL-WIDTH (12 cols)] Campus Recruitment & Alumni Hiring Bridge */}
       <section aria-label="Alumni Campus Hiring Bridge Executive Matrix">
         <div className="w-full">
           <AlumniHiringBridgeMatrixChart data={payload} loading={loading} />
         </div>
       </section>
 
-      {/* Row 5: [THREE COLUMNS (4+4+4 cols)] Technical Stack, Department Alignment & Seniority Hierarchy */}
-      <section aria-label="Technical Stack, Department Alignment and Seniority Progression">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <AlumniTechCompetencyChart data={payload} loading={loading} />
-          <AlumniDepartmentCareerAlignmentChart data={payload} loading={loading} />
-          <div className="md:col-span-2 xl:col-span-1">
-            <AlumniSeniorityHierarchyChart data={payload} loading={loading} />
+      {/* Row 5: [ALTERNATING PAIR (5+7 cols)] Career Specialization & Department Alignment */}
+      <section aria-label="Career Specialization Bands and Department Career Alignment">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-5">
+            <AlumniJobCategoryDonutChart data={payload} loading={loading} />
+          </div>
+          <div className="lg:col-span-7">
+            <AlumniDepartmentCareerAlignmentChart data={payload} loading={loading} />
           </div>
         </div>
       </section>
 
-      {/* Row 6: [TWO COLUMNS (5+7 cols)] Corporate Tiers & Employer Organizations */}
-      <section aria-label="Employer Tiers and Corporate Footprint">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      {/* Row 6: [ALTERNATING PAIR (7+5 cols)] Tech Competency & Corporate Tiers */}
+      <section aria-label="Production Tech Stack Pulse and Employer Corporate Tiers">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-7">
+            <AlumniTechCompetencyChart data={payload} loading={loading} />
+          </div>
           <div className="lg:col-span-5">
             <AlumniCompanyTierDonutChart data={payload} loading={loading} />
+          </div>
+        </div>
+      </section>
+
+      {/* Row 7: [ALTERNATING PAIR (5+7 cols) - ZERO DONUTS] Seniority Progression & Top Employers */}
+      <section aria-label="Job Seniority Hierarchy and Top Employer Organizations">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-5">
+            <AlumniSeniorityHierarchyChart data={payload} loading={loading} />
           </div>
           <div className="lg:col-span-7">
             <AlumniTopEmployerOrganizationsChart data={payload} loading={loading} />

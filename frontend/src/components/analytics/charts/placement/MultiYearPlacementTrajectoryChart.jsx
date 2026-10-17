@@ -15,10 +15,12 @@ import ChartCard from '../ChartCard';
 import ChartEmptyState from '../ChartEmptyState';
 
 /**
- * MultiYearPlacementTrajectoryChart Component (Visual 5 - Row 3 Col 2: 6 cols)
+ * MultiYearPlacementTrajectoryChart Component (Visual 5 - Full Width: 12 cols)
  * Interactive Dual-Axis Composed Chart tracking annual placement volume growth
  * alongside average CTC package trajectory across consecutive recruitment cycles.
  * Strictly consumes live API data from data.placement_cell.placement_kpis.trends.yearly_summary.
+ *
+ * Designed with generous horizontal spacing between YoY cycles and dedicated Y-axis margins.
  *
  * @param {object} data - Aggregated dashboard payload
  * @param {boolean} loading - Loading indicator
@@ -52,7 +54,7 @@ export default function MultiYearPlacementTrajectoryChart({ data, loading = fals
       >
         <ChartEmptyState
           title="Trajectory Data Unavailable"
-          message="Technical issue: Multi-year placement trajectory trends data is not available."
+          message="Multi-year placement trajectory trends data is currently not available for the selected filters."
         />
       </ChartCard>
     );
@@ -91,7 +93,7 @@ export default function MultiYearPlacementTrajectoryChart({ data, loading = fals
           <button
             type="button"
             onClick={() => setViewMetric('BOTH')}
-            className={`px-1.5 py-0.5 rounded transition-all ${
+            className={`px-2 py-0.5 rounded transition-all ${
               viewMetric === 'BOTH'
                 ? 'bg-white text-indigo-700 font-semibold shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
@@ -102,7 +104,7 @@ export default function MultiYearPlacementTrajectoryChart({ data, loading = fals
           <button
             type="button"
             onClick={() => setViewMetric('OFFERS')}
-            className={`px-1.5 py-0.5 rounded transition-all ${
+            className={`px-2 py-0.5 rounded transition-all ${
               viewMetric === 'OFFERS'
                 ? 'bg-white text-indigo-700 font-semibold shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
@@ -113,7 +115,7 @@ export default function MultiYearPlacementTrajectoryChart({ data, loading = fals
           <button
             type="button"
             onClick={() => setViewMetric('CTC')}
-            className={`px-1.5 py-0.5 rounded transition-all ${
+            className={`px-2 py-0.5 rounded transition-all ${
               viewMetric === 'CTC'
                 ? 'bg-white text-indigo-700 font-semibold shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
@@ -125,16 +127,17 @@ export default function MultiYearPlacementTrajectoryChart({ data, loading = fals
       }
     >
       <div className="flex flex-col gap-3">
-        {/* Composed Chart */}
-        <div className="h-64 w-full">
+        {/* Composed Chart with spacious padding and margins */}
+        <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={chartData}
-              margin={{ top: 12, right: 15, left: -10, bottom: 0 }}
+              margin={{ top: 18, right: 35, left: 10, bottom: 6 }}
             >
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
               <XAxis
                 dataKey="year"
+                padding={{ left: 32, right: 32 }}
                 tick={{ fill: '#334155', fontSize: 11, fontWeight: 500 }}
                 axisLine={{ stroke: '#E2E8F0' }}
                 tickLine={false}
@@ -144,45 +147,64 @@ export default function MultiYearPlacementTrajectoryChart({ data, loading = fals
                 tick={{ fill: '#64748B', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
-                label={viewMetric !== 'CTC' ? { value: 'Offers', angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 10 } : null}
+                label={viewMetric !== 'CTC' ? { value: 'Offers', angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 10, offset: 0 } : null}
               />
               <YAxis
                 yAxisId="right"
                 orientation="right"
                 unit="L"
+                width={48}
                 tick={{ fill: '#059669', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
-                label={viewMetric !== 'OFFERS' ? { value: '₹ LPA', angle: 90, position: 'insideRight', fill: '#059669', fontSize: 10 } : null}
+                label={
+                  viewMetric !== 'OFFERS'
+                    ? {
+                        value: '₹ LPA',
+                        angle: 90,
+                        position: 'insideRight',
+                        offset: 4,
+                        fill: '#059669',
+                        fontSize: 10,
+                        style: { textAnchor: 'middle' },
+                      }
+                    : null
+                }
               />
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const item = payload[0].payload;
                   return (
-                    <div className="bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md rounded-lg p-2.5 text-xs">
-                      <div className="font-semibold text-slate-800 border-b border-slate-100 pb-1 mb-1.5 flex items-center justify-between gap-3">
-                        <span>{item.year}</span>
+                    <div className="bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md rounded-xl p-3 text-xs min-w-56">
+                      <div className="font-semibold text-slate-800 border-b border-slate-100 pb-1.5 mb-2 flex items-center justify-between gap-4">
+                        <span className="font-bold text-slate-900">{item.year}</span>
                         {item.growth !== 0 && (
-                          <span className={`text-[10px] font-semibold ${item.growth > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              item.growth > 0
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}
+                          >
                             {item.growth > 0 ? `+${item.growth}% YoY` : `${item.growth}% YoY`}
                           </span>
                         )}
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-4 text-slate-600">
                           <span>Total Offers:</span>
-                          <strong className="text-indigo-600">{item.offers} offers</strong>
+                          <strong className="text-indigo-600 font-bold">{item.offers} offers</strong>
                         </div>
                         <div className="flex items-center justify-between gap-4 text-slate-600">
                           <span>Average Package:</span>
-                          <strong className="text-emerald-600">₹ {item.avgLpa} LPA</strong>
+                          <strong className="text-emerald-600 font-bold">₹ {item.avgLpa} LPA</strong>
                         </div>
                         <div className="flex items-center justify-between gap-4 text-slate-600">
                           <span>Peak Package:</span>
-                          <strong className="text-amber-600">₹ {item.maxLpa} LPA</strong>
+                          <strong className="text-amber-600 font-bold">₹ {item.maxLpa} LPA</strong>
                         </div>
-                        <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                        <div className="text-[10px] text-slate-400 pt-1.5 border-t border-slate-100">
                           {item.companies} hiring companies · {item.students} placed candidates
                         </div>
                       </div>
@@ -227,7 +249,7 @@ export default function MultiYearPlacementTrajectoryChart({ data, loading = fals
           <div className="flex items-center gap-1.5 text-emerald-800 min-w-0">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span className="truncate">
-              Latest Cycle ({latestCycle?.year}): <strong className="text-emerald-900">{latestCycle?.offers} offers</strong> at <strong className="text-emerald-900">₹ {latestCycle?.avgLpa} LPA</strong> average.
+              Latest Cycle ({latestCycle?.year}): <strong className="text-emerald-900 font-bold">{latestCycle?.offers} offers</strong> at <strong className="text-emerald-900 font-bold">₹ {latestCycle?.avgLpa} LPA</strong> average.
             </span>
           </div>
           <span className="font-bold text-emerald-700 shrink-0">

@@ -29,8 +29,8 @@ import {
  * - Row 2: [ALTERNATING PAIR (7+5 cols)]
  *   - Visual 1: Department Placement Conversion Benchmark (Horizontal Bars - 7 cols)
  *   - Visual 2: Recruiter Compensation Tier Distribution (Donut 1 - 5 cols)
- * - Row 3: [ALTERNATING PAIR (7+5 cols) - ZERO DONUTS]
- *   - Visual 3: Multi-Year Placement Conversion Trajectory (Longitudinal Area/Line - 7 cols)
+ * - Row 3: [ALTERNATING PAIR (7+5 cols) - THIS PLOT DO SMALL]
+ *   - Visual 3: Recruiter Retention & Pipeline Health (Loyalty Cohort - 7 cols, compact/not stretched)
  *   - Visual 4: Salary Package Brackets Histogram (CTC Brackets Bar - 5 cols)
  * - Row 4: [FULL-WIDTH (12 cols) - SPACIOUS HERO MATRIX]
  *   - Visual 5: Corporate Recruiter Talent Absorption Hero Matrix (460px height, full breathing room - 12 cols)
@@ -40,8 +40,8 @@ import {
  * - Row 6: [ALTERNATING PAIR (7+5 cols)]
  *   - Visual 8: Hiring Industry Sector Share (Horizontal Bars - 7 cols)
  *   - Visual 9: Top Recruiting Employers by Headcount (Donut 3 + Leaderboard - 5 cols)
- * - Row 7: [FULL-WIDTH (12 cols) - RECRUITER RETENTION HEALTH]
- *   - Visual 10: Recruiter Retention & Pipeline Health (Repeat, First-Time, Lapsed Drilldown - 12 cols)
+ * - Row 7: [FULL-WIDTH (12 cols) - ANY YOY DO SPACE SPACE]
+ *   - Visual 10: Multi-Year Placement Conversion Trajectory (Longitudinal Area/Line with spacious YoY cycles & padding - 12 cols)
  * - Row 8: [FULL-WIDTH (12 cols) - DEPARTMENT CTC BENCHMARK]
  *   - Visual 11: Department CTC Spread Benchmark (Average vs Highest LPA - 12 cols)
  *
@@ -118,11 +118,11 @@ export default function PlacementDashboard({ filters = {} }) {
         </div>
       </section>
 
-      {/* Row 3: [ALTERNATING PAIR (7+5 cols) - NO DONUTS] Multi-Year Trajectory & CTC Histogram */}
-      <section aria-label="Longitudinal Conversion Trajectory & Salary Package Brackets">
+      {/* Row 3: [ALTERNATING PAIR (7+5 cols) - THIS PLOT DO SMALL] Recruiter Retention & CTC Histogram */}
+      <section aria-label="Recruiter Retention Health & Salary Package Brackets">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <div className="lg:col-span-7">
-            <MultiYearPlacementTrajectoryChart data={payload} loading={loading} />
+            <RecruiterLoyaltyCohortChart data={payload} loading={loading} />
           </div>
           <div className="lg:col-span-5">
             <SalaryPackageHistogramChart data={payload} loading={loading} />
@@ -161,10 +161,10 @@ export default function PlacementDashboard({ filters = {} }) {
         </div>
       </section>
 
-      {/* Row 7: [FULL-WIDTH (12 cols)] Recruiter Retention & Pipeline Health */}
-      <section aria-label="Recruiter Retention Health & Pipeline Health">
+      {/* Row 7: [FULL-WIDTH (12 cols) - ANY YOY DO SPACE SPACE] Multi-Year Trajectory */}
+      <section aria-label="Longitudinal Conversion Trajectory across Cycles">
         <div className="w-full">
-          <RecruiterLoyaltyCohortChart data={payload} loading={loading} />
+          <MultiYearPlacementTrajectoryChart data={payload} loading={loading} />
         </div>
       </section>
 
