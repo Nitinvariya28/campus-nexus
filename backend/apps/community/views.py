@@ -1,4 +1,8 @@
-from django.db.models import Value, CharField, Q
+import os
+import uuid
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.db.models import Value, CharField, IntegerField, Count, Q
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from rest_framework.views import APIView
@@ -13,7 +17,7 @@ from .models import Post, Tag, PostTag, PostMedia, Comment, PostLike, SavedPost
 from apps.opportunities.models import Opportunity, OpportunitySkill
 from apps.announcements.models import Announcement
 from apps.interviews.models import InterviewExperience, InterviewRound
-from apps.companies.models import Company
+from apps.companies.models import Company, CompanyRole
 from apps.university.models import Department, Batch
 from apps.skills.models import Skill
 
@@ -32,16 +36,39 @@ from apps.interviews.serializers import InterviewExperienceCreateSerializer
 class BaseFeedView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_feed_response(self, request, posts_qs, opps_qs, anns_qs, interviews_qs=None):
-        posts = posts_qs.annotate(feed_type=Value('POST', output_field=CharField())).values('id', 'created_at', 'feed_type')
-        opps = opps_qs.annotate(feed_type=Value('OPPORTUNITY', output_field=CharField())).values('id', 'created_at', 'feed_type')
-        anns = anns_qs.annotate(feed_type=Value('ANNOUNCEMENT', output_field=CharField())).values('id', 'created_at', 'feed_type')
+    def get_feed_response(self, request, posts_qs, opps_qs, anns_qs, interviews_qs=None, sort='latest'):
+        if sort == 'popular':
+            posts = posts_qs.annotate(
+                feed_type=Value('POST', output_field=CharField()),
+                score=Count('likes', distinct=True) + Count('comments', distinct=True)
+            ).values('id', 'created_at', 'feed_type', 'score')
+            opps = opps_qs.annotate(
+                feed_type=Value('OPPORTUNITY', output_field=CharField()),
+                score=Value(0, output_field=IntegerField())
+            ).values('id', 'created_at', 'feed_type', 'score')
+            anns = anns_qs.annotate(
+                feed_type=Value('ANNOUNCEMENT', output_field=CharField()),
+                score=Value(0, output_field=IntegerField())
+            ).values('id', 'created_at', 'feed_type', 'score')
 
-        if interviews_qs is not None:
-            interviews = interviews_qs.annotate(feed_type=Value('INTERVIEW_EXPERIENCE', output_field=CharField())).values('id', 'created_at', 'feed_type')
-            feed_queryset = posts.union(opps, anns, interviews).order_by('-created_at')
+            if interviews_qs is not None:
+                interviews = interviews_qs.annotate(
+                    feed_type=Value('INTERVIEW_EXPERIENCE', output_field=CharField()),
+                    score=Value(0, output_field=IntegerField())
+                ).values('id', 'created_at', 'feed_type', 'score')
+                feed_queryset = posts.union(opps, anns, interviews).order_by('-score', '-created_at')
+            else:
+                feed_queryset = posts.union(opps, anns).order_by('-score', '-created_at')
         else:
-            feed_queryset = posts.union(opps, anns).order_by('-created_at')
+            posts = posts_qs.annotate(feed_type=Value('POST', output_field=CharField())).values('id', 'created_at', 'feed_type')
+            opps = opps_qs.annotate(feed_type=Value('OPPORTUNITY', output_field=CharField())).values('id', 'created_at', 'feed_type')
+            anns = anns_qs.annotate(feed_type=Value('ANNOUNCEMENT', output_field=CharField())).values('id', 'created_at', 'feed_type')
+
+            if interviews_qs is not None:
+                interviews = interviews_qs.annotate(feed_type=Value('INTERVIEW_EXPERIENCE', output_field=CharField())).values('id', 'created_at', 'feed_type')
+                feed_queryset = posts.union(opps, anns, interviews).order_by('-created_at')
+            else:
+                feed_queryset = posts.union(opps, anns).order_by('-created_at')
 
         paginator = LimitOffsetPagination()
         paginated_feed = paginator.paginate_queryset(feed_queryset, request, view=self)
@@ -103,11 +130,35 @@ class UnifiedFeedView(BaseFeedView):
             roles = [r.strip() for r in roles[0].split(',') if r.strip()]
 
         author_id = request.query_params.get('author_id', None)
+        is_saved = request.query_params.get('is_saved', '').lower() in ['true', '1']
+
+        # Category filters: ?category=interview,placement or ?category=interview&category=placement
+        categories = request.query_params.getlist('category')
+        if not categories and 'category' in request.query_params:
+            categories = [c.strip().lower() for c in request.query_params.get('category', '').split(',') if c.strip()]
+        elif len(categories) == 1 and ',' in categories[0]:
+            categories = [c.strip().lower() for c in categories[0].split(',') if c.strip()]
+        else:
+            categories = [c.strip().lower() for c in categories if c.strip()]
+
+        # Tag filter: ?tag=DSA or ?tag=#DSA
+        tag = request.query_params.get('tag', '').strip()
+        if tag:
+            tag = tag.lstrip('#').strip()
+
+        # Sort: ?sort=latest or ?sort=popular
+        sort = request.query_params.get('sort', 'latest').strip().lower()
 
         posts_qs = Post.objects.all()
         opps_qs = Opportunity.objects.filter(status='OPEN')
         anns_qs = Announcement.objects.filter(is_published=True)
         interviews_qs = InterviewExperience.objects.all()
+
+        if is_saved:
+            posts_qs = posts_qs.filter(saved_by_users__user=request.user)
+            opps_qs = opps_qs.none()
+            anns_qs = anns_qs.none()
+            interviews_qs = interviews_qs.none()
 
         if roles:
             posts_qs = posts_qs.filter(author__role__in=roles)
@@ -123,7 +174,61 @@ class UnifiedFeedView(BaseFeedView):
             anns_qs = anns_qs.filter(created_by_id=author_id)
             interviews_qs = interviews_qs.filter(author_id=author_id)
 
-        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs, interviews_qs)
+        # Apply Category Filter if provided
+        if categories:
+            post_types = set()
+            include_interviews = False
+            include_opps = False
+            opp_types = set()
+            include_anns = False
+
+            for cat in categories:
+                if cat == 'interview':
+                    post_types.add('INTERVIEW_EXPERIENCE')
+                    include_interviews = True
+                elif cat == 'placement':
+                    post_types.add('PLACEMENT_EXPERIENCE')
+                    include_opps = True
+                    opp_types.add('PLACEMENT')
+                elif cat == 'career':
+                    post_types.add('CAREER_ADVICE')
+                elif cat == 'internship':
+                    post_types.add('INTERNSHIP')
+                    include_opps = True
+                    opp_types.add('INTERNSHIP')
+                elif cat == 'other':
+                    post_types.add('GENERAL')
+                    post_types.add('COMPANY_INFO')
+                    include_anns = True
+
+            posts_qs = posts_qs.filter(post_type__in=post_types)
+            
+            if not include_interviews:
+                interviews_qs = interviews_qs.none()
+                
+            if not include_opps:
+                opps_qs = opps_qs.none()
+            elif opp_types:
+                opps_qs = opps_qs.filter(opportunity_type__in=opp_types)
+
+            if not include_anns:
+                anns_qs = anns_qs.none()
+
+        # Apply Tag Filter if provided
+        if tag:
+            posts_qs = posts_qs.filter(post_tags__tag__name__iexact=tag).distinct()
+            opps_qs = opps_qs.filter(
+                Q(opportunity_skills__skill__name__iexact=tag) |
+                Q(title__icontains=tag) |
+                Q(role__role_name__icontains=tag)
+            ).distinct()
+            interviews_qs = interviews_qs.filter(
+                Q(company__name__icontains=tag) |
+                Q(role__role_name__icontains=tag)
+            ).distinct()
+            anns_qs = anns_qs.none()
+
+        return self.get_feed_response(request, posts_qs, opps_qs, anns_qs, interviews_qs, sort=sort)
 
 class FeedSearchView(BaseFeedView):
     def get(self, request):
@@ -268,8 +373,70 @@ class PostOptionsView(APIView):
         # Common data for everyone
         options['companies'] = list(Company.objects.filter(is_active=True).values('id', 'name'))
         options['tags'] = list(Tag.objects.filter(is_active=True).values('id', 'name'))
+
+        # Job roles for target role selection / autocomplete
+        options['common_roles'] = [
+            'Software Development Engineer (SDE)',
+            'Frontend Developer',
+            'Backend Developer',
+            'Full Stack Developer',
+            'Data Scientist',
+            'Machine Learning Engineer',
+            'DevOps Engineer',
+            'Cloud Architect',
+            'Product Manager',
+            'UI/UX Designer',
+            'Security Analyst / Cybersecurity',
+            'Quality Assurance (QA) / SDET',
+            'Data Analyst / Business Analyst',
+            'Mobile Application Developer',
+            'Systems Engineer',
+        ]
+        options['company_roles'] = list(CompanyRole.objects.values('id', 'company_id', 'role_name', 'role_category'))
         
         return Response(options)
+
+class CommunityMediaUploadView(APIView):
+    """
+    Dedicated media uploader for community posts.
+    Stores files in media/posts/ with UUID-based unique filenames.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({"error": "No file provided for upload."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 10MB file limit
+        if uploaded_file.size > 10 * 1024 * 1024:
+            return Response({"error": "File size exceeds 10MB limit."}, status=status.HTTP_400_BAD_REQUEST)
+
+        base_name, ext = os.path.splitext(uploaded_file.name)
+        ext = ext.lower()
+        allowed_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+        if ext not in allowed_extensions:
+            return Response({
+                "error": f"Invalid file format '{ext}'. Allowed image formats: JPG, PNG, WEBP, GIF."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        clean_name = "".join(c for c in base_name if c.isalnum() or c in ('-', '_'))[:35] or "image"
+        filename = f"{uuid.uuid4().hex[:8]}_{clean_name}{ext}"
+        storage_rel_path = f"posts/{filename}"
+
+        saved_path = default_storage.save(storage_rel_path, ContentFile(uploaded_file.read()))
+        file_url = f"/media/{saved_path}"
+        if request:
+            full_url = request.build_absolute_uri(file_url)
+        else:
+            full_url = file_url
+
+        return Response({
+            "message": "Media uploaded successfully.",
+            "url": full_url,
+            "file": saved_path,
+            "media_type": "IMAGE"
+        }, status=status.HTTP_201_CREATED)
 
 class CreatePostView(APIView):
     permission_classes = [IsAuthenticated]
@@ -639,3 +806,81 @@ class BookmarkListView(APIView):
         paginated_posts = paginator.paginate_queryset(posts, request)
         serializer = PostFeedSerializer(paginated_posts, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
+
+class CommunityUserStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # 1. Real count of posts created by the user
+        posts_count = Post.objects.filter(author=user).count()
+        if user.role == 'ALUMNI':
+            posts_count += InterviewExperience.objects.filter(author=user).count()
+        elif user.role == 'PLACEMENT_CELL':
+            posts_count += Opportunity.objects.filter(posted_by=user).count()
+            posts_count += Announcement.objects.filter(created_by=user).count()
+
+        # 2. Real count of posts saved/bookmarked by the user
+        saved_count = SavedPost.objects.filter(user=user).count()
+
+        # 3. Real engagement: Total likes given by user across community
+        total_likes = PostLike.objects.filter(user=user).count()
+
+        # 4. Real engagement: Total comments written by user across community
+        total_comments = Comment.objects.filter(author=user).count()
+
+        return Response({
+            "your_posts_count": posts_count,
+            "saved_posts_count": saved_count,
+            "total_likes": total_likes,
+            "total_comments": total_comments,
+        }, status=status.HTTP_200_OK)
+
+class CommunityWidgetsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # 1. Real database analytics: Top 10 trending tags by post count
+        top_tags = (
+            Tag.objects.filter(is_active=True)
+            .annotate(post_count=Count('post_tags'))
+            .filter(post_count__gt=0)
+            .order_by('-post_count')[:10]
+        )
+        trending_data = [
+            {
+                "id": t.id,
+                "tag": f"#{t.name}" if not t.name.startswith('#') else t.name,
+                "raw_name": t.name,
+                "count": t.post_count,
+                "label": t.description or t.name,
+            }
+            for t in top_tags
+        ]
+
+        # 2. Real database data: Top active hiring opportunities
+        active_opps = (
+            Opportunity.objects.filter(status='OPEN')
+            .select_related('company', 'role')
+            .order_by('-created_at')[:5]
+        )
+        drives_data = [
+            {
+                "id": opp.id,
+                "company_name": opp.company.name if opp.company else "Campus Drive",
+                "role": opp.role.title if opp.role else opp.title,
+                "opportunity_type": opp.opportunity_type,
+                "salary_package": opp.salary_package or "",
+                "deadline": opp.deadline.isoformat() if opp.deadline else None,
+                "location": opp.location or "On-Campus",
+            }
+            for opp in active_opps
+        ]
+
+        return Response({
+            "trending_topics": trending_data,
+            "active_drives": drives_data,
+        }, status=status.HTTP_200_OK)
+
+

@@ -9,6 +9,7 @@ class OpportunitySkillCreateSerializer(serializers.Serializer):
 class OpportunityCreateSerializer(serializers.ModelSerializer):
     company_id = serializers.IntegerField()
     role_id = serializers.IntegerField(required=False, allow_null=True)
+    role_title = serializers.CharField(required=False, allow_blank=True, write_only=True)
     eligible_departments = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
     eligible_batches = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
     skills = OpportunitySkillCreateSerializer(many=True, required=False, default=list)
@@ -18,7 +19,7 @@ class OpportunityCreateSerializer(serializers.ModelSerializer):
         fields = [
             'opportunity_type', 'title', 'description', 'location', 'work_mode', 
             'employment_type', 'salary_package', 'min_cgpa', 'application_url', 
-            'deadline', 'status', 'company_id', 'role_id', 'eligible_departments', 
+            'deadline', 'status', 'company_id', 'role_id', 'role_title', 'eligible_departments', 
             'eligible_batches', 'skills'
         ]
 
@@ -26,6 +27,20 @@ class OpportunityCreateSerializer(serializers.ModelSerializer):
         departments = validated_data.pop('eligible_departments', [])
         batches = validated_data.pop('eligible_batches', [])
         skills_data = validated_data.pop('skills', [])
+        role_id = validated_data.get('role_id')
+        role_title = validated_data.pop('role_title', None)
+        company_id = validated_data.get('company_id')
+
+        if not role_id and role_title:
+            from apps.companies.models import CompanyRole
+            role_obj = CompanyRole.objects.filter(company_id=company_id, role_name__iexact=role_title.strip()).first()
+            if not role_obj:
+                role_obj = CompanyRole.objects.create(
+                    company_id=company_id,
+                    role_name=role_title.strip(),
+                    role_category='OTHER'
+                )
+            validated_data['role_id'] = role_obj.id
 
         opportunity = Opportunity.objects.create(**validated_data)
 

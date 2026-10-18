@@ -1,14 +1,19 @@
 from django.urls import path
 from .views import (
     UnifiedFeedView, FeedSearchView, PostOptionsView, CreatePostView, PostDetailView, 
-    CreateCommentView, ToggleLikeView, ManageCommentView, ToggleBookmarkView, BookmarkListView
+    CreateCommentView, ToggleLikeView, ManageCommentView, ToggleBookmarkView, BookmarkListView,
+    CommunityUserStatsView, CommunityWidgetsView, CommunityMediaUploadView
 )
 
 urlpatterns = [
     path('feed/', UnifiedFeedView.as_view(), name='community-feed'),
     path('feed/search/', FeedSearchView.as_view(), name='feed-search'),
+    path('stats/', CommunityUserStatsView.as_view(), name='community-stats'),
+    path('widgets/', CommunityWidgetsView.as_view(), name='community-widgets'),
     path('bookmarks/', BookmarkListView.as_view(), name='bookmark-list'),
     path('posts/options/', PostOptionsView.as_view(), name='post-options'),
+    path('posts/upload-media/', CommunityMediaUploadView.as_view(), name='community-upload-media'),
+    path('upload-media/', CommunityMediaUploadView.as_view(), name='community-upload-media-alt'),
     path('posts/', CreatePostView.as_view(), name='create-post'),
     path('posts/<int:post_id>/', PostDetailView.as_view(), name='post-detail'),
     path('posts/<int:post_id>/comments/', CreateCommentView.as_view(), name='create-comment'),
