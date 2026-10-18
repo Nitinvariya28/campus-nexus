@@ -7,13 +7,15 @@ import { POST_TYPE_FILTERS } from '../../../constants/community/communityConstan
  * Multiple-choice post-type selection pills:
  * [All] [Student] [Alumni] [Placement Cell]
  *
- * Requirements (AlumiBridge Community Page.docx Section 4.1):
- * - Allow multiple specific post types to be selected simultaneously.
- * - When All is selected, clear other selections.
- * - When a specific post type is selected, deselect All.
- * - If all specific selections are unselected, default back to All.
- * - Zero extra prefix text like "FILTER FEED:".
+ * Rules:
+ * - When All is selected, individual options are cleared.
+ * - When a specific option is clicked, All is deselected.
+ * - If ALL specific options are selected (Student + Alumni + Placement Cell),
+ *   automatically remove all specific options and revert directly to [All]!
+ * - If all specific options are deselected, default back to [All].
  */
+const SPECIFIC_ROLES = ['STUDENT', 'ALUMNI', 'PLACEMENT_CELL'];
+
 export default function FeedFilterTabs({ selectedTypes, onSelectionChange }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -21,7 +23,12 @@ export default function FeedFilterTabs({ selectedTypes, onSelectionChange }) {
 
   // Read active filters from URL query parameter if not controlled via props
   const roleParams = searchParams.get('types')?.split(',').filter(Boolean) || [];
-  const currentSelected = selectedTypes || (roleParams.length > 0 ? roleParams : ['ALL']);
+  const rawSelected = selectedTypes || (roleParams.length > 0 ? roleParams : ['ALL']);
+
+  // If all specific roles are currently present in URL/state, treat as effective ALL
+  const isAllActive =
+    rawSelected.includes('ALL') ||
+    SPECIFIC_ROLES.every((role) => rawSelected.includes(role));
 
   const handleToggle = (typeId) => {
     let nextSelected = [];
@@ -29,16 +36,23 @@ export default function FeedFilterTabs({ selectedTypes, onSelectionChange }) {
     if (typeId === 'ALL') {
       nextSelected = ['ALL'];
     } else {
-      // Deselect 'ALL' when a specific role is toggled
-      const filtered = currentSelected.filter((t) => t !== 'ALL');
-      if (filtered.includes(typeId)) {
-        nextSelected = filtered.filter((t) => t !== typeId);
+      // If currently ALL was active, start fresh with only non-ALL options
+      const prevWithoutAll = isAllActive ? [] : rawSelected.filter((t) => t !== 'ALL');
+
+      let updated = [];
+      if (prevWithoutAll.includes(typeId)) {
+        updated = prevWithoutAll.filter((t) => t !== typeId);
       } else {
-        nextSelected = [...filtered, typeId];
+        updated = [...prevWithoutAll, typeId];
       }
-      // If nothing selected, default back to 'ALL'
-      if (nextSelected.length === 0) {
+
+      // If all 3 specific roles are now selected -> automatically clear and revert to ALL
+      const hasAllSpecific = SPECIFIC_ROLES.every((r) => updated.includes(r));
+
+      if (hasAllSpecific || updated.length === 0) {
         nextSelected = ['ALL'];
+      } else {
+        nextSelected = updated;
       }
     }
 
@@ -64,7 +78,12 @@ export default function FeedFilterTabs({ selectedTypes, onSelectionChange }) {
   return (
     <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap">
       {POST_TYPE_FILTERS.map((tab) => {
-        const isSelected = currentSelected.includes(tab.id);
+        let isSelected = false;
+        if (tab.id === 'ALL') {
+          isSelected = isAllActive;
+        } else {
+          isSelected = !isAllActive && rawSelected.includes(tab.id);
+        }
 
         return (
           <button

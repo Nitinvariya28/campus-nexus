@@ -94,7 +94,14 @@ class BaseFeedView(APIView):
 
 class UnifiedFeedView(BaseFeedView):
     def get(self, request):
-        role_filter = request.query_params.get('role', None)
+        # Support both repeated query params (?role=STUDENT&role=ALUMNI)
+        # and comma-separated query params (?role=STUDENT,ALUMNI)
+        roles = request.query_params.getlist('role')
+        if not roles and 'role' in request.query_params:
+            roles = [r.strip() for r in request.query_params.get('role', '').split(',') if r.strip()]
+        elif len(roles) == 1 and ',' in roles[0]:
+            roles = [r.strip() for r in roles[0].split(',') if r.strip()]
+
         author_id = request.query_params.get('author_id', None)
 
         posts_qs = Post.objects.all()
@@ -102,11 +109,11 @@ class UnifiedFeedView(BaseFeedView):
         anns_qs = Announcement.objects.filter(is_published=True)
         interviews_qs = InterviewExperience.objects.all()
 
-        if role_filter:
-            posts_qs = posts_qs.filter(author__role=role_filter)
-            opps_qs = opps_qs.filter(posted_by__role=role_filter)
-            anns_qs = anns_qs.filter(created_by__role=role_filter)
-            interviews_qs = interviews_qs.filter(author__role=role_filter)
+        if roles:
+            posts_qs = posts_qs.filter(author__role__in=roles)
+            opps_qs = opps_qs.filter(posted_by__role__in=roles)
+            anns_qs = anns_qs.filter(created_by__role__in=roles)
+            interviews_qs = interviews_qs.filter(author__role__in=roles)
 
         if author_id:
             if str(author_id).lower() == 'me':
@@ -123,6 +130,12 @@ class FeedSearchView(BaseFeedView):
         query = request.query_params.get('q', '').strip()
         if not query:
             return Response({"error": "Search query 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        roles = request.query_params.getlist('role')
+        if not roles and 'role' in request.query_params:
+            roles = [r.strip() for r in request.query_params.get('role', '').split(',') if r.strip()]
+        elif len(roles) == 1 and ',' in roles[0]:
+            roles = [r.strip() for r in roles[0].split(',') if r.strip()]
 
         posts_qs = Post.objects.filter(
             Q(title__icontains=query) |
@@ -149,6 +162,12 @@ class FeedSearchView(BaseFeedView):
             Q(experience__icontains=query) |
             Q(preparation__icontains=query)
         ).distinct()
+
+        if roles:
+            posts_qs = posts_qs.filter(author__role__in=roles)
+            opps_qs = opps_qs.filter(posted_by__role__in=roles)
+            anns_qs = anns_qs.filter(created_by__role__in=roles)
+            interviews_qs = interviews_qs.filter(author__role__in=roles)
 
         return self.get_feed_response(request, posts_qs, opps_qs, anns_qs, interviews_qs)
 
@@ -475,12 +494,66 @@ class PostDetailView(APIView):
 
         return Response({"error": "Invalid type."}, status=status.HTTP_400_BAD_REQUEST)
 
+def get_post_for_interaction(post_id, entity_type=None):
+    post_obj = Post.objects.filter(id=post_id).first()
+    if post_obj:
+        return post_obj
+
+    entity_type = (entity_type or '').upper()
+
+    if entity_type == 'OPPORTUNITY' or not entity_type:
+        opp = Opportunity.objects.filter(id=post_id).first()
+        if opp:
+            from apps.accounts.models import User
+            author = opp.posted_by or User.objects.filter(role='PLACEMENT_CELL').first() or User.objects.first()
+            post, _ = Post.objects.get_or_create(
+                title=f"[Opportunity] {opp.title}",
+                defaults={
+                    'author': author,
+                    'company': opp.company,
+                    'post_type': 'PLACEMENT_EXPERIENCE',
+                    'content': opp.description or opp.title,
+                }
+            )
+            return post
+
+    if entity_type == 'ANNOUNCEMENT' or not entity_type:
+        ann = Announcement.objects.filter(id=post_id).first()
+        if ann:
+            from apps.accounts.models import User
+            author = ann.created_by or User.objects.filter(role='PLACEMENT_CELL').first() or User.objects.first()
+            post, _ = Post.objects.get_or_create(
+                title=f"[Announcement] {ann.title}",
+                defaults={
+                    'author': author,
+                    'post_type': 'GENERAL',
+                    'content': ann.content or ann.title,
+                }
+            )
+            return post
+
+    if entity_type == 'INTERVIEW_EXPERIENCE' or not entity_type:
+        ie = InterviewExperience.objects.filter(id=post_id).first()
+        if ie:
+            post, _ = Post.objects.get_or_create(
+                title=f"[Interview] {ie.company.name} - {ie.role.role_name if ie.role else 'Process'}",
+                defaults={
+                    'author': ie.author,
+                    'company': ie.company,
+                    'post_type': 'INTERVIEW_EXPERIENCE',
+                    'content': ie.experience or 'Interview Experience',
+                }
+            )
+            return post
+
+    return get_object_or_404(Post, id=post_id)
+
 class CreateCommentView(APIView):
     permission_classes = [IsAuthenticated]
     pagination_class = LimitOffsetPagination
 
     def get(self, request, post_id):
-        post_obj = get_object_or_404(Post, id=post_id)
+        post_obj = get_post_for_interaction(post_id, request.query_params.get('type'))
         comments = Comment.objects.filter(post=post_obj).select_related(
             'author', 'author__student_profile__department', 'author__student_profile__batch', 'author__alumni_profile__current_company'
         ).order_by('created_at')
@@ -490,7 +563,7 @@ class CreateCommentView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request, post_id):
-        post_obj = get_object_or_404(Post, id=post_id)
+        post_obj = get_post_for_interaction(post_id, request.query_params.get('type') or request.data.get('type'))
         serializer = CreateCommentSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -506,7 +579,7 @@ class ToggleLikeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, post_id):
-        post_obj = get_object_or_404(Post, id=post_id)
+        post_obj = get_post_for_interaction(post_id, request.query_params.get('type') or request.data.get('type'))
         user = request.user
         like_obj = PostLike.objects.filter(post=post_obj, user=user).first()
         if like_obj:
@@ -542,7 +615,7 @@ class ToggleBookmarkView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, post_id):
-        post_obj = get_object_or_404(Post, id=post_id)
+        post_obj = get_post_for_interaction(post_id, request.query_params.get('type') or request.data.get('type'))
         user = request.user
         saved_obj = SavedPost.objects.filter(post=post_obj, user=user).first()
         if saved_obj:
