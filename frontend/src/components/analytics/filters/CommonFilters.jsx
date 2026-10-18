@@ -1,4 +1,5 @@
 import React from 'react';
+import SearchableFilterSelect from './SearchableFilterSelect';
 import {
   ACADEMIC_YEARS,
   DEPARTMENTS,
@@ -9,7 +10,7 @@ import {
 /**
  * Common / Overview Dashboard Contextual Filters
  * Fields: Academic Year, Department, Graduation Batch, Date Range
- * Supports both desktop 'horizontal' inline strip and mobile 'vertical' modal layout.
+ * Upgraded with searchable typeahead select dropdowns.
  *
  * @param {object} filters - Active applied filters
  * @param {function} onChange - (key, value) => void
@@ -27,72 +28,48 @@ export default function CommonFilters({ filters = {}, onChange, layout = 'horizo
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Academic Year
           </label>
-          <select
+          <SearchableFilterSelect
+            options={ACADEMIC_YEARS}
             value={filters.year || ''}
-            onChange={(e) => handleChange('year', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Academic Year"
-          >
-            {ACADEMIC_YEARS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('year', val)}
+            placeholder="All Academic Years"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Department
           </label>
-          <select
+          <SearchableFilterSelect
+            options={DEPARTMENTS}
             value={filters.department || ''}
-            onChange={(e) => handleChange('department', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Department"
-          >
-            {DEPARTMENTS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('department', val)}
+            placeholder="All Departments"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Graduation Batch
           </label>
-          <select
+          <SearchableFilterSelect
+            options={GRADUATION_BATCHES}
             value={filters.batch || ''}
-            onChange={(e) => handleChange('batch', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Graduation Batch"
-          >
-            {GRADUATION_BATCHES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('batch', val)}
+            placeholder="All Graduation Batches"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Date Range
           </label>
-          <select
+          <SearchableFilterSelect
+            options={DATE_RANGES}
             value={filters.range || '12m'}
-            onChange={(e) => handleChange('range', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Date Range"
-          >
-            {DATE_RANGES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('range', val)}
+            placeholder="Date Range"
+          />
         </div>
       </div>
     );
@@ -101,60 +78,40 @@ export default function CommonFilters({ filters = {}, onChange, layout = 'horizo
   return (
     <div className="flex items-center gap-2 flex-nowrap shrink-0">
       {/* Academic Year */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={ACADEMIC_YEARS}
         value={filters.year || ''}
-        onChange={(e) => handleChange('year', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Academic Year"
-      >
-        {ACADEMIC_YEARS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('year', val)}
+        placeholder="Academic Year"
+      />
 
       {/* Department */}
-      <select
+      <SearchableFilterSelect
+        className="w-40"
+        options={DEPARTMENTS}
         value={filters.department || ''}
-        onChange={(e) => handleChange('department', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Department"
-      >
-        {DEPARTMENTS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('department', val)}
+        placeholder="Department"
+      />
 
       {/* Graduation Batch */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={GRADUATION_BATCHES}
         value={filters.batch || ''}
-        onChange={(e) => handleChange('batch', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Graduation Batch"
-      >
-        {GRADUATION_BATCHES.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('batch', val)}
+        placeholder="Graduation Batch"
+      />
 
       {/* Date Range */}
-      <select
+      <SearchableFilterSelect
+        className="w-32"
+        options={DATE_RANGES}
         value={filters.range || '12m'}
-        onChange={(e) => handleChange('range', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Date Range"
-      >
-        {DATE_RANGES.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('range', val)}
+        placeholder="Date Range"
+      />
     </div>
   );
 }

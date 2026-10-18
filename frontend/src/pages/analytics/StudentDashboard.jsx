@@ -50,7 +50,7 @@ export default function StudentDashboard({ filters = {} }) {
   const payload = data?.data || data;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Dashboard Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-200">
         <div>
@@ -103,24 +103,20 @@ export default function StudentDashboard({ filters = {} }) {
         <StudentKPIGrid data={payload} loading={loading} filters={filters} />
       </section>
 
-      {/* Row 2: [THREE COLUMNS (4+4+4 cols)] Resume Screening Health & Department Benchmarks */}
+      {/* Row 2: [BALANCED 2-COL (6+6 cols)] Resume Screening Health & Department Benchmarks */}
       <section aria-label="Resume Screening Health & Department Benchmarks">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <CohortATSReadinessDonutChart data={payload} loading={loading} />
           <DepartmentATSBenchmarkChart data={payload} loading={loading} />
-          <div className="md:col-span-2 xl:col-span-1">
-            <UnplacedMissingSkillsChart data={payload} loading={loading} />
-          </div>
         </div>
       </section>
 
-      {/* Row 3: [TWO COLUMNS (6+6 cols)] Skills Deficit & Market Supply Gap */}
+      {/* Row 3: [THREE COLUMNS (4+4+4 cols)] Skills Deficit, Missing Skills & Market Gap */}
       <section aria-label="Skills Deficit & Market Supply Gap">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-6">
-            <MarketDemandSupplyGapChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <UnplacedMissingSkillsChart data={payload} loading={loading} />
+          <MarketDemandSupplyGapChart data={payload} loading={loading} />
+          <div className="md:col-span-2 xl:col-span-1">
             <SkillPlacementCorrelationChart data={payload} loading={loading} />
           </div>
         </div>

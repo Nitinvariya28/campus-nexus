@@ -111,73 +111,108 @@ def get_alumni_career_analytics(filters):
         "by_tier": list(alumni_qs.filter(current_company__company_tier__isnull=False).values('current_company__company_tier').annotate(count=Count('id')).order_by('-count'))
     }
 
-    # Section 4: Cross Associations
-    # company_by_department
-    company_by_dept = []
+    # Section 4: Cross Associations (Bulk Aggregations)
     top_companies = list(alumni_qs.filter(current_company__isnull=False).values('current_company__name').annotate(count=Count('id')).order_by('-count')[:5])
-    for c in top_companies:
-        c_name = c['current_company__name']
-        depts = list(alumni_qs.filter(current_company__name=c_name).values('department__name').annotate(count=Count('id')).order_by('-count')[:5])
-        company_by_dept.append({"company__name": c_name, "departments": depts})
+    top_comp_names = [c['current_company__name'] for c in top_companies]
 
-    # company_by_batch
-    company_by_batch = []
-    for c in top_companies:
-        c_name = c['current_company__name']
-        batches = list(alumni_qs.filter(current_company__name=c_name).values('batch__start_year').annotate(count=Count('id')).order_by('-count')[:5])
-        company_by_batch.append({"company__name": c_name, "batches": batches})
+    # company_by_department (1 bulk query)
+    comp_dept_raw = list(
+        alumni_qs.filter(
+            current_company__name__in=top_comp_names, department__name__isnull=False
+        ).values('current_company__name', 'department__name').annotate(count=Count('id')).order_by('-count')
+    )
+    comp_dept_map = {cname: [] for cname in top_comp_names}
+    for item in comp_dept_raw:
+        cname = item['current_company__name']
+        if len(comp_dept_map[cname]) < 5:
+            comp_dept_map[cname].append({"department__name": item['department__name'], "count": item['count']})
+    company_by_dept = [{"company__name": c, "departments": d} for c, d in comp_dept_map.items()]
 
-    # job_categories_within_company
-    job_categories_within_company = []
-    for c in top_companies:
-        c_name = c['current_company__name']
-        cats = list(alumni_qs.filter(current_company__name=c_name, job_category__isnull=False).values('job_category').annotate(count=Count('id')).order_by('-count')[:5])
-        job_categories_within_company.append({"company__name": c_name, "categories": cats})
+    # company_by_batch (1 bulk query)
+    comp_batch_raw = list(
+        alumni_qs.filter(
+            current_company__name__in=top_comp_names, batch__start_year__isnull=False
+        ).values('current_company__name', 'batch__start_year').annotate(count=Count('id')).order_by('-count')
+    )
+    comp_batch_map = {cname: [] for cname in top_comp_names}
+    for item in comp_batch_raw:
+        cname = item['current_company__name']
+        if len(comp_batch_map[cname]) < 5:
+            comp_batch_map[cname].append({"batch__start_year": item['batch__start_year'], "count": item['count']})
+    company_by_batch = [{"company__name": c, "batches": b} for c, b in comp_batch_map.items()]
 
-    # locations_within_company
-    locations_within_company = []
-    for c in top_companies:
-        c_name = c['current_company__name']
-        locs = list(alumni_qs.filter(current_company__name=c_name, location__isnull=False).values('location').annotate(count=Count('id')).order_by('-count')[:5])
-        locations_within_company.append({"company__name": c_name, "locations": locs})
+    # job_categories_within_company (1 bulk query)
+    comp_cat_raw = list(
+        alumni_qs.filter(
+            current_company__name__in=top_comp_names, job_category__isnull=False
+        ).values('current_company__name', 'job_category').annotate(count=Count('id')).order_by('-count')
+    )
+    comp_cat_map = {cname: [] for cname in top_comp_names}
+    for item in comp_cat_raw:
+        cname = item['current_company__name']
+        if len(comp_cat_map[cname]) < 5:
+            comp_cat_map[cname].append({"job_category": item['job_category'], "count": item['count']})
+    job_categories_within_company = [{"company__name": c, "categories": cats} for c, cats in comp_cat_map.items()]
 
-    # experience_by_tier_and_job_category (B-29)
-    experience_by_tier_and_job_category = []
-    tiers = alumni_qs.filter(current_company__company_tier__isnull=False).values_list('current_company__company_tier', flat=True).distinct()
-    for tier in tiers:
-        cats = alumni_qs.filter(current_company__company_tier=tier, job_category__isnull=False).values('job_category').annotate(average_experience=Avg('years_of_experience')).order_by('-average_experience')
-        formatted_cats = []
-        for cat in cats:
-            formatted_cats.append({
-                "job_category": cat['job_category'],
-                "average_experience": round(float(cat['average_experience']), 1) if cat['average_experience'] else 0.0
-            })
-        experience_by_tier_and_job_category.append({
-            "company__tier": tier,
-            "categories": formatted_cats
+    # locations_within_company (1 bulk query)
+    comp_loc_raw = list(
+        alumni_qs.filter(
+            current_company__name__in=top_comp_names, location__isnull=False
+        ).values('current_company__name', 'location').annotate(count=Count('id')).order_by('-count')
+    )
+    comp_loc_map = {cname: [] for cname in top_comp_names}
+    for item in comp_loc_raw:
+        cname = item['current_company__name']
+        if len(comp_loc_map[cname]) < 5:
+            comp_loc_map[cname].append({"location": item['location'], "count": item['count']})
+    locations_within_company = [{"company__name": c, "locations": locs} for c, locs in comp_loc_map.items()]
+
+    # experience_by_tier_and_job_category (1 bulk query)
+    tier_cat_raw = list(
+        alumni_qs.filter(
+            current_company__company_tier__isnull=False, job_category__isnull=False
+        ).values('current_company__company_tier', 'job_category').annotate(average_experience=Avg('years_of_experience')).order_by('current_company__company_tier', '-average_experience')
+    )
+    tier_cat_map = {}
+    for item in tier_cat_raw:
+        tier = item['current_company__company_tier']
+        if tier not in tier_cat_map:
+            tier_cat_map[tier] = []
+        tier_cat_map[tier].append({
+            "job_category": item['job_category'],
+            "average_experience": round(float(item['average_experience']), 1) if item['average_experience'] else 0.0
         })
+    experience_by_tier_and_job_category = [{"company__tier": t, "categories": cats} for t, cats in tier_cat_map.items()]
 
-    # job_categories_by_batch
-    job_categories_by_batch = []
-    batches = alumni_qs.values_list('batch__start_year', flat=True).distinct()
-    for b in batches:
-        if b is None: continue
-        cats = list(alumni_qs.filter(batch__start_year=b, job_category__isnull=False).values('job_category').annotate(count=Count('id')).order_by('-count')[:5])
-        job_categories_by_batch.append({
-            "batch__start_year": b,
-            "categories": cats
-        })
+    # job_categories_by_batch (1 bulk query)
+    batch_cat_raw = list(
+        alumni_qs.filter(
+            batch__start_year__isnull=False, job_category__isnull=False
+        ).values('batch__start_year', 'job_category').annotate(count=Count('id')).order_by('batch__start_year', '-count')
+    )
+    batch_cat_map = {}
+    for item in batch_cat_raw:
+        b = item['batch__start_year']
+        if b not in batch_cat_map:
+            batch_cat_map[b] = []
+        if len(batch_cat_map[b]) < 5:
+            batch_cat_map[b].append({"job_category": item['job_category'], "count": item['count']})
+    job_categories_by_batch = [{"batch__start_year": b, "categories": cats} for b, cats in batch_cat_map.items()]
 
-    # job_categories_by_department
-    job_categories_by_department = []
-    depts = alumni_qs.values_list('department__name', flat=True).distinct()
-    for d in depts:
-        if not d: continue
-        cats = list(alumni_qs.filter(department__name=d, job_category__isnull=False).values('job_category').annotate(count=Count('id')).order_by('-count')[:5])
-        job_categories_by_department.append({
-            "department__name": d,
-            "categories": cats
-        })
+    # job_categories_by_department (1 bulk query)
+    dept_cat_raw = list(
+        alumni_qs.filter(
+            department__name__isnull=False, job_category__isnull=False
+        ).values('department__name', 'job_category').annotate(count=Count('id')).order_by('department__name', '-count')
+    )
+    dept_cat_map = {}
+    for item in dept_cat_raw:
+        d = item['department__name']
+        if d not in dept_cat_map:
+            dept_cat_map[d] = []
+        if len(dept_cat_map[d]) < 5:
+            dept_cat_map[d].append({"job_category": item['job_category'], "count": item['count']})
+    job_categories_by_department = [{"department__name": d, "categories": cats} for d, cats in dept_cat_map.items()]
 
     cross_associations = {
         "company_by_department": company_by_dept,

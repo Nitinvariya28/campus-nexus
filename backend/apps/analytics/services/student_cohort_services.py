@@ -4,7 +4,7 @@ from apps.university.models import Department, Batch
 
 def get_student_cohort_analytics(filters):
     students_qs = StudentProfile.objects.filter(user__role='STUDENT')
-    placements_qs = StudentPlacementRecord.objects.all()
+    placements_qs = StudentPlacementRecord.objects.filter(student__user__role='STUDENT')
     
     dept_id = filters.get('department_id')
     batch_id = filters.get('batch_id')
@@ -38,13 +38,14 @@ def get_student_cohort_analytics(filters):
     
     # --- A-16: Profile Completeness ---
     if total_students > 0:
-        bio_completed = students_qs.filter(bio__isnull=False).exclude(bio='').count()
-        phone_completed = students_qs.filter(phone__isnull=False).exclude(phone='').count()
-        address_completed = students_qs.filter(address__isnull=False).exclude(address='').count()
-        
-        bio_pct = round((bio_completed / total_students) * 100, 2)
-        phone_pct = round((phone_completed / total_students) * 100, 2)
-        address_pct = round((address_completed / total_students) * 100, 2)
+        comp_agg = students_qs.aggregate(
+            bio=Count('id', filter=Q(bio__isnull=False) & ~Q(bio='')),
+            phone=Count('id', filter=Q(phone__isnull=False) & ~Q(phone='')),
+            address=Count('id', filter=Q(address__isnull=False) & ~Q(address='')),
+        )
+        bio_pct = round((comp_agg['bio'] / total_students) * 100, 2)
+        phone_pct = round((comp_agg['phone'] / total_students) * 100, 2)
+        address_pct = round((comp_agg['address'] / total_students) * 100, 2)
     else:
         bio_pct = phone_pct = address_pct = 0.0
 
@@ -64,14 +65,26 @@ def get_student_cohort_analytics(filters):
     )
     
     # --- B-01, B-02, B-48: Placement Coverage ---
-    # To calculate coverage, we first need distinct placed students mapped to their dept/batch
-    
+    # Bulk query placement coverage by department and batch to eliminate N+1 loops
+    dept_placed_map = dict(
+        placements_qs.values_list('student__department__name')
+        .annotate(placed=Count('student_id', distinct=True))
+    )
+    batch_placed_raw = list(
+        placements_qs.values('student__batch__start_year', 'student__batch__end_year')
+        .annotate(placed=Count('student_id', distinct=True))
+    )
+    batch_placed_map = {
+        (b['student__batch__start_year'], b['student__batch__end_year']): b['placed']
+        for b in batch_placed_raw
+    }
+
     # Coverage by Department
     coverage_by_dept = []
     for dept_stat in students_by_department:
         d_name = dept_stat['department__name']
         eligible = dept_stat['count']
-        placed = placements_qs.filter(student__department__name=d_name).values('student_id').distinct().count()
+        placed = dept_placed_map.get(d_name, 0)
         cov_pct = round((placed / eligible) * 100, 2) if eligible > 0 else 0.0
         coverage_by_dept.append({
             "department__name": d_name,
@@ -86,7 +99,7 @@ def get_student_cohort_analytics(filters):
         s_year = batch_stat['batch__start_year']
         e_year = batch_stat['batch__end_year']
         eligible = batch_stat['count']
-        placed = placements_qs.filter(student__batch__start_year=s_year, student__batch__end_year=e_year).values('student_id').distinct().count()
+        placed = batch_placed_map.get((s_year, e_year), 0)
         cov_pct = round((placed / eligible) * 100, 2) if eligible > 0 else 0.0
         coverage_by_batch.append({
             "batch_start_year": s_year,

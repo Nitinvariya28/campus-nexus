@@ -129,13 +129,31 @@ export default function CommunityEngagementChart({ data, loading = false }) {
       subtitle="Activity and interaction volume across platforms"
       heightClass="h-64"
     >
-      <div className="w-full h-full flex flex-col justify-between">
-        <div className="w-full flex-1 min-h-[190px]">
+      <div className="w-full h-64 flex flex-col justify-between overflow-hidden">
+        {/* Interaction Metric Badges */}
+        <div className="grid grid-cols-3 gap-1.5 mb-1 shrink-0">
+          <div className="px-2 py-1 rounded bg-purple-50 border border-purple-100 flex items-center justify-between text-xs">
+            <span className="text-purple-700 font-medium text-[10px]">Posts</span>
+            <span className="font-bold text-purple-900 font-mono">{chartData.reduce((s, r) => s + (r.Posts || 0), 0)}</span>
+          </div>
+          <div className="px-2 py-1 rounded bg-sky-50 border border-sky-100 flex items-center justify-between text-xs">
+            <span className="text-sky-700 font-medium text-[10px]">Comments</span>
+            <span className="font-bold text-sky-900 font-mono">{chartData.reduce((s, r) => s + (r.Comments || 0), 0)}</span>
+          </div>
+          <div className="px-2 py-1 rounded bg-rose-50 border border-rose-100 flex items-center justify-between text-xs">
+            <span className="text-rose-700 font-medium text-[10px]">Likes</span>
+            <span className="font-bold text-rose-900 font-mono">{chartData.reduce((s, r) => s + (r.Likes || 0), 0)}</span>
+          </div>
+        </div>
+
+        <div className="w-full flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
-              barGap={3}
+              barSize={18}
+              maxBarSize={22}
+              margin={{ top: 15, right: 10, left: -20, bottom: 0 }}
+              barGap={4}
             >
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_PALETTE.grid} vertical={false} />
               <XAxis

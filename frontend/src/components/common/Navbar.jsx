@@ -7,23 +7,16 @@ import {
   BarChart3, 
   Bell, 
   LogIn, 
-  LogOut,
   Menu, 
   X
 } from 'lucide-react';
 
-export default function Navbar() {
-  const { isAuthenticated, user, logout } = useAuth();
+export default function Navbar({ hideBrand = false }) {
+  const { isAuthenticated, user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
 
   const isLoginPage = location.pathname === '/login';
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
 
   // Derive user initials if avatar is not present
   const initials = user
@@ -41,22 +34,24 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* LEFT: Brand Logo & Title (Always Navigates to Home Page '/') */}
+          {/* LEFT: Brand Logo & Title (Hidden on Dashboard when Sidebar logo is visible) */}
           <div className="flex items-center space-x-3">
-            <Link 
-              to="/" 
-              className="flex items-center space-x-2.5 group"
-              title="Return to Home Page"
-            >
-              <img 
-                src="/logo.svg" 
-                alt="AlumiBridge Logo" 
-                className="w-9 h-9 transition-transform group-hover:scale-105" 
-              />
-              <span className="text-xl font-bold tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
-                Alumi<span className="text-amber-500">Bridge</span>
-              </span>
-            </Link>
+            {!hideBrand && (
+              <Link 
+                to="/" 
+                className="flex items-center space-x-2.5 group"
+                title="Return to Home Page"
+              >
+                <img 
+                  src="/logo.svg" 
+                  alt="AlumiBridge Logo" 
+                  className="w-9 h-9 transition-transform group-hover:scale-105" 
+                />
+                <span className="text-xl font-bold tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
+                  Alumi<span className="text-amber-500">Bridge</span>
+                </span>
+              </Link>
+            )}
           </div>
 
           {/* CENTER: Main Navigation Links (Authenticated Only - Desktop) */}
@@ -107,7 +102,7 @@ export default function Navbar() {
             </nav>
           )}
 
-          {/* RIGHT: Actions */}
+          {/* RIGHT: Actions (Profile and Notifications Only - No Logout) */}
           <div className="hidden md:flex items-center space-x-3">
             {isAuthenticated ? (
               <>
@@ -152,16 +147,6 @@ export default function Navbar() {
                     {user?.first_name || 'Profile'}
                   </span>
                 </NavLink>
-
-                {/* Sign Out Button */}
-                <button
-                  onClick={handleLogout}
-                  title="Sign Out"
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Logout</span>
-                </button>
               </>
             ) : (
               /* Unauthenticated Guest State: Exactly 1 CTA Button (Login) - Hidden when already on /login */
@@ -268,19 +253,6 @@ export default function Navbar() {
                 <BarChart3 className="w-5 h-5" />
                 <span>Analytics</span>
               </NavLink>
-
-              <div className="border-t border-slate-100 my-1"></div>
-
-              <button
-                onClick={() => {
-                  closeMobile();
-                  handleLogout();
-                }}
-                className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors text-left"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Sign Out</span>
-              </button>
             </>
           ) : (
             <div className="pt-2 space-y-2">

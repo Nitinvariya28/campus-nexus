@@ -112,6 +112,8 @@ export default function AlumniBatchCareerEvolutionChart({ data, loading = false 
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
+              barSize={18}
+              maxBarSize={22}
               margin={{ top: 8, right: 15, left: -10, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />

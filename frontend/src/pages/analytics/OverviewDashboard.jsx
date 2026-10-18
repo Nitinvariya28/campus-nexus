@@ -34,7 +34,7 @@ export default function OverviewDashboard({ filters = {} }) {
   const payload = data?.data || data;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Dashboard Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-200">
         <div>
@@ -87,21 +87,17 @@ export default function OverviewDashboard({ filters = {} }) {
         <OverviewKPIGrid data={payload} loading={loading} filters={filters} />
       </section>
 
-      {/* Row 2: Population Census & Onboarding Growth (5:7 Split) */}
+      {/* Row 2: Population Census & Onboarding Growth (Consistent 2-Col Medium Width) */}
       <section aria-label="Population and Growth Visualizations">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-5">
-            <PopulationCensusChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-7">
-            <GrowthTrajectoryChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <PopulationCensusChart data={payload} loading={loading} />
+          <GrowthTrajectoryChart data={payload} loading={loading} />
         </div>
       </section>
 
       {/* Row 3: 3-Column Placement & Recruiter Benchmarks Grid */}
       <section aria-label="Placement and Recruiter Benchmarks">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <PackageDistributionChart data={payload} loading={loading} />
           <PackageTrendsChart data={payload} loading={loading} />
           <div className="md:col-span-2 xl:col-span-1">
@@ -117,7 +113,7 @@ export default function OverviewDashboard({ filters = {} }) {
 
       {/* Row 5: 3-Column Skills, Community & Industry Footprint */}
       <section aria-label="Skills, Community and Industry Analysis">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <TechStackPulseChart data={payload} loading={loading} />
           <CommunityEngagementChart data={payload} loading={loading} />
           <div className="md:col-span-2 xl:col-span-1">

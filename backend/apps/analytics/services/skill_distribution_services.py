@@ -90,23 +90,39 @@ def get_skill_distribution_analytics(filters):
             "avg_unplaced_user_advanced_skills": avg_unplaced_adv
         }
         
-        # Tech stack by dept
-        for dept in StudentProfile.objects.values_list('department__name', flat=True).distinct():
-            if not dept: continue
-            dept_skills = student_qs.filter(user__student_profile__department__name=dept).values('skill__name').annotate(count=Count('id')).order_by('-count')[:5]
-            tech_stack_by_department.append({
-                "department__name": dept,
-                "top_skills": list(dept_skills)
-            })
+        # Tech stack by dept (1 bulk query)
+        dept_skills_raw = list(
+            student_qs.filter(
+                user__student_profile__department__name__isnull=False
+            ).values(
+                'user__student_profile__department__name', 'skill__name'
+            ).annotate(count=Count('id')).order_by('-count')
+        )
+        dept_skill_map = {}
+        for item in dept_skills_raw:
+            dept = item['user__student_profile__department__name']
+            if dept not in dept_skill_map:
+                dept_skill_map[dept] = []
+            if len(dept_skill_map[dept]) < 5:
+                dept_skill_map[dept].append({"skill__name": item['skill__name'], "count": item['count']})
+        tech_stack_by_department = [{"department__name": d, "top_skills": s} for d, s in dept_skill_map.items()]
             
-        # Tech stack by batch
-        for start_year in StudentProfile.objects.values_list('batch__start_year', flat=True).distinct():
-            if not start_year: continue
-            batch_skills = student_qs.filter(user__student_profile__batch__start_year=start_year).values('skill__name').annotate(count=Count('id')).order_by('-count')[:5]
-            tech_stack_by_batch.append({
-                "batch__start_year": start_year,
-                "top_skills": list(batch_skills)
-            })
+        # Tech stack by batch (1 bulk query)
+        batch_skills_raw = list(
+            student_qs.filter(
+                user__student_profile__batch__start_year__isnull=False
+            ).values(
+                'user__student_profile__batch__start_year', 'skill__name'
+            ).annotate(count=Count('id')).order_by('-count')
+        )
+        batch_skill_map = {}
+        for item in batch_skills_raw:
+            byear = item['user__student_profile__batch__start_year']
+            if byear not in batch_skill_map:
+                batch_skill_map[byear] = []
+            if len(batch_skill_map[byear]) < 5:
+                batch_skill_map[byear].append({"skill__name": item['skill__name'], "count": item['count']})
+        tech_stack_by_batch = [{"batch__start_year": b, "top_skills": s} for b, s in batch_skill_map.items()]
 
     # --- B-32 to B-35: Alumni Associations ---
     alumni_qs = qs.filter(user__role='ALUMNI')
@@ -116,34 +132,63 @@ def get_skill_distribution_analytics(filters):
     proficiency_by_experience_band = []
     
     if alumni_qs.exists():
-        # By Company
-        for comp in AlumniProfile.objects.values_list('current_company__name', flat=True).distinct():
-            if not comp: continue
-            comp_skills = alumni_qs.filter(user__alumni_profile__current_company__name=comp).values('skill__name').annotate(count=Count('id')).order_by('-count')[:5]
-            skills_by_company.append({
-                "company__name": comp,
-                "top_skills": list(comp_skills)
-            })
+        # By Company (top 10 companies by alumni count instead of all 146)
+        top_comps = list(
+            AlumniProfile.objects.filter(
+                current_company__name__isnull=False
+            ).values('current_company__name').annotate(c=Count('id')).order_by('-c')[:10]
+        )
+        top_comp_names = [c['current_company__name'] for c in top_comps]
+        
+        comp_skills_raw = list(
+            alumni_qs.filter(
+                user__alumni_profile__current_company__name__in=top_comp_names
+            ).values(
+                'user__alumni_profile__current_company__name', 'skill__name'
+            ).annotate(count=Count('id')).order_by('-count')
+        )
+        comp_skill_map = {cname: [] for cname in top_comp_names}
+        for item in comp_skills_raw:
+            cname = item['user__alumni_profile__current_company__name']
+            if cname in comp_skill_map and len(comp_skill_map[cname]) < 5:
+                comp_skill_map[cname].append({"skill__name": item['skill__name'], "count": item['count']})
+        skills_by_company = [{"company__name": c, "top_skills": s} for c, s in comp_skill_map.items()]
             
-        # By Job Category
-        for job in AlumniProfile.objects.values_list('job_category', flat=True).distinct():
-            if not job: continue
-            job_skills = alumni_qs.filter(user__alumni_profile__job_category=job).values('skill__name').annotate(count=Count('id')).order_by('-count')[:5]
-            skills_by_job_category.append({
-                "job_category": job,
-                "top_skills": list(job_skills)
-            })
+        # By Job Category (1 bulk query)
+        job_skills_raw = list(
+            alumni_qs.filter(
+                user__alumni_profile__job_category__isnull=False
+            ).values(
+                'user__alumni_profile__job_category', 'skill__name'
+            ).annotate(count=Count('id')).order_by('-count')
+        )
+        job_skill_map = {}
+        for item in job_skills_raw:
+            job = item['user__alumni_profile__job_category']
+            if job not in job_skill_map:
+                job_skill_map[job] = []
+            if len(job_skill_map[job]) < 5:
+                job_skill_map[job].append({"skill__name": item['skill__name'], "count": item['count']})
+        skills_by_job_category = [{"job_category": j, "top_skills": s} for j, s in job_skill_map.items()]
             
-        # By Batch
-        for start_year in AlumniProfile.objects.values_list('batch__start_year', flat=True).distinct():
-            if not start_year: continue
-            batch_skills = alumni_qs.filter(user__alumni_profile__batch__start_year=start_year).values('skill__name').annotate(count=Count('id')).order_by('-count')[:5]
-            skills_by_batch.append({
-                "batch__start_year": start_year,
-                "top_skills": list(batch_skills)
-            })
+        # By Batch (1 bulk query)
+        batch_alumni_raw = list(
+            alumni_qs.filter(
+                user__alumni_profile__batch__start_year__isnull=False
+            ).values(
+                'user__alumni_profile__batch__start_year', 'skill__name'
+            ).annotate(count=Count('id')).order_by('-count')
+        )
+        batch_alumni_map = {}
+        for item in batch_alumni_raw:
+            byear = item['user__alumni_profile__batch__start_year']
+            if byear not in batch_alumni_map:
+                batch_alumni_map[byear] = []
+            if len(batch_alumni_map[byear]) < 5:
+                batch_alumni_map[byear].append({"skill__name": item['skill__name'], "count": item['count']})
+        skills_by_batch = [{"batch__start_year": b, "top_skills": s} for b, s in batch_alumni_map.items()]
             
-        # Proficiency by Experience Band
+        # Proficiency by Experience Band (1 bulk query)
         alumni_with_bands = alumni_qs.annotate(
             experience_band=Case(
                 When(user__alumni_profile__years_of_experience__lt=2, then=Value('< 2 Years')),
@@ -153,14 +198,15 @@ def get_skill_distribution_analytics(filters):
                 output_field=CharField(),
             )
         )
-        
-        bands = ['< 2 Years', '2-5 Years', '5+ Years']
-        for band in bands:
-            profs = alumni_with_bands.filter(experience_band=band).values('proficiency').annotate(count=Count('id')).order_by('-count')
-            proficiency_by_experience_band.append({
-                "experience_band": band,
-                "proficiencies": list(profs)
-            })
+        band_profs_raw = list(
+            alumni_with_bands.values('experience_band', 'proficiency').annotate(count=Count('id')).order_by('-count')
+        )
+        band_map = {'< 2 Years': [], '2-5 Years': [], '5+ Years': []}
+        for item in band_profs_raw:
+            b = item['experience_band']
+            if b in band_map:
+                band_map[b].append({"proficiency": item['proficiency'], "count": item['count']})
+        proficiency_by_experience_band = [{"experience_band": b, "proficiencies": p} for b, p in band_map.items()]
 
     return {
         "inventory_summary": {

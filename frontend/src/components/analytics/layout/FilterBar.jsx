@@ -78,7 +78,7 @@ export default function FilterBar({
 
   return (
     <>
-      <div className="shrink-0 min-h-14 bg-white border-b border-slate-200 px-3 sm:px-6 py-2 sm:py-0 flex items-center justify-between gap-3 z-20">
+      <div className="shrink-0 min-h-14 bg-white border-b border-slate-200 px-3 sm:px-6 py-2 sm:py-0 flex items-center justify-between gap-3 z-30 relative">
         {/* ========================================================= */}
         {/* MOBILE VIEW (<sm): Filter Menu Trigger Button              */}
         {/* ========================================================= */}
@@ -124,7 +124,7 @@ export default function FilterBar({
         {/* ========================================================= */}
         {/* DESKTOP / TABLET VIEW (sm+): Inline Horizontal Filter Bar  */}
         {/* ========================================================= */}
-        <div className="hidden sm:flex items-center gap-2 sm:gap-3 overflow-x-auto py-1.5 scrollbar-none min-w-0 flex-1 whitespace-nowrap">
+        <div className="hidden sm:flex items-center gap-2 sm:gap-3 py-1.5 min-w-0 flex-1 whitespace-nowrap overflow-visible">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider shrink-0">
             <Filter className="w-3.5 h-3.5 text-indigo-600" />
             <span>Filters:</span>

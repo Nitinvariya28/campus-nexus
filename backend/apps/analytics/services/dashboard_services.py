@@ -61,22 +61,52 @@ def get_dashboard_analytics(user, view=None, requested_sections=None, filters=No
         'platform_health_operations': lambda: get_platform_health_analytics(filters),
     }
 
-    # Check if selective filtering was requested
-    def is_selected(section_name):
-        if not requested_sections:
-            return True
-        return section_name in requested_sections
+    # Support explicit view parameter for all authenticated roles
+    active_view = view.lower() if view and view in ['student', 'alumni', 'placement_cell', 'placement', 'common'] else user.role.lower()
+    if active_view in ['admin']:
+        active_view = 'common'
 
+    # Check if selective filtering was requested
+    def is_selected(section_name, default_sections=None):
+        if requested_sections:
+            return section_name in requested_sections
+        if default_sections is not None:
+            return section_name in default_sections
+        return True
+
+    # Scoped common data assembly based on active view requirements
     common_data = {}
-    for section_name, builder in common_builders.items():
-        if is_selected(section_name):
-            try:
-                common_data[section_name] = builder()
-            except Exception as e:
-                common_data[section_name] = {"error": str(e)}
+    if active_view == 'student':
+        # Student dashboard only consumes placement & opportunity fallbacks for KPI headline cards
+        default_common = ['placement_snapshot', 'opportunities_snapshot']
+        for sec in default_common:
+            if is_selected(sec, default_common):
+                try:
+                    common_data[sec] = common_builders[sec]()
+                except Exception as e:
+                    common_data[sec] = {"error": str(e)}
+
+    elif active_view == 'common':
+        # Overview dashboard consumes platform census, community, companies, placement, and skills
+        default_common = ['platform_overview', 'community_pulse', 'company_landscape', 'placement_snapshot', 'skills_pulse']
+        for sec in default_common:
+            if is_selected(sec, default_common):
+                try:
+                    common_data[sec] = common_builders[sec]()
+                except Exception as e:
+                    common_data[sec] = {"error": str(e)}
+
+    elif requested_sections:
+        # If user explicitly requested specific common sections
+        for sec in common_builders:
+            if sec in requested_sections:
+                try:
+                    common_data[sec] = common_builders[sec]()
+                except Exception as e:
+                    common_data[sec] = {"error": str(e)}
 
     # If common view requested, return early
-    if view == 'common':
+    if active_view == 'common':
         return {
             "role_detected": user.role,
             "view": "common",
@@ -84,14 +114,11 @@ def get_dashboard_analytics(user, view=None, requested_sections=None, filters=No
         }
 
     role_data = {}
-    role_key = user.role.lower()
-
-    # Support explicit view parameter for all authenticated roles
-    active_view = view.lower() if view and view in ['student', 'alumni', 'placement_cell', 'placement'] else user.role.lower()
 
     if active_view == 'student':
+        default_student = ['cohort_metrics', 'market_skill_gaps', 'learning_and_ai', 'interview_prep', 'resume_cohort_health']
         for section_name, builder in student_builders.items():
-            if is_selected(section_name):
+            if is_selected(section_name, default_student):
                 try:
                     role_data[section_name] = builder()
                 except Exception as e:
@@ -104,8 +131,9 @@ def get_dashboard_analytics(user, view=None, requested_sections=None, filters=No
         }
 
     elif active_view == 'alumni':
+        default_alumni = ['career_paths', 'alumni_contributions', 'skills_in_industry']
         for section_name, builder in alumni_builders.items():
-            if is_selected(section_name):
+            if is_selected(section_name, default_alumni):
                 try:
                     role_data[section_name] = builder()
                 except Exception as e:
@@ -118,8 +146,9 @@ def get_dashboard_analytics(user, view=None, requested_sections=None, filters=No
         }
 
     elif active_view in ['placement_cell', 'placement']:
+        default_pc = ['cohort_outcomes', 'placement_kpis', 'recruiter_health']
         for section_name, builder in placement_cell_builders.items():
-            if is_selected(section_name):
+            if is_selected(section_name, default_pc):
                 try:
                     role_data[section_name] = builder()
                 except Exception as e:
@@ -135,5 +164,5 @@ def get_dashboard_analytics(user, view=None, requested_sections=None, filters=No
         "role_detected": user.role,
         "view": active_view,
         "common": common_data,
-        role_key: role_data,
+        active_view: role_data,
     }

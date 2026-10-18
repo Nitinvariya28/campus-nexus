@@ -33,12 +33,12 @@ const BAND_COLORS = {
 export default function SalaryPackageHistogramChart({ data, loading = false }) {
   if (loading) {
     return (
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[380px] animate-pulse">
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[320px] animate-pulse">
         <div className="space-y-2">
           <div className="h-4 w-52 bg-slate-200 rounded" />
           <div className="h-3 w-64 bg-slate-100 rounded" />
         </div>
-        <div className="h-56 bg-slate-100 rounded-lg my-auto" />
+        <div className="h-44 bg-slate-100 rounded-lg my-auto" />
         <div className="h-3 bg-slate-100 rounded w-1/2" />
       </div>
     );
@@ -54,7 +54,7 @@ export default function SalaryPackageHistogramChart({ data, loading = false }) {
       <ChartCard
         title="Salary Package Distribution"
         subtitle="Distribution of offers across salary bands"
-        heightClass="h-[380px]"
+        heightClass="h-[320px]"
       >
         <ChartEmptyState
           title="Salary Bands Unavailable"
@@ -114,7 +114,7 @@ export default function SalaryPackageHistogramChart({ data, loading = false }) {
         </div>
 
         {/* Bar Chart */}
-        <div className="h-56 w-full">
+        <div className="h-[170px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
@@ -149,7 +149,7 @@ export default function SalaryPackageHistogramChart({ data, loading = false }) {
                   );
                 }}
               />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={36}>
+              <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={18} maxBarSize={22}>
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}

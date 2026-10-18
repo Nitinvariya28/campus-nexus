@@ -169,7 +169,7 @@ export default function PackageDistributionChart({ data, loading = false }) {
                   );
                 }}
               />
-              <Bar dataKey="Offers" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="Offers" radius={[4, 4, 0, 0]} barSize={18} maxBarSize={22}>
                 <LabelList
                   dataKey="Offers"
                   position="top"

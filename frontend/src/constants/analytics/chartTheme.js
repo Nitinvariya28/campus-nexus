@@ -70,3 +70,29 @@ export const SEMANTIC_COLORS = {
     hex: '#7C3AED',
   },
 };
+
+/**
+ * Standardized Chart Dimensions & Styling Across All 4 Dashboards
+ * Strictly enforces identical inside width, bar thickness, radii, and typography.
+ */
+export const CHART_DIMENSIONS = {
+  barSize: 18,
+  maxBarSize: 22,
+  barRadiusVertical: [4, 4, 0, 0],
+  barRadiusHorizontal: [0, 4, 4, 0],
+  donutInnerRadius: 55,
+  donutOuterRadius: 80,
+  strokeWidth: 2,
+  axisTick: { fontSize: 11, fill: '#64748B' },
+  gridStroke: '#E2E8F0',
+  gridDashArray: '3 3',
+  tooltipStyle: {
+    backgroundColor: '#0F172A',
+    borderColor: '#334155',
+    borderRadius: '8px',
+    color: '#F8FAFC',
+    fontSize: '11px',
+    padding: '6px 10px',
+  },
+};
+

@@ -29,18 +29,28 @@ def get_cohort_resume_readiness(filters):
     
     analyses = ResumeAnalysis.objects.filter(resume_id__in=resume_ids, score__isnull=False)
     
-    total_resumes_analyzed = analyses.values('resume_id').distinct().count()
-    students_with_analysis = analyses.values('resume__user_id').distinct().count()
+    analyses_list = list(
+        analyses.order_by('resume_id', 'created_at').values(
+            'resume_id', 'resume__user_id', 'score', 'missing_skills'
+        )
+    )
     
-    average_ats_score = analyses.aggregate(avg=Avg('score'))['avg']
-    average_ats_score = float(average_ats_score) if average_ats_score else 0.0
+    total_resumes_analyzed = len(set(a['resume_id'] for a in analyses_list))
+    students_with_analysis = len(set(a['resume__user_id'] for a in analyses_list))
     
-    # Band distribution
-    excellent_count = analyses.filter(score__gte=80).values('resume__user_id').distinct().count()
-    good_count = analyses.filter(score__gte=60, score__lt=80).values('resume__user_id').distinct().count()
-    needs_work_count = analyses.filter(score__lt=60).values('resume__user_id').distinct().count()
+    scores = [float(a['score']) for a in analyses_list if a['score'] is not None]
+    average_ats_score = round(sum(scores) / len(scores), 1) if scores else 0.0
     
-    total_band_students = excellent_count + good_count + needs_work_count
+    # Band distribution per student (using latest score per student)
+    user_latest_scores = {}
+    for a in analyses_list:
+        if a['score'] is not None:
+            user_latest_scores[a['resume__user_id']] = float(a['score'])
+            
+    excellent_count = sum(1 for s in user_latest_scores.values() if s >= 80)
+    good_count = sum(1 for s in user_latest_scores.values() if 60 <= s < 80)
+    needs_work_count = sum(1 for s in user_latest_scores.values() if s < 60)
+    total_band_students = len(user_latest_scores)
     
     ats_band_distribution = []
     if total_band_students > 0:
@@ -50,84 +60,79 @@ def get_cohort_resume_readiness(filters):
             {"band": "Needs Work (<60)", "student_count": needs_work_count, "percentage": round((needs_work_count / total_band_students) * 100, 1)}
         ]
 
-    # Department distribution - done in memory to avoid reverse OneToOne bugs
+    # Department distribution - in memory
     from apps.profiles.models import StudentProfile
     student_profiles = StudentProfile.objects.all().values('user_id', 'department_id', 'department__name')
     dept_map = {sp['user_id']: sp for sp in student_profiles if sp['department_id']}
     
     dept_scores = collections.defaultdict(list)
-    analysis_scores = analyses.values('resume__user_id', 'score')
-    for a in analysis_scores:
+    for a in analyses_list:
         uid = a['resume__user_id']
-        if uid in dept_map:
+        if uid in dept_map and a['score'] is not None:
             dept_scores[dept_map[uid]['department_id']].append(float(a['score']))
             
     department_distribution = []
-    for did, scores in dept_scores.items():
-        # Find department name
+    for did, dscores in dept_scores.items():
         dname = next((sp['department__name'] for sp in dept_map.values() if sp['department_id'] == did), "Unknown")
         department_distribution.append({
             'department_id': did,
             'department__name': dname,
-            'average_ats_score': round(sum(scores) / len(scores), 1)
+            'average_ats_score': round(sum(dscores) / len(dscores), 1)
         })
     department_distribution.sort(key=lambda x: x['average_ats_score'], reverse=True)
-
         
-    # Improvement metrics: approximation using python logic (comparing first and last score per resume)
-    # Group by resume_id
+    # Improvement metrics: comparing first and last score per resume in memory
+    by_resume = collections.defaultdict(list)
+    for a in analyses_list:
+        if a['score'] is not None:
+            by_resume[a['resume_id']].append(float(a['score']))
+            
     resume_improvements = []
-    for r_id in resume_ids:
-        r_analyses = analyses.filter(resume_id=r_id).order_by('created_at')
-        if r_analyses.count() > 1:
-            first = r_analyses.first().score
-            last = r_analyses.last().score
-            if last and first:
-                resume_improvements.append(float(last) - float(first))
+    for r_id, rscores in by_resume.items():
+        if len(rscores) > 1:
+            resume_improvements.append(rscores[-1] - rscores[0])
                 
     average_score_improvement = sum(resume_improvements) / len(resume_improvements) if resume_improvements else 0.0
     students_improved = len([x for x in resume_improvements if x > 0])
     
     # Placement Correlation
-    placed_student_ids = StudentPlacementRecord.objects.values_list('student__user_id', flat=True).distinct()
-    placed_avg = analyses.filter(resume__user_id__in=placed_student_ids).aggregate(avg=Avg('score'))['avg']
-    unplaced_avg = analyses.exclude(resume__user_id__in=placed_student_ids).aggregate(avg=Avg('score'))['avg']
+    placed_student_ids = set(StudentPlacementRecord.objects.values_list('student__user_id', flat=True).distinct())
+    placed_scores = [float(a['score']) for a in analyses_list if a['resume__user_id'] in placed_student_ids and a['score'] is not None]
+    unplaced_scores = [float(a['score']) for a in analyses_list if a['resume__user_id'] not in placed_student_ids and a['score'] is not None]
+    
+    placed_avg = round(sum(placed_scores) / len(placed_scores), 1) if placed_scores else 0.0
+    unplaced_avg = round(sum(unplaced_scores) / len(unplaced_scores), 1) if unplaced_scores else 0.0
     
     placement_correlation = {
-        "placed_students_avg_ats": float(placed_avg) if placed_avg else 0.0,
-        "unplaced_students_avg_ats": float(unplaced_avg) if unplaced_avg else 0.0
+        "placed_students_avg_ats": placed_avg,
+        "unplaced_students_avg_ats": unplaced_avg
     }
     
     # Missing skills for unplaced
     unplaced_missing_skills_counter = collections.Counter()
-    unplaced_analyses = analyses.exclude(resume__user_id__in=placed_student_ids)
-    for ua in unplaced_analyses:
-        if ua.missing_skills:
-            for skill in ua.missing_skills:
+    for ua in analyses_list:
+        if ua['resume__user_id'] not in placed_student_ids and ua.get('missing_skills'):
+            for skill in ua['missing_skills']:
                 unplaced_missing_skills_counter[skill] += 1
                 
     unplaced_missing_skills = [{"skill": k, "flagged_count": v} for k, v in unplaced_missing_skills_counter.most_common(10)]
     
     # Students below threshold
     threshold = float(filters.get('threshold', 60))
-    # We fetch latest score per student below threshold
-    latest_score_subquery = ResumeAnalysis.objects.filter(
-        resume__user_id=OuterRef('resume__user_id')
-    ).order_by('-created_at').values('score')[:1]
+    students_below_ids = [uid for uid, sc in user_latest_scores.items() if sc < threshold]
     
-    students_below = analyses.annotate(
-        latest_score=Subquery(latest_score_subquery)
-    ).filter(latest_score__lt=threshold).values(
-        'resume__user_id', 'resume__user__first_name', 'resume__user__last_name', 'latest_score'
-    ).distinct()[:10]
+    user_info_map = {
+        sp['user_id']: sp for sp in StudentProfile.objects.filter(user_id__in=students_below_ids).values('user_id', 'user__first_name', 'user__last_name')
+    }
     
     students_below_threshold = [
         {
-            "student_id": s['resume__user_id'],
-            "first_name": s['resume__user__first_name'],
-            "last_name": s['resume__user__last_name'],
-            "latest_ats_score": float(s['latest_score'])
-        } for s in students_below
+            "student_id": uid,
+            "first_name": user_info_map.get(uid, {}).get('user__first_name', ''),
+            "last_name": user_info_map.get(uid, {}).get('user__last_name', ''),
+            "latest_ats_score": user_latest_scores[uid]
+        }
+        for uid in students_below_ids[:10]
     ]
 
     return {

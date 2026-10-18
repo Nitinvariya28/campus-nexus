@@ -33,6 +33,7 @@ def get_company_performance_analytics(filters):
         placements_qs = placements_qs.filter(offer_type=offer_type)
 
     # --- B-44: Recruiter Health ---
+    from django.db.models import Max
     latest_year_obj = StudentPlacementRecord.objects.order_by('-placement_year').first()
     latest_year = latest_year_obj.placement_year if latest_year_obj else None
     
@@ -44,61 +45,86 @@ def get_company_performance_analytics(filters):
         companies_this_year = set(StudentPlacementRecord.objects.filter(placement_year=latest_year).values_list('company_id', flat=True).distinct())
         companies_past_years = set(StudentPlacementRecord.objects.filter(placement_year__lt=latest_year).values_list('company_id', flat=True).distinct())
         
+        all_comp_ids = companies_this_year.union(companies_past_years)
+        comp_name_map = {c['id']: c['name'] for c in Company.objects.filter(id__in=all_comp_ids).values('id', 'name')}
+        
+        # Pre-fetch counts for this year and last year in 1 query
+        offers_by_company_year = {
+            (p['company_id'], p['placement_year']): p['c']
+            for p in StudentPlacementRecord.objects.filter(
+                placement_year__gte=latest_year - 1, company_id__in=companies_this_year
+            ).values('company_id', 'placement_year').annotate(c=Count('id'))
+        }
+        
         # New: Hired this year, never before
         new_ids = companies_this_year - companies_past_years
         for c_id in new_ids:
-            c = Company.objects.get(id=c_id)
-            offers = StudentPlacementRecord.objects.filter(placement_year=latest_year, company_id=c_id).count()
-            new_recruiters.append({"company__name": c.name, "offers_this_year": offers})
+            c_name = comp_name_map.get(c_id, f"Company {c_id}")
+            offers = offers_by_company_year.get((c_id, latest_year), 0)
+            new_recruiters.append({"company__name": c_name, "offers_this_year": offers})
             
         # Repeat: Hired this year and before
         repeat_ids = companies_this_year.intersection(companies_past_years)
         for c_id in repeat_ids:
-            c = Company.objects.get(id=c_id)
-            offers_this = StudentPlacementRecord.objects.filter(placement_year=latest_year, company_id=c_id).count()
-            offers_last = StudentPlacementRecord.objects.filter(placement_year=latest_year-1, company_id=c_id).count()
-            repeat_recruiters.append({"company__name": c.name, "offers_this_year": offers_this, "offers_last_year": offers_last})
+            c_name = comp_name_map.get(c_id, f"Company {c_id}")
+            offers_this = offers_by_company_year.get((c_id, latest_year), 0)
+            offers_last = offers_by_company_year.get((c_id, latest_year - 1), 0)
+            repeat_recruiters.append({
+                "company__name": c_name,
+                "offers_this_year": offers_this,
+                "offers_last_year": offers_last
+            })
             
-        # Lapsed: Hired before, not this year
+        # Lapsed: Hired before, not this year (1 bulk query)
         lapsed_ids = companies_past_years - companies_this_year
+        lapsed_max_years = {
+            p['company_id']: p['max_yr']
+            for p in StudentPlacementRecord.objects.filter(
+                company_id__in=lapsed_ids
+            ).values('company_id').annotate(max_yr=Max('placement_year'))
+        }
         for c_id in lapsed_ids:
-            c = Company.objects.get(id=c_id)
-            last_visit = StudentPlacementRecord.objects.filter(company_id=c_id).order_by('-placement_year').first().placement_year
-            lapsed_recruiters.append({"company__name": c.name, "last_visited_year": last_visit})
+            c_name = comp_name_map.get(c_id, f"Company {c_id}")
+            last_visit = lapsed_max_years.get(c_id)
+            lapsed_recruiters.append({"company__name": c_name, "last_visited_year": last_visit})
 
     # --- B-56: Outreach Targets ---
     alumni_companies = set(AlumniProfile.objects.filter(current_company__isnull=False).values_list('current_company_id', flat=True).distinct())
     placement_companies = set(StudentPlacementRecord.objects.values_list('company_id', flat=True).distinct())
     
-    outreach_ids = alumni_companies - placement_companies
+    outreach_ids = list(alumni_companies - placement_companies)[:10]
     outreach_targets = []
-    for c_id in list(outreach_ids)[:10]:  # limit to top 10 for performance
-        c = Company.objects.get(id=c_id)
-        alumni_count = AlumniProfile.objects.filter(current_company_id=c_id).count()
-        outreach_targets.append({
-            "company__name": c.name,
-            "alumni_working_here": alumni_count,
-            "reason": "Alumni present but 0 placement records"
-        })
-    outreach_targets.sort(key=lambda x: x['alumni_working_here'], reverse=True)
+    if outreach_ids:
+        outreach_name_map = {c['id']: c['name'] for c in Company.objects.filter(id__in=outreach_ids).values('id', 'name')}
+        outreach_counts_map = {
+            a['current_company_id']: a['c']
+            for a in AlumniProfile.objects.filter(
+                current_company_id__in=outreach_ids
+            ).values('current_company_id').annotate(c=Count('id'))
+        }
+        for c_id in outreach_ids:
+            outreach_targets.append({
+                "company__name": outreach_name_map.get(c_id, f"Company {c_id}"),
+                "alumni_working_here": outreach_counts_map.get(c_id, 0),
+                "reason": "Alumni present but 0 placement records"
+            })
+        outreach_targets.sort(key=lambda x: x['alumni_working_here'], reverse=True)
 
-    # --- B-47: Internship Conversion ---
-    # Find students who had an internship
-    intern_records = StudentPlacementRecord.objects.filter(offer_type="INTERNSHIP")
-    eligible_internships = intern_records.count()
+    # --- B-47: Internship Conversion (2 fast bulk queries instead of 140) ---
+    intern_pairs = set(
+        StudentPlacementRecord.objects.filter(
+            offer_type="INTERNSHIP"
+        ).values_list('student_id', 'company_id')
+    )
+    eligible_internships = len(intern_pairs)
     
-    converted = 0
-    for ir in intern_records:
-        # check if student got FTE at same company in same or future year
-        has_fte = StudentPlacementRecord.objects.filter(
-            student_id=ir.student_id, 
-            company_id=ir.company_id, 
-            offer_type="FTE",
-            placement_year__gte=ir.placement_year
-        ).exists()
-        if has_fte:
-            converted += 1
-            
+    fte_pairs = set(
+        StudentPlacementRecord.objects.filter(
+            offer_type__in=["FTE", "FULL_TIME_PLACEMENT"]
+        ).values_list('student_id', 'company_id')
+    )
+    
+    converted = len(intern_pairs.intersection(fte_pairs))
     conversion_rate = round((converted / eligible_internships) * 100, 2) if eligible_internships > 0 else 0.0
 
     # --- B-42, B-43: Company Outcomes ---

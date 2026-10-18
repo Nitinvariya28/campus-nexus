@@ -225,7 +225,8 @@ export default function MultiYearPlacementTrajectoryChart({ data, loading = fals
                   name="Total Offers"
                   fill="#4F46E5"
                   radius={[4, 4, 0, 0]}
-                  barSize={24}
+                  barSize={18}
+                  maxBarSize={22}
                 />
               )}
               {(viewMetric === 'BOTH' || viewMetric === 'CTC') && (
@@ -235,9 +236,9 @@ export default function MultiYearPlacementTrajectoryChart({ data, loading = fals
                   dataKey="avgLpa"
                   name="Average CTC (₹ LPA)"
                   stroke="#10B981"
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#10B981', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-                  activeDot={{ r: 6 }}
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: '#10B981', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+                  activeDot={{ r: 5 }}
                 />
               )}
             </ComposedChart>

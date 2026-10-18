@@ -1,3 +1,4 @@
+import collections
 from django.db.models import Count, Case, When, Value, CharField
 from django.utils import timezone
 from apps.skills.models import UserLearningResource, UserAIUsage, MasterLearningPlatform
@@ -65,12 +66,26 @@ def get_learning_ai_analytics(filters):
     
     tool_by_purpose_matrix = []
     top_tools = ai_qs.values('ai_tool').annotate(count=Count('user', distinct=True)).order_by('-count')[:5]
-    for t in top_tools:
-        purposes = list(ai_qs.filter(ai_tool=t['ai_tool']).values('usage_purpose').annotate(count=Count('user', distinct=True)).order_by('-count')[:5])
-        tool_by_purpose_matrix.append({
-            "ai_tool": t['ai_tool'],
-            "top_purposes": purposes
-        })
+    top_tool_names = [t['ai_tool'] for t in top_tools]
+    if top_tool_names:
+        purposes_raw = list(
+            ai_qs.filter(ai_tool__in=top_tool_names)
+            .values('ai_tool', 'usage_purpose')
+            .annotate(count=Count('user', distinct=True))
+            .order_by('ai_tool', '-count')
+        )
+        tool_purpose_map = collections.defaultdict(list)
+        for p in purposes_raw:
+            if len(tool_purpose_map[p['ai_tool']]) < 5:
+                tool_purpose_map[p['ai_tool']].append({
+                    "usage_purpose": p['usage_purpose'],
+                    "count": p['count']
+                })
+        for tool_name in top_tool_names:
+            tool_by_purpose_matrix.append({
+                "ai_tool": tool_name,
+                "top_purposes": tool_purpose_map.get(tool_name, [])
+            })
 
     # --- Student Insights ---
     # Apply Student filters (department, batch, semester)
@@ -90,28 +105,67 @@ def get_learning_ai_analytics(filters):
     learning_by_department = []
     ai_by_department_and_semester = []
     
-    departments = student_users_qs.values_list('department__name', flat=True).distinct()
-    for dept in departments:
-        if not dept: continue
-        dept_ids = set(student_users_qs.filter(department__name=dept).values_list('user_id', flat=True))
-        if not dept_ids: continue
-        
+    # 1 bulk query for learning by department
+    dept_platforms_raw = list(
+        learning_qs.filter(
+            user_id__in=student_user_ids, platform__isnull=False
+        ).values(
+            'user__student_profile__department__name', 'platform__name'
+        ).annotate(count=Count('user_id', distinct=True)).order_by('-count')
+    )
+    
+    dept_learn_map = {}
+    for item in dept_platforms_raw:
+        dept = item['user__student_profile__department__name']
+        if not dept:
+            continue
+        if dept not in dept_learn_map:
+            dept_learn_map[dept] = []
+        if len(dept_learn_map[dept]) < 5:
+            dept_learn_map[dept].append({
+                "platform__name": item['platform__name'],
+                "count": item['count']
+            })
+            
+    for dept, platforms in dept_learn_map.items():
         learning_by_department.append({
             "department__name": dept,
-            "top_platforms": build_platform_list(learning_qs.filter(user_id__in=dept_ids), limit=5)
+            "top_platforms": platforms
         })
         
-        semesters = student_users_qs.filter(department__name=dept).values_list('semester', flat=True).distinct()
-        for sem in semesters:
-            if sem is None: continue
-            sem_ids = set(student_users_qs.filter(department__name=dept, semester=sem).values_list('user_id', flat=True))
-            if sem_ids:
-                top_ai = list(ai_qs.filter(user_id__in=sem_ids).values('ai_tool').annotate(count=Count('user', distinct=True)).order_by('-count')[:5])
-                ai_by_department_and_semester.append({
-                    "department__name": dept,
-                    "semester": sem,
-                    "top_ai_tools": top_ai
-                })
+    # 1 bulk query for AI by department and semester
+    dept_sem_ai_raw = list(
+        ai_qs.filter(
+            user_id__in=student_user_ids
+        ).values(
+            'user__student_profile__department__name',
+            'user__student_profile__semester',
+            'ai_tool'
+        ).annotate(count=Count('user_id', distinct=True)).order_by('-count')
+    )
+    
+    dept_sem_map = {}
+    for item in dept_sem_ai_raw:
+        dept = item['user__student_profile__department__name']
+        sem = item['user__student_profile__semester']
+        tool = item['ai_tool']
+        if not dept or sem is None or not tool:
+            continue
+        key = (dept, sem)
+        if key not in dept_sem_map:
+            dept_sem_map[key] = []
+        if len(dept_sem_map[key]) < 5:
+            dept_sem_map[key].append({
+                "ai_tool": tool,
+                "count": item['count']
+            })
+            
+    for (dept, sem), top_tools in dept_sem_map.items():
+        ai_by_department_and_semester.append({
+            "department__name": dept,
+            "semester": sem,
+            "top_ai_tools": top_tools
+        })
 
     # B-12: Placed vs Unplaced
     placed_student_ids = set(StudentPlacementRecord.objects.filter(student__user_id__in=student_user_ids).values_list('student__user_id', flat=True))
@@ -154,8 +208,12 @@ def get_learning_ai_analytics(filters):
     alumni_insights_by_band = []
     bands = ['< 2 Years', '2-5 Years', '5+ Years']
     
+    band_users_map = collections.defaultdict(set)
+    for uid, b in alumni_with_bands.values_list('user_id', 'experience_band'):
+        band_users_map[b].add(uid)
+
     for band in bands:
-        band_user_ids = set(alumni_with_bands.filter(experience_band=band).values_list('user_id', flat=True))
+        band_user_ids = band_users_map.get(band, set())
         if band_user_ids:
             top_ai = list(ai_qs.filter(user_id__in=band_user_ids).values('ai_tool').annotate(count=Count('user', distinct=True)).order_by('-count')[:5])
             top_learn = build_platform_list(learning_qs.filter(user_id__in=band_user_ids), limit=5)

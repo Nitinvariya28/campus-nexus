@@ -85,68 +85,72 @@ export default function CompanyPresenceChart({ data, loading = false }) {
       subtitle="Institutional partner rankings"
       heightClass="h-64"
     >
-      <div className="w-full h-full flex flex-col justify-between">
-        <div className="w-full flex-1 min-h-[190px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 4, right: 28, left: 10, bottom: -10 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke={CHART_PALETTE.grid} horizontal={false} />
-              <XAxis type="number" hide />
-              <YAxis
-                dataKey="name"
-                type="category"
-                tick={{ fontSize: 10, fill: CHART_PALETTE.axisText }}
-                tickLine={false}
-                axisLine={false}
-                width={68}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload || !payload.length) return null;
-                  const item = payload[0].payload;
-                  return (
-                    <div className="bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md rounded-lg p-2.5 min-w-[120px] text-xs">
-                      <div className="font-bold text-slate-800 border-b border-slate-100 pb-1 mb-1">
-                        {item.name}
-                      </div>
-                      <div className="flex items-center justify-between gap-3 text-slate-600">
-                        <span>Presence Score:</span>
-                        <strong className="text-indigo-600 font-bold">{item.score}</strong>
-                      </div>
-                      {item.alumni > 0 && (
-                        <div className="flex items-center justify-between gap-3 text-slate-500 text-[11px] mt-0.5">
-                          <span>Alumni Hired:</span>
-                          <span>{item.alumni}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }}
-              />
-              <Bar dataKey="score" fill="#2563EB" radius={[0, 4, 4, 0]} maxBarSize={14}>
-                <LabelList
-                  dataKey="score"
-                  position="right"
-                  fill="#64748B"
-                  fontSize={10}
-                  fontWeight={600}
+      <div className="w-full h-full flex flex-col justify-between overflow-hidden">
+        {/* Scrollable container so recruiter names and bars do not overlap */}
+        <div className="w-full flex-1 overflow-y-auto max-h-[175px] pr-1.5 scrollbar-thin">
+          <div style={{ height: `${Math.max(175, chartData.length * 36)}px`, width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                layout="vertical"
+                margin={{ top: 4, right: 32, left: 5, bottom: 4 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_PALETTE.grid} horizontal={false} />
+                <XAxis type="number" hide />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  tick={{ fontSize: 10, fill: CHART_PALETTE.axisText }}
+                  tickFormatter={(val) => (val && val.length > 15 ? `${val.substring(0, 13)}…` : val)}
+                  tickLine={false}
+                  axisLine={false}
+                  width={88}
                 />
-                {chartData.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={index < 3 ? '#2563EB' : index < 6 ? '#4F46E5' : '#6366F1'}
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const item = payload[0].payload;
+                    return (
+                      <div className="bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md rounded-lg p-2.5 min-w-[130px] text-xs">
+                        <div className="font-bold text-slate-800 border-b border-slate-100 pb-1 mb-1">
+                          {item.name}
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-slate-600">
+                          <span>Presence Score:</span>
+                          <strong className="text-indigo-600 font-bold">{item.score}</strong>
+                        </div>
+                        {item.alumni > 0 && (
+                          <div className="flex items-center justify-between gap-3 text-slate-500 text-[11px] mt-0.5">
+                            <span>Alumni Hired:</span>
+                            <span>{item.alumni}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+                <Bar dataKey="score" fill="#2563EB" radius={[0, 4, 4, 0]} barSize={14}>
+                  <LabelList
+                    dataKey="score"
+                    position="right"
+                    fill="#64748B"
+                    fontSize={10}
+                    fontWeight={600}
                   />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                  {chartData.map((_, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={index < 3 ? '#2563EB' : index < 6 ? '#4F46E5' : '#6366F1'}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Bottom indicator */}
-        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1.5 border-t border-slate-100">
+        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1.5 border-t border-slate-100 mt-1">
           <span>Campus Intake Score</span>
           <span className="font-medium text-slate-500">{chartData.length} Partners</span>
         </div>

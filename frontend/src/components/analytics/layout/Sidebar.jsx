@@ -4,12 +4,8 @@ import {
   GraduationCap,
   Briefcase,
   Building2,
-  User,
-  Settings,
-  HelpCircle,
   ChevronRight,
   X,
-  Layers,
 } from 'lucide-react';
 import { DASHBOARDS } from '../../../constants/analytics/dashboardConfig';
 
@@ -20,7 +16,7 @@ import { DASHBOARDS } from '../../../constants/analytics/dashboardConfig';
  * and sleeker active tab indicator in Rich Indigo (#4F46E5).
  *
  * Supports both:
- * 1. Desktop static sidebar (md:flex w-64)
+ * 1. Desktop static sidebar (md:flex w-60, full h-screen)
  * 2. Mobile slide-out drawer (md:hidden slide-in overlay when isOpen is true)
  *
  * @param {string} activeDashboard - Currently selected dashboard ID ('common' | 'student' | 'alumni' | 'placement_cell')
@@ -40,12 +36,6 @@ export default function Sidebar({
     Briefcase,
     Building2,
   };
-
-  const quickLinks = [
-    { label: 'Profile', path: '/profile', icon: User },
-    { label: 'Settings', path: '/settings', icon: Settings },
-    { label: 'Help & Support', path: '/support', icon: HelpCircle },
-  ];
 
   // Prevent background scroll when mobile drawer is open & handle ESC key
   useEffect(() => {
@@ -78,7 +68,7 @@ export default function Sidebar({
   };
 
   const renderDashboardNav = (isMobile = false) => (
-    <nav className="space-y-1.5">
+    <nav className="space-y-1">
       {DASHBOARDS.map((db) => {
         const Icon = iconMap[db.icon] || LayoutDashboard;
         const isActive = activeDashboard === db.id;
@@ -88,22 +78,22 @@ export default function Sidebar({
             key={db.id}
             type="button"
             onClick={() => handleSelect(db.id)}
-            className={`w-full group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 text-left ${
+            className={`w-full group flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 text-left ${
               isActive
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-950/40 ring-1 ring-indigo-400/30'
+                ? 'bg-indigo-600 text-white shadow-xs shadow-indigo-950/40 ring-1 ring-indigo-400/30 font-semibold'
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
             }`}
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <Icon
-                className={`w-4 h-4 shrink-0 transition-colors ${
+                className={`w-3.5 h-3.5 shrink-0 transition-colors ${
                   isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'
                 }`}
               />
               <div className="truncate">
-                <span className="truncate block font-medium">{db.title}</span>
+                <span className="truncate block">{db.title}</span>
                 {isMobile && db.subtitle && (
-                  <span className={`text-[10px] block truncate ${isActive ? 'text-indigo-200' : 'text-slate-500'}`}>
+                  <span className={`text-[9px] block truncate ${isActive ? 'text-indigo-200' : 'text-slate-500'}`}>
                     {db.subtitle}
                   </span>
                 )}
@@ -111,7 +101,7 @@ export default function Sidebar({
             </div>
 
             {isActive && (
-              <ChevronRight className="w-3.5 h-3.5 text-indigo-200 shrink-0 ml-2" />
+              <ChevronRight className="w-3 h-3 text-indigo-200 shrink-0 ml-1.5" />
             )}
           </button>
         );
@@ -119,46 +109,34 @@ export default function Sidebar({
     </nav>
   );
 
-  const renderQuickLinks = () => (
-    <nav className="space-y-0.5">
-      {quickLinks.map((item) => {
-        const Icon = item.icon;
-        return (
-          <a
-            key={item.label}
-            href={item.path}
-            onClick={() => onClose && onClose()}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors"
-          >
-            <Icon className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            <span>{item.label}</span>
-          </a>
-        );
-      })}
-    </nav>
-  );
-
   return (
     <>
-      {/* 1. Desktop Static Sidebar (Zone 2, md:flex) */}
-      <aside className="w-64 shrink-0 bg-slate-900 text-slate-300 hidden md:flex flex-col justify-between py-6 px-3.5 border-r border-slate-800/80 h-full overflow-y-auto scrollbar-none shadow-xs">
-        {/* Top Group: Strictly Four Thematic Dashboards */}
-        <div className="space-y-6">
+      {/* 1. Desktop Static Sidebar (Zone 2, md:flex) - Full Height with Brand Header */}
+      <aside className="w-56 shrink-0 bg-slate-900 text-slate-300 hidden md:flex flex-col justify-start py-4 px-3 border-r border-slate-800/80 h-screen overflow-y-auto scrollbar-none shadow-xs">
+        <div>
+          {/* Top Platform Brand Header */}
+          <div className="flex items-center gap-2.5 px-2.5 pb-4 mb-4 border-b border-slate-800/80">
+            <img 
+              src="/logo.svg" 
+              alt="AlumiBridge Logo" 
+              className="w-7 h-7 shrink-0" 
+            />
+            <div className="min-w-0">
+              <span className="text-base font-bold tracking-tight text-white block truncate leading-tight">
+                Alumi<span className="text-amber-500">Bridge</span>
+              </span>
+              <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider block">
+                Analytics Intelligence
+              </span>
+            </div>
+          </div>
+
+          {/* Analytics Views Section */}
           <div>
-            <h2 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2.5">
-              Dashboards
+            <h2 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2.5 mb-2">
+              Analytics Suite
             </h2>
             {renderDashboardNav(false)}
-          </div>
-        </div>
-
-        {/* Bottom Group: Quick Links with Subtle Border Separation */}
-        <div>
-          <div className="border-t border-slate-800/80 pt-4 mb-1">
-            <h2 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">
-              Quick Links
-            </h2>
-            {renderQuickLinks()}
           </div>
         </div>
       </aside>
@@ -190,42 +168,36 @@ export default function Sidebar({
           <div>
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800/80">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs">
-                  <Layers className="w-4 h-4" />
-                </div>
+                <img 
+                  src="/logo.svg" 
+                  alt="AlumiBridge Logo" 
+                  className="w-7 h-7 shrink-0" 
+                />
                 <div>
-                  <h3 className="text-sm font-semibold text-white leading-tight">
-                    Analytics Suite
+                  <h3 className="text-xs font-semibold text-white leading-tight">
+                    Alumi<span className="text-amber-500">Bridge</span>
                   </h3>
-                  <p className="text-[10px] text-slate-400">Select dashboard view</p>
+                  <p className="text-[9px] text-slate-400">Analytics Intelligence</p>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                aria-label="Close dashboard slide bar"
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                aria-label="Close analytics navigation"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Dashboard Selector */}
             <div>
-              <h2 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2.5">
-                Dashboards
+              <h2 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2.5 mb-2">
+                Analytics Suite
               </h2>
               {renderDashboardNav(true)}
             </div>
-          </div>
-
-          {/* Quick Links at Bottom of Drawer */}
-          <div className="border-t border-slate-800/80 pt-4 mt-6">
-            <h2 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">
-              Quick Links
-            </h2>
-            {renderQuickLinks()}
           </div>
         </aside>
       </div>

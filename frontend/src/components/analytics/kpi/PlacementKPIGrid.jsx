@@ -27,14 +27,13 @@ export default function PlacementKPIGrid({ data, loading = false, filters = {} }
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
-            className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between h-[132px] animate-pulse"
+            className="bg-white px-2.5 py-2 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-2.5 h-[50px] animate-pulse"
           >
-            <div className="flex items-center justify-between">
-              <div className="h-3 w-24 bg-slate-200 rounded" />
-              <div className="w-7 h-7 rounded-lg bg-slate-100" />
+            <div className="w-7 h-7 rounded-md bg-slate-100 shrink-0" />
+            <div className="flex-1 space-y-1">
+              <div className="h-2 w-14 bg-slate-200 rounded" />
+              <div className="h-3.5 w-20 bg-slate-200 rounded" />
             </div>
-            <div className="h-7 w-20 bg-slate-200 rounded my-2" />
-            <div className="h-2.5 w-32 bg-slate-100 rounded" />
           </div>
         ))}
       </KPIGrid>
@@ -149,78 +148,52 @@ export default function PlacementKPIGrid({ data, loading = false, filters = {} }
 
   return (
     <KPIGrid>
-      {/* KPI 1: Campus Placement Rate */}
+      {/* KPI 1: Placement Rate */}
       <KPICard
-        title="Campus Placement Rate"
+        title="Placement Rate"
         value={placementRateVal !== '—' ? `${placementRateVal}%` : '—'}
-        subtitle={
-          placedCount > 0 && eligibleCount > 0
-            ? `${placedCount} of ${eligibleCount} students placed`
-            : 'Verified placement conversion'
-        }
         accentColor="emerald"
         customBadge={placementGauge}
       />
 
-      {/* KPI 2: Total Offers Extended */}
+      {/* KPI 2: Total Offers */}
       <KPICard
-        title="Total Placement Offers"
+        title="Total Offers"
         value={totalOffers}
         icon={<Briefcase />}
         accentColor="blue"
-        subtitle={
-          multiOfferStudents > 0
-            ? `${multiOfferStudents} students with 2+ offers`
-            : 'Verified campus placement offers'
-        }
       />
 
-      {/* KPI 3: Institutional Average Package */}
+      {/* KPI 3: Average Package */}
       <KPICard
-        title="Campus Average Package"
+        title="Average Package"
         value={avgLpa}
         icon={<TrendingUp />}
         accentColor="indigo"
-        subtitle={
-          medianLpa !== '—' && maxLpa !== '—'
-            ? `Median: ₹ ${medianLpa} · Peak: ₹ ${maxLpa} LPA`
-            : 'Institutional compensation benchmarks'
-        }
       />
 
-      {/* KPI 4: Distinct Hiring Corporate Partners */}
+      {/* KPI 4: Active Recruiters */}
       <KPICard
-        title="Active Hiring Partners"
+        title="Active Recruiters"
         value={distinctCompaniesDisplay}
         icon={<Building2 />}
         accentColor="purple"
-        subtitle={
-          newRecruitersCount > 0
-            ? `${newRecruitersCount} new corporate partners`
-            : 'Corporate recruiters on campus'
-        }
       />
 
-      {/* KPI 5: Tier-1 & Dream Share */}
+      {/* KPI 5: Tier-1 / Dream Share */}
       <KPICard
-        title="Tier-1 & Dream Share"
+        title="Tier-1 / Dream Share"
         value={tier1Share}
         icon={<Sparkles />}
         accentColor="amber"
-        subtitle="Super Dream, Dream & Unicorn CTC"
       />
 
-      {/* KPI 6: PPO Conversion Rate */}
+      {/* KPI 6: PPO Conversion */}
       <KPICard
-        title="PPO Conversion Rate"
+        title="PPO Conversion"
         value={ppoRate}
         icon={<Zap />}
         accentColor="rose"
-        subtitle={
-          convertedCount > 0 && eligibleInterns > 0
-            ? `${convertedCount} of ${eligibleInterns} interns converted to FTE`
-            : 'Internship-to-FTE conversion'
-        }
       />
     </KPIGrid>
   );

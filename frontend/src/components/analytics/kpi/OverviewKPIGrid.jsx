@@ -21,16 +21,12 @@ export default function OverviewKPIGrid({ data, loading = false, filters = {} })
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
-            className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[132px] animate-pulse"
+            className="bg-white px-2.5 py-2 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-2.5 h-[50px] animate-pulse"
           >
-            <div className="flex items-center justify-between">
-              <div className="h-3 w-20 bg-slate-200 rounded" />
-              <div className="w-8 h-8 rounded-lg bg-slate-100" />
-            </div>
-            <div className="h-7 w-24 bg-slate-200 rounded my-2" />
-            <div className="space-y-1">
-              <div className="h-3 w-16 bg-slate-100 rounded" />
-              <div className="h-2.5 w-28 bg-slate-100 rounded" />
+            <div className="w-7 h-7 rounded-md bg-slate-100 shrink-0" />
+            <div className="flex-1 space-y-1">
+              <div className="h-2 w-14 bg-slate-200 rounded" />
+              <div className="h-3.5 w-20 bg-slate-200 rounded" />
             </div>
           </div>
         ))}
@@ -91,116 +87,86 @@ export default function OverviewKPIGrid({ data, loading = false, filters = {} })
   );
 
   // SVG Circular Gauge for Verification Card
-  const radius = 15;
-  const circumference = 2 * Math.PI * radius; // ~94.2
+  const radius = 10;
+  const circumference = 2 * Math.PI * radius; // ~62.8
   const numericRate = parseFloat(verificationRate) || 0;
   const strokeDashoffset = circumference - (numericRate / 100) * circumference;
 
   const verificationGauge = (
-    <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
-      <svg className="w-10 h-10 transform -rotate-90">
+    <div className="relative w-7 h-7 flex items-center justify-center shrink-0">
+      <svg className="w-7 h-7 transform -rotate-90">
         <circle
-          cx="20"
-          cy="20"
+          cx="14"
+          cy="14"
           r={radius}
           stroke="#E2E8F0"
-          strokeWidth="3.5"
+          strokeWidth="2.5"
           fill="transparent"
         />
         <circle
-          cx="20"
-          cy="20"
+          cx="14"
+          cy="14"
           r={radius}
           stroke={numericRate > 0 ? '#059669' : '#CBD5E1'}
-          strokeWidth="3.5"
+          strokeWidth="2.5"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
           fill="transparent"
         />
       </svg>
-      <span className="absolute text-[9px] font-extrabold text-slate-700 font-mono">
+      <span className="absolute text-[8px] font-bold text-slate-700 font-mono">
         {Math.round(numericRate)}%
       </span>
     </div>
   );
 
-  // Role Breakdown Chips for Card 1
-  const userRoleChips = (
-    <div>
-      <div className="text-[11px] font-semibold text-slate-500 mb-1">
-        <span>Verified Identity Census</span>
-      </div>
-      <div className="flex items-center gap-1 text-[9px] font-semibold pt-1 border-t border-slate-100 flex-wrap">
-        <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
-          Students {studentCount.toLocaleString()}
-        </span>
-        <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700">
-          Alumni {alumniCount.toLocaleString()}
-        </span>
-        <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">
-          Staff {staffCount.toLocaleString()}
-        </span>
-      </div>
-    </div>
-  );
-
   return (
     <KPIGrid>
-      {/* Card 1: Total Registered Users */}
+      {/* Card 1: Registered Users */}
       <KPICard
-        title="Total Registered Users"
+        title="Registered Users"
         value={totalUsers}
         accentColor="indigo"
         icon={<Users />}
-        customFooter={userRoleChips}
       />
 
       {/* Card 2: Identity Verification Rate with Circular Gauge */}
       <KPICard
-        title="Identity Verification Rate"
+        title="Verification Rate"
         value={`${verificationRate}%`}
-        subtitle={
-          totalUsers > 0
-            ? `${totalVerified.toLocaleString()} / ${totalUsers.toLocaleString()} verified`
-            : 'No users registered'
-        }
         accentColor="emerald"
         customBadge={verificationGauge}
       />
 
       {/* Card 3: Active Partner Recruiters */}
       <KPICard
-        title="Active Partner Recruiters"
+        title="Active Recruiters"
         value={partnerCompanies}
-        subtitle={partnerCompanies > 0 ? 'On-Campus & Off-Campus Network' : 'No partner recruiters recorded'}
         accentColor="blue"
         icon={<Building2 />}
       />
 
       {/* Card 4: Total Placement Offers */}
       <KPICard
-        title="Total Placement Offers"
+        title="Total Offers"
         value={totalOffers}
-        subtitle={distinctPlaced > 0 ? `${distinctPlaced} Placed Students` : 'No placement records'}
         accentColor="purple"
         icon={<Briefcase />}
       />
 
-      {/* Card 5: Average Package (Campus) */}
+      {/* Card 5: Average Package */}
       <KPICard
-        title="Average Package (Campus)"
+        title="Average Package"
         value={avgLpa > 0 ? `₹ ${avgLpa.toFixed(1)} LPA` : '₹ 0.0 LPA'}
-        subtitle={avgLpa > 0 ? 'Campus Compensation Average' : 'No compensation data'}
         accentColor="amber"
         icon={<TrendingUp />}
       />
 
-      {/* Card 6: Total Community Posts */}
+      {/* Card 6: Community Posts */}
       <KPICard
-        title="Total Community Posts"
+        title="Community Posts"
         value={totalPosts}
-        subtitle={totalPosts > 0 ? 'Platform Discussions & Pulse' : 'No discussions posted'}
         accentColor="rose"
         icon={<MessageSquare />}
       />

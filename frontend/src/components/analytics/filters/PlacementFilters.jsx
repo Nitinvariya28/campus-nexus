@@ -1,4 +1,5 @@
 import React from 'react';
+import SearchableFilterSelect from './SearchableFilterSelect';
 import {
   PLACEMENT_YEARS,
   DEPARTMENTS,
@@ -15,7 +16,7 @@ import {
  * 3. Offer Type
  * 4. Salary Band
  * 5. Company Tier
- * Supports both desktop 'horizontal' inline strip and mobile 'vertical' modal layout.
+ * Upgraded with searchable typeahead select dropdowns.
  *
  * @param {object} filters - Active filter states
  * @param {function} onChange - (key, value) => void
@@ -33,90 +34,60 @@ export default function PlacementFilters({ filters = {}, onChange, layout = 'hor
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Placement Cycle / Year
           </label>
-          <select
+          <SearchableFilterSelect
+            options={PLACEMENT_YEARS}
             value={filters.placement_year || ''}
-            onChange={(e) => handleChange('placement_year', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Placement Cycle"
-          >
-            {PLACEMENT_YEARS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('placement_year', val)}
+            placeholder="All Placement Cycles"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Department
           </label>
-          <select
+          <SearchableFilterSelect
+            options={DEPARTMENTS}
             value={filters.department || ''}
-            onChange={(e) => handleChange('department', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Department"
-          >
-            {DEPARTMENTS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('department', val)}
+            placeholder="All Departments"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Offer Type
           </label>
-          <select
+          <SearchableFilterSelect
+            options={PLACEMENT_OFFER_TYPES}
             value={filters.offer_type || ''}
-            onChange={(e) => handleChange('offer_type', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Offer Type"
-          >
-            {PLACEMENT_OFFER_TYPES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('offer_type', val)}
+            placeholder="All Offer Types"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Salary Band
           </label>
-          <select
+          <SearchableFilterSelect
+            options={SALARY_BANDS}
             value={filters.salary_band || ''}
-            onChange={(e) => handleChange('salary_band', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Salary Band"
-          >
-            {SALARY_BANDS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('salary_band', val)}
+            placeholder="All Salary Bands"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Company Tier
           </label>
-          <select
+          <SearchableFilterSelect
+            options={COMPANY_TIERS}
             value={filters.company_tier || ''}
-            onChange={(e) => handleChange('company_tier', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Company Tier"
-          >
-            {COMPANY_TIERS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('company_tier', val)}
+            placeholder="All Company Tiers"
+          />
         </div>
       </div>
     );
@@ -125,74 +96,49 @@ export default function PlacementFilters({ filters = {}, onChange, layout = 'hor
   return (
     <div className="flex items-center gap-2 flex-nowrap shrink-0">
       {/* 1. Placement Year / Cycle */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={PLACEMENT_YEARS}
         value={filters.placement_year || ''}
-        onChange={(e) => handleChange('placement_year', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Placement Cycle"
-      >
-        {PLACEMENT_YEARS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('placement_year', val)}
+        placeholder="Placement Cycle"
+      />
 
       {/* 2. Department */}
-      <select
+      <SearchableFilterSelect
+        className="w-40"
+        options={DEPARTMENTS}
         value={filters.department || ''}
-        onChange={(e) => handleChange('department', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Department"
-      >
-        {DEPARTMENTS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('department', val)}
+        placeholder="Department"
+      />
 
       {/* 3. Offer Type */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={PLACEMENT_OFFER_TYPES}
         value={filters.offer_type || ''}
-        onChange={(e) => handleChange('offer_type', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Offer Type"
-      >
-        {PLACEMENT_OFFER_TYPES.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('offer_type', val)}
+        placeholder="Offer Type"
+      />
 
       {/* 4. Salary Band */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={SALARY_BANDS}
         value={filters.salary_band || ''}
-        onChange={(e) => handleChange('salary_band', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Salary Band"
-      >
-        {SALARY_BANDS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('salary_band', val)}
+        placeholder="Salary Band"
+      />
 
       {/* 5. Company Tier */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={COMPANY_TIERS}
         value={filters.company_tier || ''}
-        onChange={(e) => handleChange('company_tier', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Company Tier"
-      >
-        {COMPANY_TIERS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('company_tier', val)}
+        placeholder="Company Tier"
+      />
     </div>
   );
 }

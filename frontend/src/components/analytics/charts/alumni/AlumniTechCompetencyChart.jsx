@@ -35,7 +35,7 @@ export default function AlumniTechCompetencyChart({ data, loading = false }) {
 
   if (loading) {
     return (
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[420px] animate-pulse">
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[360px] animate-pulse">
         <div className="space-y-2">
           <div className="h-4 w-44 bg-slate-200 rounded" />
           <div className="h-3 w-60 bg-slate-100 rounded" />
@@ -60,7 +60,7 @@ export default function AlumniTechCompetencyChart({ data, loading = false }) {
       <ChartCard
         title="Production Tech Stack"
         subtitle="Technologies utilized by verified alumni in industry"
-        heightClass="h-[420px]"
+        heightClass="h-[360px]"
       >
         <ChartEmptyState
           title="Skills Data Unavailable"

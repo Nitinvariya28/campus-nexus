@@ -54,10 +54,10 @@ export default function DepartmentEligibilityVsPlacedChart({ data, loading = fal
       const name = d.department__name || 'Unknown Department';
       const shortName = DEPT_ABBR[name] || name.split(' ')[0] || name;
       const eligible = Number(d.eligible_students) || 0;
-      const placed = Number(d.placed_students) || 0;
+      const placed = Math.min(eligible, Number(d.placed_students) || 0);
       const unplaced = Math.max(0, eligible - placed);
       const coveragePct =
-        eligible > 0 ? Number(((placed / eligible) * 100).toFixed(1)) : 0;
+        eligible > 0 ? Math.min(100, Number(((placed / eligible) * 100).toFixed(1))) : 0;
 
       totalEligible += eligible;
       totalPlaced += placed;

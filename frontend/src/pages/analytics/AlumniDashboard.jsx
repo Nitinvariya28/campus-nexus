@@ -51,7 +51,7 @@ export default function AlumniDashboard({ filters = {} }) {
   const payload = data?.data || data;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Dashboard Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-200">
         <div>
@@ -104,27 +104,19 @@ export default function AlumniDashboard({ filters = {} }) {
         <AlumniKPIGrid data={payload} loading={loading} filters={filters} />
       </section>
 
-      {/* Row 2: [ALTERNATING PAIR (7+5 cols)] Industry Sectors & Geographic Hubs */}
+      {/* Row 2: [BALANCED 2-COL (6+6 cols)] Industry Sectors & Geographic Hubs */}
       <section aria-label="Industry Sectors and Geographic Footprint">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-7">
-            <AlumniIndustryDomainChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-5">
-            <AlumniGeographicFootprintChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AlumniIndustryDomainChart data={payload} loading={loading} />
+          <AlumniGeographicFootprintChart data={payload} loading={loading} />
         </div>
       </section>
 
-      {/* Row 3: [ALTERNATING PAIR (7+5 cols) - ZERO DONUTS] Career Evolution & Experience Matrix */}
+      {/* Row 3: [BALANCED 2-COL (6+6 cols)] Career Evolution & Experience Matrix */}
       <section aria-label="Career Evolution Across Batches and Experience Tiers">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-7">
-            <AlumniBatchCareerEvolutionChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-5">
-            <AlumniExperienceTierMatrixChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AlumniBatchCareerEvolutionChart data={payload} loading={loading} />
+          <AlumniExperienceTierMatrixChart data={payload} loading={loading} />
         </div>
       </section>
 
@@ -135,39 +127,27 @@ export default function AlumniDashboard({ filters = {} }) {
         </div>
       </section>
 
-      {/* Row 5: [ALTERNATING PAIR (5+7 cols)] Career Specialization & Department Alignment */}
+      {/* Row 5: [BALANCED 2-COL (6+6 cols)] Career Specialization & Department Alignment */}
       <section aria-label="Career Specialization Bands and Department Career Alignment">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-5">
-            <AlumniJobCategoryDonutChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-7">
-            <AlumniDepartmentCareerAlignmentChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AlumniJobCategoryDonutChart data={payload} loading={loading} />
+          <AlumniDepartmentCareerAlignmentChart data={payload} loading={loading} />
         </div>
       </section>
 
-      {/* Row 6: [ALTERNATING PAIR (7+5 cols)] Tech Competency & Corporate Tiers */}
+      {/* Row 6: [BALANCED 2-COL (6+6 cols)] Tech Competency & Corporate Tiers */}
       <section aria-label="Production Tech Stack Pulse and Employer Corporate Tiers">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-7">
-            <AlumniTechCompetencyChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-5">
-            <AlumniCompanyTierDonutChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AlumniTechCompetencyChart data={payload} loading={loading} />
+          <AlumniCompanyTierDonutChart data={payload} loading={loading} />
         </div>
       </section>
 
-      {/* Row 7: [ALTERNATING PAIR (5+7 cols) - ZERO DONUTS] Seniority Progression & Top Employers */}
+      {/* Row 7: [BALANCED 2-COL (6+6 cols)] Seniority Progression & Top Employers */}
       <section aria-label="Job Seniority Hierarchy and Top Employer Organizations">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-5">
-            <AlumniSeniorityHierarchyChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-7">
-            <AlumniTopEmployerOrganizationsChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AlumniSeniorityHierarchyChart data={payload} loading={loading} />
+          <AlumniTopEmployerOrganizationsChart data={payload} loading={loading} />
         </div>
       </section>
     </div>

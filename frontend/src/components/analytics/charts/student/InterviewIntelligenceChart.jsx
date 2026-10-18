@@ -114,8 +114,8 @@ export default function InterviewIntelligenceChart({ data, loading = false }) {
       <div className="flex flex-col gap-3">
         {/* Upper: Difficulty Donut & Stats */}
         <div className="grid grid-cols-2 gap-2 items-center">
-          <div className="relative h-36 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="relative h-36 w-full min-w-0 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <PieChart>
                 <Tooltip
                   content={({ active, payload }) => {

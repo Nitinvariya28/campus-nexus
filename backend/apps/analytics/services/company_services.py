@@ -83,8 +83,7 @@ def get_company_landscape_analytics(filters):
     roles_counts = {item['company_id']: item['c'] for item in roles_qs.values('company_id').annotate(c=Count('id'))}
     
     company_presence = []
-    # Fetch base companies to map names
-    companies_map = {c.id: c.name for c in companies_qs}
+    companies_map = {item['id']: item['name'] for item in companies_qs.values('id', 'name')}
     
     for c_id, c_name in companies_map.items():
         al_c = alumni_counts.get(c_id, 0)

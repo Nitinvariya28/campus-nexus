@@ -35,14 +35,13 @@ export default function AlumniKPIGrid({ data, loading = false, filters = {} }) {
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
-            className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between h-[132px] animate-pulse"
+            className="bg-white px-2.5 py-2 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-2.5 h-[50px] animate-pulse"
           >
-            <div className="flex items-center justify-between">
-              <div className="h-3 w-24 bg-slate-200 rounded" />
-              <div className="w-7 h-7 rounded-lg bg-slate-100" />
+            <div className="w-7 h-7 rounded-md bg-slate-100 shrink-0" />
+            <div className="flex-1 space-y-1">
+              <div className="h-2 w-14 bg-slate-200 rounded" />
+              <div className="h-3.5 w-20 bg-slate-200 rounded" />
             </div>
-            <div className="h-7 w-20 bg-slate-200 rounded my-2" />
-            <div className="h-2.5 w-32 bg-slate-100 rounded" />
           </div>
         ))}
       </KPIGrid>
@@ -104,20 +103,18 @@ export default function AlumniKPIGrid({ data, loading = false, filters = {} }) {
     <KPIGrid>
       {/* KPI 1: Total Alumni Network Size */}
       <KPICard
-        title="Total Alumni Network"
+        title="Alumni Network"
         value={totalAlumni}
         icon={<GraduationCap />}
         accentColor="indigo"
-        subtitle="Verified campus graduates"
       />
 
       {/* KPI 2: Mean Career Experience */}
       <KPICard
-        title="Avg Career Experience"
+        title="Avg Experience"
         value={avgExp}
         icon={<Briefcase />}
         accentColor="blue"
-        subtitle="Post-graduation industry tenure"
       />
 
       {/* KPI 3: Global Tech Hubs */}
@@ -126,7 +123,6 @@ export default function AlumniKPIGrid({ data, loading = false, filters = {} }) {
         value={globalHubsCount}
         icon={<Globe2 />}
         accentColor="emerald"
-        subtitle={`Top: ${topHubName} & overseas hubs`}
       />
 
       {/* KPI 4: Dominant Industry Sector */}
@@ -135,7 +131,7 @@ export default function AlumniKPIGrid({ data, loading = false, filters = {} }) {
         value={industryLabel}
         icon={<Building2 />}
         accentColor="purple"
-        subtitle={`${industryCount} alumni (${industryPct})`}
+        valueClassName="text-xs sm:text-sm font-bold tracking-tight text-slate-900 truncate"
       />
 
       {/* KPI 5: Tier-1 & Unicorn Share */}
@@ -144,7 +140,6 @@ export default function AlumniKPIGrid({ data, loading = false, filters = {} }) {
         value={tier1Share}
         icon={<Award />}
         accentColor="amber"
-        subtitle="Super Dream, Dream & Unicorns"
       />
 
       {/* KPI 6: Alumni Hiring Bridge */}
@@ -153,7 +148,6 @@ export default function AlumniKPIGrid({ data, loading = false, filters = {} }) {
         value={bridgeFirmsCount}
         icon={<Users />}
         accentColor="rose"
-        subtitle={`${totalBridgeAlumni} alumni inside hiring firms`}
       />
     </KPIGrid>
   );

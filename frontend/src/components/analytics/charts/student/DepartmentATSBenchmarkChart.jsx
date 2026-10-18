@@ -102,8 +102,8 @@ export default function DepartmentATSBenchmarkChart({ data, loading = false }) {
       }
     >
       <div className="flex flex-col gap-3">
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-64 w-full min-w-0">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart
               data={chartData}
               layout="vertical"

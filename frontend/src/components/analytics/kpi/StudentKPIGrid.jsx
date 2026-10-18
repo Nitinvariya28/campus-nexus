@@ -37,14 +37,13 @@ export default function StudentKPIGrid({ data, loading = false, filters = {} }) 
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
-            className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between h-[132px] animate-pulse"
+            className="bg-white px-2.5 py-2 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-2.5 h-[50px] animate-pulse"
           >
-            <div className="flex items-center justify-between">
-              <div className="h-3 w-24 bg-slate-200 rounded" />
-              <div className="w-7 h-7 rounded-lg bg-slate-100" />
+            <div className="w-7 h-7 rounded-md bg-slate-100 shrink-0" />
+            <div className="flex-1 space-y-1">
+              <div className="h-2 w-14 bg-slate-200 rounded" />
+              <div className="h-3.5 w-20 bg-slate-200 rounded" />
             </div>
-            <div className="h-7 w-20 bg-slate-200 rounded my-2" />
-            <div className="h-2.5 w-32 bg-slate-100 rounded" />
           </div>
         ))}
       </KPIGrid>
@@ -153,41 +152,24 @@ export default function StudentKPIGrid({ data, loading = false, filters = {} }) 
     <KPIGrid>
       {/* 1. Cohort Average Resume ATS Score */}
       <KPICard
-        title="Cohort Avg ATS Score"
+        title="Avg ATS Score"
         value={cohortAts !== '—' ? `${cohortAts} / 100` : '—'}
-        subtitle={
-          totalResumes > 0
-            ? driveReadyPct
-              ? `${totalResumes} evaluated · ${driveReadyPct}% Day-1 ready`
-              : `${totalResumes} evaluated student resumes`
-            : 'Automated screening match index'
-        }
         accentColor="indigo"
         customBadge={atsGauge}
       />
 
       {/* 2. Cohort Placement Rate */}
       <KPICard
-        title="Cohort Placement Rate"
+        title="Cohort Placement"
         value={placementRateVal !== '—' ? `${placementRateVal}%` : '—'}
-        subtitle={
-          placedCount > 0 && eligibleCount > 0
-            ? `${placedCount} of ${eligibleCount} students placed`
-            : 'Graduating cohort placement rate'
-        }
         accentColor="emerald"
         icon={<Award />}
       />
 
       {/* 3. Campus Average Package */}
       <KPICard
-        title="Campus Average Package"
+        title="Average Package"
         value={avgLpa !== '—' ? `₹ ${avgLpa} LPA` : '—'}
-        subtitle={
-          medianLpa !== '—' && maxLpa !== '—'
-            ? `Median: ₹ ${medianLpa} · Peak: ₹ ${maxLpa} LPA`
-            : 'Institutional compensation benchmarks'
-        }
         accentColor="amber"
         icon={<TrendingUp />}
       />
@@ -196,41 +178,24 @@ export default function StudentKPIGrid({ data, loading = false, filters = {} }) 
       <KPICard
         title="Top In-Demand Skill"
         value={topDemandSkillName}
-        subtitle={
-          topDemandDrives
-            ? `Requested in ${topDemandDrives} campus drives`
-            : `Leading demand across campus drives`
-        }
         accentColor="blue"
         icon={<Cpu />}
-        valueClassName="text-xl xl:text-lg 2xl:text-xl font-bold tracking-tight text-slate-900 truncate"
+        valueClassName="text-xs sm:text-sm font-bold tracking-tight text-slate-900 truncate"
       />
 
       {/* 5. Highest Paying Skill */}
       <KPICard
         title="Highest Paying Skill"
         value={topPayingSkillName}
-        subtitle={
-          topPayingAvgLpa !== '—'
-            ? topPayingMaxLpa
-              ? `₹ ${topPayingAvgLpa} LPA Avg · Peak: ₹ ${topPayingMaxLpa} LPA`
-              : `₹ ${topPayingAvgLpa} LPA campus average package`
-            : 'High-compensation specialization'
-        }
         accentColor="purple"
         icon={<Zap />}
-        valueClassName="text-xl xl:text-lg 2xl:text-xl font-bold tracking-tight text-slate-900 truncate"
+        valueClassName="text-xs sm:text-sm font-bold tracking-tight text-slate-900 truncate"
       />
 
       {/* 6. Active Campus Drives */}
       <KPICard
-        title="Active Campus Drives"
+        title="Active Drives"
         value={activeDrives > 0 ? `${activeDrives} Drives` : `${activeDrives}`}
-        subtitle={
-          urgentCount > 0
-            ? `${urgentCount} urgent deadlines (< 7 days)`
-            : 'Open verified recruitment drives'
-        }
         accentColor="rose"
         icon={<Briefcase />}
       />

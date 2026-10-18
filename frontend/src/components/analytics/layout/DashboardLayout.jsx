@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import FilterBar from './FilterBar';
 import Footer from './Footer';
+import Navbar from '../../common/Navbar';
 import { DASHBOARDS } from '../../../constants/analytics/dashboardConfig';
 import {
   LayoutDashboard,
@@ -65,8 +66,11 @@ export default function DashboardLayout({
         onClose={() => setMobileDrawerOpen(false)}
       />
 
-      {/* Main Column: Filter Bar + Analysis Area (Scrollable Vertically Only) */}
+      {/* Main Column: Navbar + Filter Bar + Analysis Area (Scrollable Vertically Only) */}
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden bg-slate-50">
+        {/* Top Navbar (Brand logo hidden since Sidebar has the official logo) */}
+        <Navbar hideBrand={true} />
+
         {/* Mobile Dashboard Navigation Header (md:hidden): Slide Bar Toggle + Quick Tabs */}
         <div className="md:hidden bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center justify-between gap-2 shrink-0 z-30 shadow-xs">
           {/* Slide Bar Drawer Toggle */}

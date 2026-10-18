@@ -46,21 +46,47 @@ def get_market_gap_analytics(filters):
     opp_skill_qs = OpportunitySkill.objects.filter(opportunity__in=opp_qs)
     
     top_required_skills = []
+    top_skill_ids = []
     if total_opps > 0:
         skill_counts = opp_skill_qs.values('skill__name', 'skill_id').annotate(count=Count('opportunity', distinct=True)).order_by('-count')[:20]
         for sk in skill_counts:
+            top_skill_ids.append(sk['skill_id'])
             top_required_skills.append({
                 "skill__name": sk['skill__name'],
+                "skill_id": sk['skill_id'],
                 "opportunities_requiring_skill": sk['count'],
                 "market_demand_pct": round((sk['count'] / total_opps) * 100, 2)
             })
 
+    # Bulk fetch user skills for all top skills across eligible students (1 query instead of 160)
+    user_skills_list = list(
+        UserSkill.objects.filter(
+            skill_id__in=top_skill_ids, user_id__in=eligible_student_user_ids
+        ).values('user_id', 'skill_id', 'user__student_profile__department__name')
+    )
+    
+    # Map users by skill
+    skill_to_users = {}
+    skill_dept_to_users = {}
+    for us in user_skills_list:
+        sk_id = us['skill_id']
+        u_id = us['user_id']
+        d_name = us['user__student_profile__department__name']
+        
+        if sk_id not in skill_to_users:
+            skill_to_users[sk_id] = set()
+        skill_to_users[sk_id].add(u_id)
+        
+        if d_name:
+            pair = (sk_id, d_name)
+            if pair not in skill_dept_to_users:
+                skill_dept_to_users[pair] = set()
+            skill_dept_to_users[pair].add(u_id)
+
     # --- B-05: Supply vs Demand Global ---
     supply_vs_demand_global_skills = []
     for req_sk in top_required_skills:
-        skill_id_val = next(x['skill_id'] for x in skill_counts if x['skill__name'] == req_sk['skill__name'])
-        users_with_skill = set(UserSkill.objects.filter(skill_id=skill_id_val, user_id__in=eligible_student_user_ids).values_list('user_id', flat=True))
-        
+        users_with_skill = skill_to_users.get(req_sk['skill_id'], set())
         supply_pct = round((len(users_with_skill) / total_students) * 100, 2) if total_students else 0.0
         
         supply_vs_demand_global_skills.append({
@@ -72,19 +98,20 @@ def get_market_gap_analytics(filters):
 
     # --- B-06: Department Supply vs Demand ---
     department_supply_vs_demand = []
-    departments = student_qs.values_list('department__name', flat=True).distinct()
+    departments_qs = student_qs.values('department__name').annotate(cnt=Count('user_id', distinct=True))
     
-    for dept in departments:
-        if not dept: continue
-        dept_student_ids = set(student_qs.filter(department__name=dept).values_list('user_id', flat=True))
-        dept_student_count = len(dept_student_ids)
-        if dept_student_count == 0: continue
+    for d_info in departments_qs:
+        dept = d_info['department__name']
+        if not dept:
+            continue
+        dept_student_count = d_info['cnt']
+        if dept_student_count == 0:
+            continue
         
         dept_skills = []
         for req_sk in top_required_skills:
-            skill_id_val = next(x['skill_id'] for x in skill_counts if x['skill__name'] == req_sk['skill__name'])
-            dept_users_with_skill = set(UserSkill.objects.filter(skill_id=skill_id_val, user_id__in=dept_student_ids).values_list('user_id', flat=True))
-            dept_supply_pct = round((len(dept_users_with_skill) / dept_student_count) * 100, 2)
+            dept_users = skill_dept_to_users.get((req_sk['skill_id'], dept), set())
+            dept_supply_pct = round((len(dept_users) / dept_student_count) * 100, 2)
             
             dept_skills.append({
                 "skill__name": req_sk['skill__name'],
@@ -105,13 +132,25 @@ def get_market_gap_analytics(filters):
         open_opps = open_opps.filter(deadline__gt=deadline)
         
     open_drive_scarcity = []
-    open_skill_counts = OpportunitySkill.objects.filter(opportunity__in=open_opps).values('skill__name', 'skill_id').annotate(count=Count('opportunity', distinct=True))
+    open_skill_counts = list(
+        OpportunitySkill.objects.filter(opportunity__in=open_opps).values(
+            'skill__name', 'skill_id'
+        ).annotate(count=Count('opportunity', distinct=True))
+    )
+    
+    open_skill_ids = [osk['skill_id'] for osk in open_skill_counts]
+    student_skill_user_counts = {
+        item['skill_id']: item['c']
+        for item in UserSkill.objects.filter(
+            skill_id__in=open_skill_ids, user__role='STUDENT'
+        ).values('skill_id').annotate(c=Count('user_id', distinct=True))
+    }
     
     for osk in open_skill_counts:
-        students_with_skill = UserSkill.objects.filter(skill_id=osk['skill_id'], user__role='STUDENT').values('user_id').distinct().count()
+        students_with_skill = student_skill_user_counts.get(osk['skill_id'], 0)
         
         scarcity_status = "HEALTHY"
-        if students_with_skill < osk['count'] * 2: # Heuristic for Critical
+        if students_with_skill < osk['count'] * 2:
             scarcity_status = "CRITICAL_SHORTAGE"
         elif students_with_skill < osk['count'] * 5:
             scarcity_status = "MODERATE_SHORTAGE"
@@ -130,23 +169,48 @@ def get_market_gap_analytics(filters):
     if placement_year and placement_year != 'None':
         placements = placements.filter(placement_year=placement_year)
         
-    # Get top 20 skills listed by placed students
-    placed_student_ids = list(placements.values_list('student__user_id', flat=True))
-    top_placed_skills = UserSkill.objects.filter(user_id__in=placed_student_ids).values('skill__name', 'skill_id').annotate(count=Count('user_id', distinct=True)).order_by('-count')[:20]
-    
-    for psk in top_placed_skills:
-        users_with_skill = set(UserSkill.objects.filter(skill_id=psk['skill_id']).values_list('user_id', flat=True))
-        skill_placements = placements.filter(student__user_id__in=users_with_skill)
-        
-        if skill_placements.count() >= 3: # Sample size threshold
-            avg_pkg = skill_placements.aggregate(Avg('package_lpa'))['package_lpa__avg']
-            max_pkg = skill_placements.aggregate(Max('package_lpa'))['package_lpa__max']
+    # Pre-fetch placed user packages in 1 query
+    user_packages = {}
+    for p in placements.values('student__user_id', 'package_lpa'):
+        uid = p['student__user_id']
+        if p['package_lpa'] is not None:
+            if uid not in user_packages:
+                user_packages[uid] = []
+            user_packages[uid].append(float(p['package_lpa']))
             
+    placed_student_ids = list(user_packages.keys())
+    top_placed_skills = list(
+        UserSkill.objects.filter(user_id__in=placed_student_ids).values(
+            'skill__name', 'skill_id'
+        ).annotate(count=Count('user_id', distinct=True)).order_by('-count')[:20]
+    )
+    
+    top_placed_skill_ids = [psk['skill_id'] for psk in top_placed_skills]
+    user_skill_pairs = list(
+        UserSkill.objects.filter(
+            skill_id__in=top_placed_skill_ids, user_id__in=placed_student_ids
+        ).values('skill_id', 'user_id')
+    )
+    
+    skill_packages_map = {}
+    for usp in user_skill_pairs:
+        sk_id = usp['skill_id']
+        u_id = usp['user_id']
+        if sk_id not in skill_packages_map:
+            skill_packages_map[sk_id] = []
+        if u_id in user_packages:
+            skill_packages_map[sk_id].extend(user_packages[u_id])
+            
+    for psk in top_placed_skills:
+        pkgs = skill_packages_map.get(psk['skill_id'], [])
+        if len(pkgs) >= 3:
+            avg_pkg = sum(pkgs) / len(pkgs)
+            max_pkg = max(pkgs)
             package_associations.append({
                 "skill__name": psk['skill__name'],
-                "sample_size": skill_placements.count(),
-                "average_package_lpa": round(float(avg_pkg), 2) if avg_pkg else 0.0,
-                "max_package_lpa": round(float(max_pkg), 2) if max_pkg else 0.0
+                "sample_size": len(pkgs),
+                "average_package_lpa": round(avg_pkg, 2),
+                "max_package_lpa": round(max_pkg, 2)
             })
             
     package_associations = sorted(package_associations, key=lambda x: x['average_package_lpa'], reverse=True)

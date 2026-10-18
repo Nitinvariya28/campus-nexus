@@ -38,7 +38,7 @@ export default function DepartmentPlacementConversionChart({ data, loading = fal
 
   if (loading) {
     return (
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[380px] animate-pulse">
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[320px] animate-pulse">
         <div className="space-y-2">
           <div className="h-4 w-52 bg-slate-200 rounded" />
           <div className="h-3 w-64 bg-slate-100 rounded" />
@@ -66,7 +66,7 @@ export default function DepartmentPlacementConversionChart({ data, loading = fal
       <ChartCard
         title="Department Placement Conversion"
         subtitle="Placement conversion percentage across departments"
-        heightClass="h-[380px]"
+        heightClass="h-[320px]"
       >
         <ChartEmptyState
           title="Department Data Unavailable"
@@ -79,11 +79,11 @@ export default function DepartmentPlacementConversionChart({ data, loading = fal
   const chartData = rawDepts.slice(0, 7).map((item) => {
     const fullName = item.department__name || item.student__department__name || 'Unknown';
     const shortName = DEPT_ABBR[fullName] || fullName.split(' ')[0];
-    const eligible = item.eligible_students || 0;
-    const placed = item.placed_students || item.total_offers || 0;
+    const eligible = Number(item.eligible_students) || 0;
+    const placed = Math.min(eligible, Number(item.placed_students || item.total_offers || 0));
     const rate = item.coverage_pct != null
-      ? Number(item.coverage_pct)
-      : eligible > 0 ? (placed / eligible) * 100 : 0;
+      ? Math.min(100, Math.max(0, Number(item.coverage_pct)))
+      : eligible > 0 ? Math.min(100, (placed / eligible) * 100) : 0;
 
     const roundedRate = Number(rate.toFixed(1));
 

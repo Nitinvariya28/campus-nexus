@@ -32,71 +32,57 @@ export default function KPICard({
   const colorToken = SEMANTIC_COLORS[accentColor] || SEMANTIC_COLORS.blue;
 
   return (
-    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs transition-all flex flex-col justify-between h-full min-w-0 overflow-hidden">
-      {/* Header Row: Title & Top-Right Badge/Gauge */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="bg-white px-2.5 py-2 rounded-lg border border-slate-200/90 shadow-2xs hover:border-slate-300 hover:shadow-xs transition-all flex items-center gap-2.5 h-full min-w-0 overflow-hidden">
+      {/* Left: Icon Badge or Circular Gauge */}
+      {customBadge ? (
+        <div className="shrink-0">{customBadge}</div>
+      ) : icon ? (
+        <div
+          className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${colorToken.bg} ${colorToken.text}`}
+        >
+          {React.isValidElement(icon)
+            ? React.cloneElement(icon, { className: 'w-3.5 h-3.5' })
+            : typeof icon === 'function' || (typeof icon === 'object' && icon !== null && icon.$$typeof)
+            ? React.createElement(icon, { className: 'w-3.5 h-3.5' })
+            : null}
+        </div>
+      ) : null}
+
+      {/* Right: Metric Label & Primary Value */}
+      <div className="min-w-0 flex-1">
         <span
-          className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate min-w-0 flex-1"
+          className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate leading-tight"
           title={title}
         >
           {title}
         </span>
-        {customBadge ? (
-          <div className="shrink-0">{customBadge}</div>
-        ) : icon ? (
-          <div
-            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${colorToken.bg} ${colorToken.text}`}
-          >
-            {React.isValidElement(icon)
-              ? React.cloneElement(icon, { className: 'w-3.5 h-3.5' })
-              : typeof icon === 'function' || (typeof icon === 'object' && icon !== null && icon.$$typeof)
-              ? React.createElement(icon, { className: 'w-3.5 h-3.5' })
-              : null}
-          </div>
-        ) : null}
-      </div>
-
-      {/* Metric Value Row */}
-      {value !== undefined && (
-        <div className="my-1.5">
-          <div
-            className={`font-bold tracking-tight text-slate-900 truncate whitespace-nowrap ${
-              valueClassName || 'text-2xl'
-            }`}
-            title={typeof value === 'number' ? value.toLocaleString() : value}
-          >
-            {typeof value === 'number' ? value.toLocaleString() : value}
-          </div>
-        </div>
-      )}
-
-      {/* Footer Row: Delta, Subtitle or Custom Breakdown */}
-      {customFooter ? (
-        <div className="mt-1 pt-1 border-t border-slate-100">{customFooter}</div>
-      ) : (
-        <div className="space-y-0.5 min-w-0">
-          {deltaText && (
-            <div
-              className={`text-[11px] font-semibold flex items-center gap-1 ${
-                isPositive ? 'text-emerald-600' : 'text-rose-600'
-              } truncate`}
+        {value !== undefined && (
+          <div className="mt-0.5 flex items-baseline gap-1.5 min-w-0">
+            <span
+              className={`font-bold tracking-tight text-slate-900 truncate whitespace-nowrap leading-none ${
+                valueClassName || 'text-xs sm:text-sm'
+              }`}
+              title={typeof value === 'number' ? value.toLocaleString() : value}
             >
-              {isPositive ? (
-                <TrendingUp className="w-3 h-3 shrink-0" />
-              ) : (
-                <TrendingDown className="w-3 h-3 shrink-0" />
-              )}
-              <span className="truncate">{deltaText}</span>
-            </div>
-          )}
-
-          {subtitle && (
-            <p className="text-[11px] text-slate-400 truncate" title={subtitle}>
-              {subtitle}
-            </p>
-          )}
-        </div>
-      )}
+              {typeof value === 'number' ? value.toLocaleString() : value}
+            </span>
+            {deltaText && (
+              <span
+                className={`text-[9px] font-semibold flex items-center gap-0.5 ${
+                  isPositive ? 'text-emerald-600' : 'text-rose-600'
+                } truncate shrink-0`}
+              >
+                {isPositive ? (
+                  <TrendingUp className="w-2 h-2 shrink-0" />
+                ) : (
+                  <TrendingDown className="w-2 h-2 shrink-0" />
+                )}
+                <span>{deltaText}</span>
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -120,6 +120,8 @@ export default function AlumniDepartmentCareerAlignmentChart({ data, loading = f
             <BarChart
               data={chartData}
               layout="vertical"
+              barSize={16}
+              maxBarSize={18}
               margin={{ top: 8, right: 25, left: 10, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />

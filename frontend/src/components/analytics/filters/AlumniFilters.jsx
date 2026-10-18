@@ -1,4 +1,5 @@
 import React from 'react';
+import SearchableFilterSelect from './SearchableFilterSelect';
 import {
   GRADUATION_BATCHES,
   DEPARTMENTS,
@@ -15,7 +16,7 @@ import {
  * 3. Career Job Category
  * 4. Industry Sector
  * 5. Company Tier
- * Supports both desktop 'horizontal' inline strip and mobile 'vertical' modal layout.
+ * Upgraded with searchable typeahead select dropdowns.
  *
  * @param {object} filters - Active filter states
  * @param {function} onChange - (key, value) => void
@@ -33,90 +34,60 @@ export default function AlumniFilters({ filters = {}, onChange, layout = 'horizo
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Graduation Batch
           </label>
-          <select
+          <SearchableFilterSelect
+            options={GRADUATION_BATCHES}
             value={filters.batch || ''}
-            onChange={(e) => handleChange('batch', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Graduation Batch"
-          >
-            {GRADUATION_BATCHES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('batch', val)}
+            placeholder="All Graduation Batches"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Department
           </label>
-          <select
+          <SearchableFilterSelect
+            options={DEPARTMENTS}
             value={filters.department || ''}
-            onChange={(e) => handleChange('department', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Department"
-          >
-            {DEPARTMENTS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('department', val)}
+            placeholder="All Departments"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Job Category
           </label>
-          <select
+          <SearchableFilterSelect
+            options={ALUMNI_JOB_CATEGORIES}
             value={filters.job_category || ''}
-            onChange={(e) => handleChange('job_category', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Job Category"
-          >
-            {ALUMNI_JOB_CATEGORIES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('job_category', val)}
+            placeholder="All Job Categories"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Industry Sector
           </label>
-          <select
+          <SearchableFilterSelect
+            options={ALUMNI_INDUSTRIES}
             value={filters.industry || ''}
-            onChange={(e) => handleChange('industry', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Industry Sector"
-          >
-            {ALUMNI_INDUSTRIES.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('industry', val)}
+            placeholder="All Industry Sectors"
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Company Tier
           </label>
-          <select
+          <SearchableFilterSelect
+            options={COMPANY_TIERS}
             value={filters.company_tier || ''}
-            onChange={(e) => handleChange('company_tier', e.target.value)}
-            className="w-full text-sm bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-colors"
-            aria-label="Company Tier"
-          >
-            {COMPANY_TIERS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleChange('company_tier', val)}
+            placeholder="All Company Tiers"
+          />
         </div>
       </div>
     );
@@ -125,74 +96,49 @@ export default function AlumniFilters({ filters = {}, onChange, layout = 'horizo
   return (
     <div className="flex items-center gap-2 flex-nowrap shrink-0">
       {/* 1. Graduation Batch */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={GRADUATION_BATCHES}
         value={filters.batch || ''}
-        onChange={(e) => handleChange('batch', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Graduation Batch"
-      >
-        {GRADUATION_BATCHES.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('batch', val)}
+        placeholder="Graduation Batch"
+      />
 
       {/* 2. Department */}
-      <select
+      <SearchableFilterSelect
+        className="w-40"
+        options={DEPARTMENTS}
         value={filters.department || ''}
-        onChange={(e) => handleChange('department', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Department"
-      >
-        {DEPARTMENTS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('department', val)}
+        placeholder="Department"
+      />
 
       {/* 3. Job Category */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={ALUMNI_JOB_CATEGORIES}
         value={filters.job_category || ''}
-        onChange={(e) => handleChange('job_category', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Job Category"
-      >
-        {ALUMNI_JOB_CATEGORIES.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('job_category', val)}
+        placeholder="Job Category"
+      />
 
       {/* 4. Industry Sector */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={ALUMNI_INDUSTRIES}
         value={filters.industry || ''}
-        onChange={(e) => handleChange('industry', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Industry Sector"
-      >
-        {ALUMNI_INDUSTRIES.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('industry', val)}
+        placeholder="Industry Sector"
+      />
 
       {/* 5. Company Tier */}
-      <select
+      <SearchableFilterSelect
+        className="w-36"
+        options={COMPANY_TIERS}
         value={filters.company_tier || ''}
-        onChange={(e) => handleChange('company_tier', e.target.value)}
-        className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1.5 focus:ring-indigo-500 font-medium cursor-pointer transition-colors shadow-2xs shrink-0"
-        aria-label="Company Tier"
-      >
-        {COMPANY_TIERS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        onChange={(val) => handleChange('company_tier', val)}
+        placeholder="Company Tier"
+      />
     </div>
   );
 }

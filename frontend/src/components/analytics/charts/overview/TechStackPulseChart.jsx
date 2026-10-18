@@ -36,7 +36,7 @@ const PILL_BADGE_CLASSES = [
  * @param {boolean} loading - Loading indicator
  */
 export default function TechStackPulseChart({ data, loading = false }) {
-  const [viewMode, setViewMode] = useState('bars'); // 'bars' | 'cloud'
+  const [viewMode, setViewMode] = useState('top'); // 'top' | 'all' | 'cloud'
 
   if (loading) {
     return (
@@ -114,32 +114,45 @@ export default function TechStackPulseChart({ data, loading = false }) {
     <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
       <button
         type="button"
-        onClick={() => setViewMode('bars')}
-        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
-          viewMode === 'bars'
-            ? 'bg-white text-indigo-700 shadow-2xs'
+        onClick={() => setViewMode('top')}
+        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
+          viewMode === 'top'
+            ? 'bg-white text-indigo-700 shadow-2xs font-bold'
             : 'text-slate-500 hover:text-slate-800'
         }`}
-        title="View ranked adoption bars"
+        title="View top competencies"
       >
-        <BarChart2 className="w-3 h-3" />
-        <span>Bars</span>
+        Top 7
+      </button>
+      <button
+        type="button"
+        onClick={() => setViewMode('all')}
+        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
+          viewMode === 'all'
+            ? 'bg-white text-indigo-700 shadow-2xs font-bold'
+            : 'text-slate-500 hover:text-slate-800'
+        }`}
+        title="View all competencies"
+      >
+        All ({rankedSkills.length})
       </button>
       <button
         type="button"
         onClick={() => setViewMode('cloud')}
-        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
+        className={`flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
           viewMode === 'cloud'
-            ? 'bg-white text-indigo-700 shadow-2xs'
+            ? 'bg-white text-indigo-700 shadow-2xs font-bold'
             : 'text-slate-500 hover:text-slate-800'
         }`}
         title="View skill cloud badges"
       >
-        <Cloud className="w-3 h-3" />
+        <Cloud className="w-2.5 h-2.5" />
         <span>Cloud</span>
       </button>
     </div>
   );
+
+  const displayedSkills = viewMode === 'top' ? rankedSkills.slice(0, 7) : rankedSkills;
 
   return (
     <ChartCard
@@ -148,13 +161,29 @@ export default function TechStackPulseChart({ data, loading = false }) {
       actionSlot={actionSlot}
       heightClass="h-64"
     >
-      <div className="h-full flex flex-col justify-between">
+      <div className="h-64 flex flex-col justify-between overflow-hidden">
         <div className="flex-1 min-h-0 pt-1 overflow-hidden">
-          {viewMode === 'bars' ? (
-            /* Mode 1: Full-width Scrollable Ranked Progress Bars */
-            <div className="h-full space-y-2.5 pr-2 overflow-y-auto scrollbar-thin">
-              {rankedSkills.map((skill) => (
-                <div key={skill.name} className="space-y-1">
+          {viewMode === 'cloud' ? (
+            /* Mode 2: Interactive Skill Cloud Badges */
+            <div className="h-full flex flex-wrap content-start gap-1.5 overflow-y-auto scrollbar-thin pr-1">
+              {rankedSkills.map((pill) => (
+                <span
+                  key={pill.name}
+                  title={`${pill.name}: ${pill.count} verified declarations (${pill.pct}%)`}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border transition-colors hover:shadow-xs cursor-default ${pill.bg}`}
+                >
+                  <span>{pill.name}</span>
+                  <span className="text-[9px] font-bold opacity-75 font-mono">
+                    {pill.count}
+                  </span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            /* Mode 1 & 2: Top / Full-width Progress Bars */
+            <div className={`h-full space-y-2 pr-1.5 ${viewMode === 'all' ? 'overflow-y-auto scrollbar-thin' : 'overflow-hidden'}`}>
+              {displayedSkills.map((skill) => (
+                <div key={skill.name} className="space-y-0.5">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span
@@ -182,22 +211,6 @@ export default function TechStackPulseChart({ data, loading = false }) {
                     />
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            /* Mode 2: Interactive Skill Cloud Badges */
-            <div className="h-full flex flex-wrap content-start gap-1.5 overflow-y-auto scrollbar-thin pr-1">
-              {rankedSkills.map((pill) => (
-                <span
-                  key={pill.name}
-                  title={`${pill.name}: ${pill.count} verified declarations (${pill.pct}%)`}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors hover:shadow-xs cursor-default ${pill.bg}`}
-                >
-                  <span>{pill.name}</span>
-                  <span className="text-[9px] font-bold opacity-75 font-mono">
-                    {pill.count}
-                  </span>
-                </span>
               ))}
             </div>
           )}

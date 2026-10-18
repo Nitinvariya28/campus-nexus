@@ -83,33 +83,25 @@ def get_opportunities_analytics(filters):
             p['month'] = p['month'].strftime('%Y-%m')
 
     # --- B-55: Platform Effectiveness (ROI) ---
-    # To answer B-55: "By company, how many opportunities were posted and how many recorded placements link to platform opportunities?"
-    # We will aggregate on the Company model using our filtered opps_qs as a sub-set if company_id is provided, 
-    # but strictly B-55 wants the company conversion rate.
-    
-    # Let's group by Company using our filtered opportunities
-    companies_in_scope = opps_qs.values_list('company_id', flat=True).distinct()
-    
-    platform_effectiveness = []
-    for c_id in companies_in_scope:
-        c = Company.objects.get(id=c_id)
-        opp_count = opps_qs.filter(company_id=c_id).count()
-        # Placements linked to these specific opportunities
-        linked_placements = sum(
-            opp.successful_placements.count() for opp in opps_qs.filter(company_id=c_id)
+    # Group opportunities by company and aggregate platform-sourced placements in a single query
+    eff_qs = (
+        opps_qs.values('company__name')
+        .annotate(
+            opportunities_posted=Count('id', distinct=True),
+            platform_sourced_placements=Count('successful_placements', distinct=True)
         )
-        
-        conversion_pct = round((linked_placements / opp_count) * 100, 2) if opp_count > 0 else 0.0
-        
-        platform_effectiveness.append({
-            "company__name": c.name,
-            "opportunities_posted": opp_count,
-            "platform_sourced_placements": linked_placements,
-            "conversion_pct": conversion_pct
-        })
-        
-    platform_effectiveness.sort(key=lambda x: x['platform_sourced_placements'], reverse=True)
-    platform_effectiveness = platform_effectiveness[:50] # Limit to top 50
+        .order_by('-platform_sourced_placements')[:50]
+    )
+    platform_effectiveness = [
+        {
+            "company__name": item['company__name'],
+            "opportunities_posted": item['opportunities_posted'],
+            "platform_sourced_placements": item['platform_sourced_placements'],
+            "conversion_pct": round((item['platform_sourced_placements'] / item['opportunities_posted']) * 100, 2)
+            if item['opportunities_posted'] > 0 else 0.0
+        }
+        for item in eff_qs if item['company__name']
+    ]
 
     return {
         "inventory_summary": {

@@ -86,13 +86,15 @@ export default function IndustryFootprintChart({ data, loading = false }) {
       subtitle="Talent distribution across corporate sectors"
       heightClass="h-64"
     >
-      <div className="w-full h-full flex flex-col justify-between">
-        <div className="w-full flex-1 min-h-[190px]">
+      <div className="w-full h-64 flex flex-col justify-between overflow-hidden">
+        <div className="w-full flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
+              barSize={12}
+              maxBarSize={14}
               margin={{ top: 8, right: 6, left: -22, bottom: 0 }}
-              barGap={3}
+              barGap={2}
             >
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_PALETTE.grid} vertical={false} />
               <XAxis

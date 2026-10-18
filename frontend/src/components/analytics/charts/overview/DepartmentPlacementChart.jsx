@@ -197,7 +197,8 @@ export default function DepartmentPlacementChart({ data, loading = false }) {
             name="Total Offers"
             fill="#4F46E5"
             radius={[4, 4, 0, 0]}
-            maxBarSize={40}
+            barSize={18}
+            maxBarSize={22}
           />
           <Bar
             yAxisId="right"
@@ -205,7 +206,8 @@ export default function DepartmentPlacementChart({ data, loading = false }) {
             name="Average LPA (₹)"
             fill="#D97706"
             radius={[4, 4, 0, 0]}
-            maxBarSize={40}
+            barSize={18}
+            maxBarSize={22}
           />
         </BarChart>
       </ResponsiveContainer>

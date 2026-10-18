@@ -53,12 +53,12 @@ const CATEGORY_CONFIG = {
 export default function AlumniJobCategoryDonutChart({ data, loading = false }) {
   if (loading) {
     return (
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[380px] animate-pulse">
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between h-[280px] animate-pulse">
         <div className="space-y-2">
           <div className="h-4 w-44 bg-slate-200 rounded" />
           <div className="h-3 w-60 bg-slate-100 rounded" />
         </div>
-        <div className="w-36 h-36 rounded-full border-8 border-slate-100 mx-auto my-auto" />
+        <div className="w-28 h-28 rounded-full border-8 border-slate-100 mx-auto my-auto" />
         <div className="space-y-2">
           <div className="h-3 bg-slate-100 rounded w-full" />
           <div className="h-3 bg-slate-100 rounded w-4/5" />
@@ -74,7 +74,7 @@ export default function AlumniJobCategoryDonutChart({ data, loading = false }) {
       <ChartCard
         title="Career Specialization Bands"
         subtitle="Alumni role distribution across technical disciplines"
-        heightClass="h-[380px]"
+        heightClass="h-[280px]"
       >
         <ChartEmptyState
           title="Role Data Unavailable"
@@ -123,94 +123,91 @@ export default function AlumniJobCategoryDonutChart({ data, loading = false }) {
         </span>
       }
     >
-      <div className="flex flex-col gap-4">
-        {/* Donut Chart with Centered Total */}
-        <div className="relative h-44 w-full flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const item = payload[0].payload;
-                  return (
-                    <div className="bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md rounded-lg p-2.5 text-xs">
-                      <div className="font-semibold text-slate-800 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                        {item.name}
+      <div className="flex flex-col justify-between h-[280px]">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center flex-1 min-h-0">
+          {/* Left: Donut Chart with Centered Total */}
+          <div className="sm:col-span-5 relative h-44 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const item = payload[0].payload;
+                    return (
+                      <div className="bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md rounded-lg p-2.5 text-xs">
+                        <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                          {item.name}
+                        </div>
+                        <div className="text-slate-500 mt-1">
+                          {item.value} alumni ({item.percentage.toFixed(1)}%)
+                        </div>
                       </div>
-                      <div className="text-slate-500 mt-1">
-                        {item.value} alumni ({item.percentage.toFixed(1)}%)
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-              <Pie
-                data={chartData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={70}
-                paddingAngle={3}
-                stroke="#FFFFFF"
-                strokeWidth={2}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+                    );
+                  }}
+                />
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={46}
+                  outerRadius={66}
+                  paddingAngle={3}
+                  stroke="#FFFFFF"
+                  strokeWidth={2}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
 
-          {/* Centered Donut Label */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-xl font-bold tracking-tight text-slate-900 leading-none">
-              {totalGraduates}
-            </span>
-            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mt-1">
-              Roles
-            </span>
+            {/* Centered Donut Label */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-lg font-bold tracking-tight text-slate-900 leading-none">
+                {totalGraduates}
+              </span>
+              <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">
+                Roles
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* Detailed Breakdown List */}
-        <div className="space-y-1.5 pt-2 border-t border-slate-100">
-          {chartData.slice(0, 5).map((item, idx) => {
-            const Icon = item.Icon;
-            return (
+          {/* Right: Detailed Breakdown List */}
+          <div className="sm:col-span-7 flex flex-col justify-center space-y-1 pr-1 border-l border-slate-100 pl-3 max-h-44 overflow-y-auto scrollbar-thin">
+            {chartData.slice(0, 5).map((item, idx) => (
               <div
                 key={idx}
-                className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50/70 hover:bg-slate-50 transition-colors"
+                className="flex items-center justify-between py-1 px-1.5 rounded hover:bg-slate-50 text-xs transition-colors"
               >
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
                   <div
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-slate-800 truncate">
-                      {item.name}
-                    </p>
-                  </div>
+                  <span className="text-xs font-semibold text-slate-800 truncate" title={item.name}>
+                    {item.name}
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-xs font-bold text-slate-900">{item.value}</span>
-                  <span className="text-[11px] font-medium text-slate-500">
-                    ({item.percentage.toFixed(1)}%)
+                <div className="flex items-center gap-1 shrink-0 font-mono text-[11px]">
+                  <span className="font-bold text-slate-900">{item.value}</span>
+                  <span className="text-slate-400 text-[10px]">
+                    ({item.percentage.toFixed(0)}%)
                   </span>
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
 
         {/* Actionable Insight Callout */}
-        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-          <span className="text-slate-600 font-medium">Core Tech Dominance:</span>
-          <span className="font-bold text-slate-900">
+        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs mt-1 shrink-0">
+          <span className="text-slate-600 font-medium text-[11px]">Core Tech Dominance:</span>
+          <span className="font-bold text-slate-900 text-[11px]">
             {((((chartData[0]?.value || 0) + (chartData[1]?.value || 0)) / totalGraduates) * 100).toFixed(0)}% in Dev & Cloud
           </span>
         </div>

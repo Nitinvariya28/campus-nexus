@@ -32,29 +32,26 @@ def get_placement_summary_analytics(filters):
     if industry and industry != 'None':
         placements_qs = placements_qs.filter(company__industry=industry)
 
-    # --- A-27: Total Offers & Distinct Students ---
-    total_offers = placements_qs.count()
-    distinct_students_placed = placements_qs.values('student_id').distinct().count()
-    
-    # --- A-36: Platform Sourced vs Not ---
-    platform_sourced = placements_qs.filter(opportunity__isnull=False).count()
-    non_platform = placements_qs.filter(opportunity__isnull=True).count()
+    # --- A-27, A-36, A-32: Summary & Package Aggregates in 1 single pass ---
+    summary_aggs = placements_qs.aggregate(
+        total_offers=Count('id'),
+        distinct_students_placed=Count('student_id', distinct=True),
+        platform_sourced=Count('id', filter=Q(opportunity__isnull=False)),
+        non_platform=Count('id', filter=Q(opportunity__isnull=True)),
+        avg_lpa=Avg('package_lpa'),
+        min_lpa=Min('package_lpa'),
+        max_lpa=Max('package_lpa'),
+    )
+    total_offers = summary_aggs['total_offers'] or 0
+    distinct_students_placed = summary_aggs['distinct_students_placed'] or 0
+    platform_sourced = summary_aggs['platform_sourced'] or 0
+    non_platform = summary_aggs['non_platform'] or 0
     
     # --- A-37: Multiple Offer Students ---
-    # Group by student, count offers, filter those > 1. 
-    # Using Django ORM to count students with > 1 offer efficiently:
-    student_counts = placements_qs.values('student_id').annotate(c=Count('id'))
-    multiple_offer_students = sum(1 for s in student_counts if s['c'] > 1)
-    
-    # --- A-32: Package Statistics ---
-    package_qs = placements_qs.filter(package_lpa__isnull=False)
-    package_aggs = package_qs.aggregate(
-        avg=Avg('package_lpa'),
-        min=Min('package_lpa'),
-        max=Max('package_lpa')
-    )
+    multiple_offer_students = placements_qs.values('student_id').annotate(c=Count('id')).filter(c__gt=1).count()
     
     # Median Calculation (In Memory)
+    package_qs = placements_qs.filter(package_lpa__isnull=False)
     packages = list(package_qs.values_list('package_lpa', flat=True).order_by('package_lpa'))
     n = len(packages)
     if n == 0:
@@ -64,9 +61,9 @@ def get_placement_summary_analytics(filters):
     else:
         median_lpa = float((packages[n//2 - 1] + packages[n//2]) / 2)
         
-    avg_lpa = round(float(package_aggs['avg']), 2) if package_aggs['avg'] else None
-    min_lpa = round(float(package_aggs['min']), 2) if package_aggs['min'] else None
-    max_lpa = round(float(package_aggs['max']), 2) if package_aggs['max'] else None
+    avg_lpa = round(float(summary_aggs['avg_lpa']), 2) if summary_aggs['avg_lpa'] else None
+    min_lpa = round(float(summary_aggs['min_lpa']), 2) if summary_aggs['min_lpa'] else None
+    max_lpa = round(float(summary_aggs['max_lpa']), 2) if summary_aggs['max_lpa'] else None
 
     # --- A-33: Package Bands ---
     bands_qs = package_qs.annotate(

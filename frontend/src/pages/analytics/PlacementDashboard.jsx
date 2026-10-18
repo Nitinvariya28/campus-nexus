@@ -53,7 +53,7 @@ export default function PlacementDashboard({ filters = {} }) {
   const payload = data?.data || data;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Dashboard Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-200">
         <div>
@@ -106,27 +106,19 @@ export default function PlacementDashboard({ filters = {} }) {
         <PlacementKPIGrid data={payload} loading={loading} filters={filters} />
       </section>
 
-      {/* Row 2: [ALTERNATING PAIR (7+5 cols)] Department Conversion & Compensation Tiers */}
+      {/* Row 2: [BALANCED 2-COL (6+6 cols)] Department Conversion & Compensation Tiers */}
       <section aria-label="Department Placement Conversion & Compensation Tier Distribution">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-7">
-            <DepartmentPlacementConversionChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-5">
-            <RecruiterCompensationTierDonutChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <DepartmentPlacementConversionChart data={payload} loading={loading} />
+          <RecruiterCompensationTierDonutChart data={payload} loading={loading} />
         </div>
       </section>
 
-      {/* Row 3: [ALTERNATING PAIR (7+5 cols) - THIS PLOT DO SMALL] Recruiter Retention & CTC Histogram */}
+      {/* Row 3: [BALANCED 2-COL (6+6 cols)] Recruiter Retention & CTC Histogram */}
       <section aria-label="Recruiter Retention Health & Salary Package Brackets">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-7">
-            <RecruiterLoyaltyCohortChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-5">
-            <SalaryPackageHistogramChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <RecruiterLoyaltyCohortChart data={payload} loading={loading} />
+          <SalaryPackageHistogramChart data={payload} loading={loading} />
         </div>
       </section>
 
@@ -137,27 +129,19 @@ export default function PlacementDashboard({ filters = {} }) {
         </div>
       </section>
 
-      {/* Row 5: [ALTERNATING PAIR (5+7 cols)] Offer Types Split & Eligibility vs Placed */}
+      {/* Row 5: [BALANCED 2-COL (6+6 cols)] Offer Types Split & Eligibility vs Placed */}
       <section aria-label="Offer Type Split & Department Eligibility Inventory">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-5">
-            <PlacementOfferTypeSplitChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-7">
-            <DepartmentEligibilityVsPlacedChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <PlacementOfferTypeSplitChart data={payload} loading={loading} />
+          <DepartmentEligibilityVsPlacedChart data={payload} loading={loading} />
         </div>
       </section>
 
-      {/* Row 6: [ALTERNATING PAIR (7+5 cols)] Industry Sector Share & Top Employers */}
+      {/* Row 6: [BALANCED 2-COL (6+6 cols)] Industry Sector Share & Top Employers */}
       <section aria-label="Hiring Industry Sectors & Top Recruiting Partners">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-7">
-            <HiringIndustrySectorShareChart data={payload} loading={loading} />
-          </div>
-          <div className="lg:col-span-5">
-            <TopHiringOrganizationsDonutChart data={payload} loading={loading} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <HiringIndustrySectorShareChart data={payload} loading={loading} />
+          <TopHiringOrganizationsDonutChart data={payload} loading={loading} />
         </div>
       </section>
 
