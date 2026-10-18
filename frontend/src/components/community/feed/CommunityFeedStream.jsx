@@ -5,6 +5,7 @@ import FeedSkeletonCard from '../common/FeedSkeletonCard';
 import EmptyStateMessage from '../common/EmptyStateMessage';
 import { togglePostLike, togglePostBookmark } from '../../../services/community/communityService';
 import { AlertCircle, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
+import { useCommunityFilter } from '../../../context/CommunityFilterContext';
 
 /**
  * CommunityFeedStream Component
@@ -14,15 +15,30 @@ import { AlertCircle, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
  * - Direct real-time API queries (zero caching policy)
  * - Seamless Infinite Scroll: Automatically pre-fetches the next 10 posts
  *   when the user scrolls to the 7th post of the current batch.
- * - Zero intrusive "Load more" button or remaining count text.
+ * - Reactive to CommunityFilterContext (Categories, Trending Tag, Sorting)
+ * - Performance optimized: Zero re-renders of the left sidebar, header, or page container.
  * - Skeleton loading states & error recovery
  * - Optimistic like and bookmark interaction triggers
  */
 export default function CommunityFeedStream({
   roles = ['ALL'],
   authorId = null,
+  isSaved = false,
+  emptyTitle,
+  emptyMessage,
   onResetFilters,
 }) {
+  let filterContext = null;
+  try {
+    filterContext = useCommunityFilter();
+  } catch (e) {
+    // Graceful fallback if rendered outside provider
+  }
+
+  const categories = filterContext?.selectedCategories ?? [];
+  const tag = filterContext?.activeTag ?? null;
+  const sort = filterContext?.sortBy ?? 'latest';
+
   const {
     items,
     isLoading,
@@ -31,7 +47,14 @@ export default function CommunityFeedStream({
     error,
     loadMore,
     refreshFeed,
-  } = useUnifiedFeed({ roles, authorId });
+  } = useUnifiedFeed({
+    roles,
+    authorId,
+    isSaved,
+    categories,
+    tag,
+    sort,
+  });
 
   const observerRef = useRef(null);
 
@@ -113,12 +136,31 @@ export default function CommunityFeedStream({
 
   // Empty State
   if (items.length === 0) {
+    const defaultTitle = isSaved
+      ? 'No Saved Posts Yet'
+      : authorId
+      ? 'No Posts Published Yet'
+      : 'No Posts in this Category';
+
+    const defaultMsg = isSaved
+      ? 'Posts you bookmark will appear here for easy access. Click the bookmark icon on any post to save it for later.'
+      : authorId
+      ? 'You have not created or published any community posts yet.'
+      : 'There are currently no updates or discussions published under the selected filter criteria.';
+
     return (
       <EmptyStateMessage
-        title="No Posts in this Category"
-        message="There are currently no updates or discussions published under the selected filter criteria."
-        onReset={onResetFilters}
-        resetLabel="Show All Posts"
+        title={emptyTitle || defaultTitle}
+        message={emptyMessage || defaultMsg}
+        onReset={() => {
+          if (filterContext?.resetAllFilters) {
+            filterContext.resetAllFilters();
+          }
+          if (onResetFilters) {
+            onResetFilters();
+          }
+        }}
+        resetLabel={isSaved || authorId ? null : 'Show All Posts'}
       />
     );
   }

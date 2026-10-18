@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import CommentInputForm from './CommentInputForm';
 import CommentItem from './CommentItem';
 import { fetchPostComments, createPostComment } from '../../../../services/community/communityService';
+import { useCommunityStats } from '../../../../context/CommunityStatsContext';
 import { Loader2, MessageSquare, AlertCircle } from 'lucide-react';
 
 /**
@@ -21,6 +22,7 @@ export default function CommentThread({ postId, entityType = 'POST', onCommentAd
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState(null);
+  const { adjustComments } = useCommunityStats();
 
   // Fetch initial comments
   const loadInitialComments = useCallback(async () => {
@@ -73,6 +75,7 @@ export default function CommentThread({ postId, entityType = 'POST', onCommentAd
       if (newComment) {
         setComments((prev) => [newComment, ...prev]);
         setTotalCount((prev) => prev + 1);
+        adjustComments(1);
         if (onCommentAdded) {
           onCommentAdded();
         }

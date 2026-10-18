@@ -14,6 +14,10 @@ import { fetchUnifiedFeed } from '../../services/community/communityService';
 export default function useUnifiedFeed({
   roles = ['ALL'],
   authorId = null,
+  isSaved = false,
+  categories = [],
+  tag = null,
+  sort = 'latest',
   limit = 10,
 } = {}) {
   const [items, setItems] = useState([]);
@@ -27,8 +31,11 @@ export default function useUnifiedFeed({
   // Track latest request to avoid race conditions
   const requestIdRef = useRef(0);
 
-  // Normalize roles parameter for memoization
+  // Normalize parameters for memoization
   const rolesKey = Array.isArray(roles) ? roles.slice().sort().join(',') : String(roles);
+  const categoriesKey = Array.isArray(categories) ? categories.slice().sort().join(',') : String(categories || '');
+  const tagKey = tag ? String(tag).trim() : '';
+  const sortKey = sort ? String(sort).trim() : 'latest';
 
   // Initial Fetch or Filter Change
   const fetchFeedData = useCallback(async () => {
@@ -42,6 +49,10 @@ export default function useUnifiedFeed({
         offset: 0,
         role: roles,
         author_id: authorId,
+        is_saved: isSaved,
+        category: categories,
+        tag,
+        sort,
       });
 
       // Ignore if a newer request has superseded this one
@@ -66,7 +77,7 @@ export default function useUnifiedFeed({
         setIsLoading(false);
       }
     }
-  }, [rolesKey, authorId, limit]);
+  }, [rolesKey, authorId, isSaved, categoriesKey, tagKey, sortKey, limit]);
 
   // Trigger initial fetch on filter / author / limit change
   useEffect(() => {
@@ -89,6 +100,10 @@ export default function useUnifiedFeed({
         offset: nextOffset,
         role: roles,
         author_id: authorId,
+        is_saved: isSaved,
+        category: categories,
+        tag,
+        sort,
       });
 
       if (currentRequestId !== requestIdRef.current) return;
@@ -110,7 +125,7 @@ export default function useUnifiedFeed({
         setIsLoadingMore(false);
       }
     }
-  }, [isLoading, isLoadingMore, hasMore, offset, limit, roles, authorId, items, totalCount]);
+  }, [isLoading, isLoadingMore, hasMore, offset, limit, rolesKey, authorId, isSaved, categoriesKey, tagKey, sortKey, items, totalCount]);
 
   // Refresh current feed without wiping UI immediately
   const refreshFeed = useCallback(() => {

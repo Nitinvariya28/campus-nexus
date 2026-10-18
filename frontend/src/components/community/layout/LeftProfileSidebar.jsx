@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import RoleBadgePill from '../common/RoleBadgePill';
 import { COMMUNITY_SIDEBAR_NAV } from '../../../constants/community/communityConstants';
+import { useCommunityStats } from '../../../context/CommunityStatsContext';
 
 /**
  * LeftProfileSidebar Component
@@ -20,16 +21,16 @@ import { COMMUNITY_SIDEBAR_NAV } from '../../../constants/community/communityCon
  * Conforms to AlumiBridge Community Page.docx Section 3:
  * - Profile Snapshot
  * - [+ Create Post] CTA
- * - Your Posts (count: 12)
- * - Saved Posts (count: 34)
+ * - Your Posts (dynamic count from context)
+ * - Saved Posts (dynamic count from context)
  * - Manage Your Posts
- * - Total Likes (count: 142)
- * - Total Comments (count: 38)
- * (Discover Members removed from sidebar per user instructions)
+ * - Total Likes (dynamic count from context)
+ * - Total Comments (dynamic count from context)
  */
 export default function LeftProfileSidebar({ onCreatePost, onItemClick, className = '' }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { stats } = useCommunityStats();
 
   const initials = user
     ? `${user.first_name?.[0] || 'U'}${user.last_name?.[0] || ''}`.toUpperCase()
@@ -43,6 +44,12 @@ export default function LeftProfileSidebar({ onCreatePost, onItemClick, classNam
     FileText,
     Bookmark,
     Settings,
+  };
+
+  const getItemCount = (id) => {
+    if (id === 'my-posts') return stats.your_posts_count;
+    if (id === 'saved') return stats.saved_posts_count;
+    return undefined;
   };
 
   const handleCreatePostClick = () => {
@@ -130,9 +137,9 @@ export default function LeftProfileSidebar({ onCreatePost, onItemClick, classNam
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {item.count !== undefined && (
+                  {getItemCount(item.id) !== undefined && (
                     <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">
-                      {item.count}
+                      {getItemCount(item.id)}
                     </span>
                   )}
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -155,7 +162,7 @@ export default function LeftProfileSidebar({ onCreatePost, onItemClick, classNam
               <ThumbsUp className="w-3.5 h-3.5 text-blue-600" />
               <span>Total Likes</span>
             </div>
-            <span className="text-xs font-bold text-slate-900">142</span>
+            <span className="text-xs font-bold text-slate-900">{stats.total_likes}</span>
           </div>
 
           <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-100/80">
@@ -163,7 +170,7 @@ export default function LeftProfileSidebar({ onCreatePost, onItemClick, classNam
               <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
               <span>Total Comments</span>
             </div>
-            <span className="text-xs font-bold text-slate-900">38</span>
+            <span className="text-xs font-bold text-slate-900">{stats.total_comments}</span>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Heart, MessageSquare, Bookmark, Share2 } from 'lucide-react';
 import CommentThread from '../comments/CommentThread';
 import { togglePostLike, togglePostBookmark } from '../../../../services/community/communityService';
+import { useCommunityStats } from '../../../../context/CommunityStatsContext';
 
 /**
  * PostActionToolbar Component
@@ -28,12 +29,14 @@ export default function PostActionToolbar({
   const [isBookmarked, setIsBookmarked] = useState(initialSaved);
   const [commentsCount, setCommentsCount] = useState(initialComments);
   const [isCommentsExpanded, setIsCommentsExpanded] = useState(false);
+  const { adjustLikes, adjustSaved } = useCommunityStats();
 
   // Like Toggle
   const handleLike = async () => {
     const nextState = !isLiked;
     setIsLiked(nextState);
     setLikesCount((prev) => (nextState ? prev + 1 : Math.max(0, prev - 1)));
+    adjustLikes(nextState ? 1 : -1);
 
     try {
       const res = await togglePostLike(postId, entityType);
@@ -47,6 +50,7 @@ export default function PostActionToolbar({
       console.error('Like toggle failed:', err);
       setIsLiked(!nextState);
       setLikesCount((prev) => (!nextState ? prev + 1 : Math.max(0, prev - 1)));
+      adjustLikes(nextState ? -1 : 1);
     }
   };
 
@@ -54,6 +58,7 @@ export default function PostActionToolbar({
   const handleBookmark = async () => {
     const nextState = !isBookmarked;
     setIsBookmarked(nextState);
+    adjustSaved(nextState ? 1 : -1);
 
     try {
       const res = await togglePostBookmark(postId, entityType);
@@ -64,6 +69,7 @@ export default function PostActionToolbar({
     } catch (err) {
       console.error('Bookmark toggle failed:', err);
       setIsBookmarked(!nextState);
+      adjustSaved(nextState ? -1 : 1);
     }
   };
 

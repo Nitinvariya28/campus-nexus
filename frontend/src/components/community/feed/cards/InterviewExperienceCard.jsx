@@ -1,8 +1,37 @@
-import React from 'react';
-import { Award, Building2, CheckCircle2, XCircle, Clock, Layers, BookOpen, Calendar, HelpCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Award,
+  Building2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Layers,
+  BookOpen,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import RoleBadgePill from '../../common/RoleBadgePill';
 import VerifiedOfficialBadge from '../../common/VerifiedOfficialBadge';
 import PostActionToolbar from './PostActionToolbar';
+
+const ROUND_TYPE_LABELS = {
+  ONLINE_ASSESSMENT: 'Online Assessment (OA)',
+  TECHNICAL: 'Technical Interview',
+  CODING: 'Live Coding',
+  SYSTEM_DESIGN: 'System Design',
+  HR: 'HR / Behavioral',
+  MANAGERIAL: 'Managerial',
+  GROUP_DISCUSSION: 'Group Discussion',
+  OTHER: 'Interview Round',
+};
+
+const ROUND_MODE_LABELS = {
+  ONLINE: 'Online',
+  OFFLINE: 'In-Person (Offline)',
+  HYBRID: 'Hybrid',
+  NOT_SPECIFIED: 'Not Specified',
+};
 
 /**
  * InterviewExperienceCard Component
@@ -10,6 +39,8 @@ import PostActionToolbar from './PostActionToolbar';
  */
 export default function InterviewExperienceCard({ post }) {
   if (!post) return null;
+
+  const [isRoundsExpanded, setIsRoundsExpanded] = useState(true);
 
   const {
     author = {},
@@ -21,6 +52,7 @@ export default function InterviewExperienceCard({ post }) {
     experience,
     preparation,
     rounds_count,
+    rounds = [],
     created_at,
   } = post;
 
@@ -35,7 +67,7 @@ export default function InterviewExperienceCard({ post }) {
         </span>
       );
     }
-    if (norm === 'REJECTED') {
+    if (norm === 'REJECTED' || norm === 'NOT_SELECTED') {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
           <XCircle className="w-3.5 h-3.5" />
@@ -175,6 +207,87 @@ export default function InterviewExperienceCard({ post }) {
           <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
             {preparation}
           </p>
+        </div>
+      )}
+
+      {/* Detailed Interview Rounds Breakdown */}
+      {rounds && rounds.length > 0 && (
+        <div className="space-y-2.5 pt-1">
+          <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-purple-600" />
+              <span>Interview Rounds Breakdown ({rounds.length})</span>
+            </h4>
+            <button
+              type="button"
+              onClick={() => setIsRoundsExpanded(!isRoundsExpanded)}
+              className="text-xs font-semibold text-purple-700 hover:text-purple-900 flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <span>{isRoundsExpanded ? 'Collapse Rounds' : 'Show All Rounds'}</span>
+              {isRoundsExpanded ? (
+                <ChevronUp className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+
+          {isRoundsExpanded && (
+            <div className="space-y-2.5 animate-in fade-in duration-150">
+              {rounds.map((round, idx) => (
+                <div
+                  key={round.id || idx}
+                  className="rounded-lg border border-slate-200 bg-slate-50/80 p-3.5 space-y-2.5 shadow-2xs hover:bg-slate-50 transition-colors"
+                >
+                  {/* Round Header Bar */}
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-purple-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                        {round.round_number || idx + 1}
+                      </span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {ROUND_TYPE_LABELS[round.round_type] || round.round_type || `Round ${idx + 1}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {round.mode && (
+                        <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 font-medium text-[11px] leading-tight shadow-2xs">
+                          {ROUND_MODE_LABELS[round.mode] || round.mode}
+                        </span>
+                      )}
+                      {round.duration_minutes && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 font-medium text-[11px] leading-tight shadow-2xs">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>{round.duration_minutes} mins</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Topics Covered */}
+                  {round.topics && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-slate-500 font-semibold text-xs">Topics:</span>
+                      <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-800 font-medium text-xs shadow-2xs">
+                        {round.topics}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Experience & Questions Asked */}
+                  {round.description && (
+                    <div className="rounded-md bg-white p-2.5 border border-slate-200/80 space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Questions &amp; Experience
+                      </p>
+                      <p className="text-xs text-slate-800 leading-relaxed whitespace-pre-line">{round.description}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

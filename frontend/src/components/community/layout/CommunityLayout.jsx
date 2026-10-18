@@ -3,6 +3,8 @@ import CommunityHeader from './CommunityHeader';
 import LeftProfileSidebar from './LeftProfileSidebar';
 import RightWidgetSidebar from './RightWidgetSidebar';
 import { X, Sparkles } from 'lucide-react';
+import { CommunityStatsProvider } from '../../../context/CommunityStatsContext';
+import { CommunityFilterProvider } from '../../../context/CommunityFilterContext';
 
 /**
  * CommunityLayout Component
@@ -26,7 +28,9 @@ export default function CommunityLayout({
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   return (
-    <div className="w-full">
+    <CommunityStatsProvider>
+      <CommunityFilterProvider>
+        <div className="w-full">
       {/* 1. Sticky Top Header (Fixed below Navbar at top-16) */}
       <CommunityHeader
         selectedTypes={selectedTypes}
@@ -91,6 +95,8 @@ export default function CommunityLayout({
           </div>
         </div>
       )}
-    </div>
+        </div>
+      </CommunityFilterProvider>
+    </CommunityStatsProvider>
   );
 }

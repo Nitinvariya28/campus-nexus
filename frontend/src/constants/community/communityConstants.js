@@ -15,14 +15,12 @@ export const COMMUNITY_SIDEBAR_NAV = [
     id: 'my-posts',
     label: 'Your Posts',
     path: '/community/my-posts',
-    count: 12,
     icon: 'FileText',
   },
   {
     id: 'saved',
     label: 'Saved Posts',
     path: '/community/saved',
-    count: 34,
     icon: 'Bookmark',
   },
   {

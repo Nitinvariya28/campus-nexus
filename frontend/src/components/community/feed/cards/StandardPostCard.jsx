@@ -105,10 +105,13 @@ export default function StandardPostCard({ post, onLikeToggle, onBookmarkToggle 
           {media.map((m, idx) => (
             <img
               key={m.id || idx}
-              src={m.url}
-              alt="Post attachment"
+              src={m.url || m.file}
+              alt={title || "Post attachment"}
               className="w-full h-auto object-cover max-h-80"
               loading="lazy"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
             />
           ))}
         </div>

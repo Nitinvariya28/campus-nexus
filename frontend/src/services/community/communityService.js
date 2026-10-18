@@ -13,9 +13,19 @@ import api from '../api';
  * @param {number} [options.offset=0] - Offset index for pagination.
  * @param {string|string[]} [options.role] - Optional role filter ('STUDENT', 'ALUMNI', 'PLACEMENT_CELL') or array.
  * @param {number|string} [options.author_id] - Optional author filter (e.g. 'me' or user ID).
+ * @param {boolean} [options.is_saved] - Optional filter for user's bookmarked posts.
  * @returns {Promise<{count: number, next: string|null, previous: string|null, results: Array}>}
  */
-export async function fetchUnifiedFeed({ limit = 10, offset = 0, role, author_id } = {}) {
+export async function fetchUnifiedFeed({
+  limit = 10,
+  offset = 0,
+  role,
+  author_id,
+  is_saved,
+  category,
+  tag,
+  sort,
+} = {}) {
   const params = {
     limit,
     offset,
@@ -34,6 +44,22 @@ export async function fetchUnifiedFeed({ limit = 10, offset = 0, role, author_id
 
   if (author_id) {
     params.author_id = author_id;
+  }
+
+  if (is_saved) {
+    params.is_saved = true;
+  }
+
+  if (category && category.length > 0) {
+    params.category = Array.isArray(category) ? category.join(',') : category;
+  }
+
+  if (tag) {
+    params.tag = tag;
+  }
+
+  if (sort && sort !== 'latest') {
+    params.sort = sort;
   }
 
   const response = await api.get('/community/feed/', { params });
@@ -151,6 +177,51 @@ export async function fetchPostCreationOptions() {
   return response.data;
 }
 
+/**
+ * Fetches real activity & engagement statistics for the authenticated user.
+ * @returns {Promise<{your_posts_count: number, saved_posts_count: number, total_likes: number, total_comments: number}>}
+ */
+export async function fetchCommunityUserStats() {
+  const response = await api.get('/community/stats/');
+  return response.data;
+}
+
+/**
+ * Fetches real community sidebar widgets (trending topics and active hiring drives).
+ * @returns {Promise<{trending_topics: Array, active_drives: Array}>}
+ */
+export async function fetchCommunityWidgets() {
+  const response = await api.get('/community/widgets/');
+  return response.data;
+}
+
+/**
+ * Creates a new community entity (Standard Post, Interview Experience, Opportunity, or Announcement).
+ * @param {Object} postData
+ * @param {string} postData.entity_type - 'STANDARD_POST' | 'INTERVIEW_EXPERIENCE' | 'OPPORTUNITY' | 'ANNOUNCEMENT'
+ * @returns {Promise<{message: string, id: number}>}
+ */
+export async function createCommunityPost(postData) {
+  const response = await api.post('/community/posts/', postData);
+  return response.data;
+}
+
+/**
+ * Uploads a post media file (image) to the server.
+ * @param {File} file
+ * @returns {Promise<{message: string, url: string, file: string, media_type: string}>}
+ */
+export async function uploadCommunityMedia(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/community/posts/upload-media/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+}
+
 export default {
   fetchUnifiedFeed,
   searchFeed,
@@ -160,4 +231,8 @@ export default {
   fetchPostComments,
   createPostComment,
   fetchPostCreationOptions,
+  createCommunityPost,
+  fetchCommunityUserStats,
+  fetchCommunityWidgets,
+  uploadCommunityMedia,
 };
