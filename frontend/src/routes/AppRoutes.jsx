@@ -29,6 +29,11 @@ import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 // Analytics Pages (Protected)
 import AnalyticsMasterPage from '../pages/analytics/AnalyticsMasterPage';
 
+// Community Pages (Protected)
+import CommunityPage from '../pages/community/CommunityPage';
+import SavedPostsPage from '../pages/community/SavedPostsPage';
+import MemberDiscoveryPage from '../pages/community/MemberDiscoveryPage';
+
 // Profile Settings Page (Protected)
 import AccountSettingsPage from '../pages/profile/AccountSettingsPage';
 
@@ -62,9 +67,17 @@ export default function AppRoutes() {
           <Route path="profile" element={<AccountSettingsPage />} />
           <Route path="profile/settings" element={<AccountSettingsPage />} />
 
+          {/* Community Module */}
+          <Route path="community" element={<CommunityPage />} />
+          <Route path="community/feed" element={<CommunityPage />} />
+          <Route path="community/create" element={<CommunityPage />} />
+          <Route path="community/my-posts" element={<CommunityPage />} />
+          <Route path="community/manage" element={<CommunityPage />} />
+          <Route path="community/saved" element={<SavedPostsPage />} />
+          <Route path="community/discover" element={<MemberDiscoveryPage />} />
+          <Route path="community/*" element={<Navigate to="/community" replace />} />
+
           {/* Graceful redirects for modules not yet implemented */}
-          <Route path="community" element={<Navigate to="/analytics" replace />} />
-          <Route path="community/*" element={<Navigate to="/analytics" replace />} />
           <Route path="notifications" element={<Navigate to="/analytics" replace />} />
           <Route path="notifications/*" element={<Navigate to="/analytics" replace />} />
         </Route>

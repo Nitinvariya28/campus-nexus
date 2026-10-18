@@ -11,6 +11,7 @@ import Navbar from '../components/common/Navbar';
 export default function AppLayout() {
   const location = useLocation();
   const isAnalytics = location.pathname.startsWith('/analytics');
+  const isCommunity = location.pathname.startsWith('/community');
 
   if (isAnalytics) {
     return (
@@ -22,7 +23,7 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-800">
+    <div className={`min-h-screen ${isCommunity ? 'bg-slate-50' : 'bg-slate-100'} flex flex-col text-slate-800`}>
       {/* Sticky Master Top Navbar */}
       <Navbar />
 
