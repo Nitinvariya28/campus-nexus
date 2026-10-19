@@ -9,10 +9,22 @@ class FeedAuthorSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     meta = serializers.SerializerMethodField()
     is_verified_official = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'name', 'role', 'meta', 'is_verified_official']
+        fields = ['id', 'name', 'role', 'meta', 'is_verified_official', 'avatar']
+
+    def get_avatar(self, obj):
+        if not obj.profile_photo:
+            return None
+        val = str(obj.profile_photo)
+        if val.startswith('http://') or val.startswith('https://'):
+            return val
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(val)
+        return val
 
     def get_name(self, obj):
         if obj.role in ['PLACEMENT_CELL', 'ADMIN']:
@@ -63,10 +75,11 @@ class PostFeedSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     interactions = serializers.SerializerMethodField()
     company = serializers.CharField(source='company.name', read_only=True)
+    company_id = serializers.IntegerField(source='company.id', read_only=True, allow_null=True)
 
     class Meta:
         model = Post
-        fields = ['feed_type', 'id', 'title', 'content', 'post_type', 'created_at', 'author', 'company', 'media', 'tags', 'interactions']
+        fields = ['feed_type', 'id', 'title', 'content', 'post_type', 'created_at', 'author', 'company', 'company_id', 'media', 'tags', 'interactions']
         
     def get_tags(self, obj):
         return [pt.tag.name for pt in obj.post_tags.all()]
@@ -88,11 +101,13 @@ class OpportunityFeedSerializer(serializers.ModelSerializer):
     author = FeedAuthorSerializer(source='posted_by')
     skills = serializers.SerializerMethodField()
     company = serializers.CharField(source='company.name', read_only=True)
+    company_id = serializers.IntegerField(source='company.id', read_only=True, allow_null=True)
+    role_id = serializers.IntegerField(source='role.id', read_only=True, allow_null=True)
     interactions = serializers.SerializerMethodField()
     
     class Meta:
         model = Opportunity
-        fields = ['feed_type', 'id', 'title', 'description', 'opportunity_type', 'work_mode', 'employment_type', 'application_url', 'deadline', 'created_at', 'author', 'company', 'skills', 'interactions']
+        fields = ['feed_type', 'id', 'title', 'description', 'opportunity_type', 'work_mode', 'employment_type', 'application_url', 'deadline', 'created_at', 'author', 'company', 'company_id', 'role_id', 'skills', 'interactions']
 
     def get_skills(self, obj):
         return [os.skill.name for os in obj.opportunity_skills.all()]
@@ -156,6 +171,8 @@ class InterviewExperienceFeedSerializer(serializers.ModelSerializer):
     feed_type = serializers.CharField(default="INTERVIEW_EXPERIENCE", read_only=True)
     author = FeedAuthorSerializer()
     company = serializers.CharField(source='company.name', read_only=True)
+    company_id = serializers.IntegerField(source='company.id', read_only=True, allow_null=True)
+    role_id = serializers.IntegerField(source='role.id', read_only=True, allow_null=True)
     role_title = serializers.CharField(source='role.role_name', read_only=True)
     rounds_count = serializers.SerializerMethodField()
     rounds = InterviewRoundDetailSerializer(many=True, read_only=True)
@@ -164,7 +181,7 @@ class InterviewExperienceFeedSerializer(serializers.ModelSerializer):
     class Meta:
         model = InterviewExperience
         fields = [
-            'feed_type', 'id', 'author', 'company', 'role_title', 'experience_type',
+            'feed_type', 'id', 'author', 'company', 'company_id', 'role_id', 'role_title', 'experience_type',
             'result', 'difficulty', 'experience', 'preparation', 'rounds_count', 'rounds', 'created_at', 'interactions'
         ]
 
@@ -325,6 +342,9 @@ class CreateCommentSerializer(serializers.ModelSerializer):
 class UpdatePostSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255, required=False)
     content = serializers.CharField(required=False)
+    post_type = serializers.CharField(max_length=50, required=False)
+    company_id = serializers.IntegerField(required=False, allow_null=True)
+    new_company_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     tag_ids = serializers.ListField(
         child=serializers.IntegerField(), required=False
     )

@@ -1,7 +1,187 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import FeedFilterTabs from '../feed/FeedFilterTabs';
-import { Search, Menu } from 'lucide-react';
+import { Search, Menu, Loader2, X } from 'lucide-react';
+import { searchUsers } from '../../../services/community/communityService';
+import RoleBadgePill from '../common/RoleBadgePill';
+
+/**
+ * UserSearchDropdown Component
+ * Floating search bar with live user search and dropdown results.
+ */
+function UserSearchBox({ onSelectUser, isMobile = false }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userResults, setUserResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const containerRef = useRef(null);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Debounced user search
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (trimmed.length < 2) {
+      setUserResults([]);
+      setIsSearching(false);
+      setShowDropdown(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchUsers(trimmed);
+        setUserResults(results || []);
+        setShowDropdown(true);
+      } catch (err) {
+        console.error('Error searching users:', err);
+        setUserResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 280);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (userId) => {
+    setShowDropdown(false);
+    setSearchQuery('');
+    if (onSelectUser) {
+      onSelectUser(userId);
+    } else {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('user', userId);
+      navigate(`/community?${nextParams.toString()}`);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
+
+    // If there is an exact or single match, select that user
+    if (userResults.length === 1) {
+      handleSelect(userResults[0].id);
+      return;
+    }
+
+    // Otherwise navigate to discover with query
+    setShowDropdown(false);
+    navigate(`/community/discover?q=${encodeURIComponent(trimmed)}`);
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <form onSubmit={handleSearchSubmit} className="relative">
+        <Search
+          className={`${
+            isMobile ? 'w-3.5 h-3.5 left-2.5' : 'w-4 h-4 left-3'
+          } text-slate-400 absolute top-1/2 -translate-y-1/2 pointer-events-none`}
+        />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            if (e.target.value.trim().length >= 2) setShowDropdown(true);
+          }}
+          onFocus={() => {
+            if (searchQuery.trim().length >= 2) setShowDropdown(true);
+          }}
+          placeholder={isMobile ? 'Search user, alumni...' : 'Search members, alumni, topics...'}
+          className={`w-full ${
+            isMobile ? 'pl-8 pr-7 py-1.5' : 'pl-9 pr-9 py-1.5'
+          } bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setUserResults([]);
+              setShowDropdown(false);
+            }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-0.5 cursor-pointer"
+            title="Clear"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </form>
+
+      {/* Floating Dropdown Results */}
+      {showDropdown && searchQuery.trim().length >= 2 && (
+        <div className="absolute right-0 left-0 top-full mt-1.5 bg-white rounded-xl border border-slate-200/90 shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <span>Community Members</span>
+            {isSearching && <Loader2 className="w-3 h-3 animate-spin text-blue-600" />}
+          </div>
+
+          <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 no-scrollbar">
+            {userResults.length > 0 ? (
+              userResults.map((u) => {
+                const initial = u.full_name ? u.full_name.charAt(0).toUpperCase() : 'U';
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => handleSelect(u.id)}
+                    className="w-full px-3 py-2.5 flex items-center gap-2.5 hover:bg-blue-50/70 transition-colors text-left cursor-pointer group"
+                  >
+                    {u.profile_photo ? (
+                      <img
+                        src={u.profile_photo}
+                        alt={u.full_name}
+                        className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0 text-xs shadow-2xs">
+                        {initial}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-semibold text-slate-900 group-hover:text-blue-700 truncate">
+                          {u.full_name}
+                        </span>
+                        <RoleBadgePill role={u.role} className="text-[9px] py-0 px-1" />
+                      </div>
+                      {(u.current_company || u.department) && (
+                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                          {u.current_company ? u.current_company : ''}
+                          {u.current_company && u.department ? ' • ' : ''}
+                          {u.department ? u.department : ''}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            ) : !isSearching ? (
+              <div className="px-4 py-6 text-center text-xs text-slate-500">
+                No matching members or alumni found for "{searchQuery}".
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * CommunityHeader Component
@@ -9,29 +189,15 @@ import { Search, Menu } from 'lucide-react';
  * - Mobile (< lg): Three-lines (hamburger) button to open Left Sidebar drawer.
  * - Left: 4 Multi-Choice Filter Options ([All] [Student] [Alumni] [Placement Cell])
  *   with horizontal touch-scrolling on mobile.
- * - Right: Search input option with margins, search icon, and clear button.
- * - Sticky below top navbar (top-16 z-30) so when scrolling down the feed,
- *   the filter options and search bar remain visible.
+ * - Right: Search input option with live user search dropdown.
  */
 export default function CommunityHeader({
   selectedTypes,
   onSelectionChange,
   onSearch,
   onToggleMobileMenu,
+  onSelectUser,
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      if (onSearch) {
-        onSearch(searchQuery.trim());
-      }
-      navigate(`/community/discover?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-
   return (
     <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md border border-slate-200/90 py-2.5 px-3 sm:px-5 rounded-xl shadow-xs mb-4 transition-all">
       {/* DESKTOP & TABLET VIEW (md: and up) */}
@@ -44,28 +210,9 @@ export default function CommunityHeader({
           />
         </div>
 
-        {/* Right Side: Search Input */}
+        {/* Right Side: Search Input with Live User Dropdown */}
         <div className="w-72 lg:w-80 shrink-0">
-          <form onSubmit={handleSearchSubmit} className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search members, alumni, topics..."
-              className="w-full pl-9 pr-9 py-1.5 bg-slate-50/90 border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-0.5 cursor-pointer"
-                title="Clear"
-              >
-                ✕
-              </button>
-            )}
-          </form>
+          <UserSearchBox onSelectUser={onSelectUser} />
         </div>
       </div>
 
@@ -85,25 +232,7 @@ export default function CommunityHeader({
           </button>
 
           <div className="flex-1 min-w-0">
-            <form onSubmit={handleSearchSubmit} className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full pl-8 pr-7 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-0.5"
-                >
-                  ✕
-                </button>
-              )}
-            </form>
+            <UserSearchBox onSelectUser={onSelectUser} isMobile={true} />
           </div>
         </div>
 

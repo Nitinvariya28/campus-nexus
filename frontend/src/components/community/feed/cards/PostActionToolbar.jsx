@@ -23,6 +23,7 @@ export default function PostActionToolbar({
   shareTitle = '',
   onLikeChange,
   onBookmarkChange,
+  onUserClick,
 }) {
   const [isLiked, setIsLiked] = useState(initialLiked);
   const [likesCount, setLikesCount] = useState(initialLikes);
@@ -162,6 +163,7 @@ export default function PostActionToolbar({
           postId={postId}
           entityType={entityType}
           onCommentAdded={() => setCommentsCount((prev) => prev + 1)}
+          onUserClick={onUserClick}
         />
       )}
     </div>

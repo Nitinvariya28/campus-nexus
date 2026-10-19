@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { useCommunityStats } from '../../../context/CommunityStatsContext';
 import { usePostOptions } from '../../../hooks/community/usePostOptions';
-import { createCommunityPost } from '../../../services/community/communityService';
+import { createCommunityPost, updateCommunityPost } from '../../../services/community/communityService';
 import StandardPostForm from './forms/StandardPostForm';
 import InterviewExperienceForm from './forms/InterviewExperienceForm';
 import OpportunityForm from './forms/OpportunityForm';
@@ -21,64 +21,91 @@ import AnnouncementForm from './forms/AnnouncementForm';
 
 /**
  * CreatePostModal / CreatePostOrchestrator
- * High-performance, role-adaptive container for creating community entities.
+ * High-performance, role-adaptive container for creating and editing community entities.
  * Sleek, compact horizontal creation mode switcher without bulky KPI cards.
  */
 export default function CreatePostModal({
   isOpen = true,
   onClose,
   onPostCreated,
+  onPostUpdated,
   isStandalonePage = false,
+  initialPost = null,
+  mode = 'create',
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { adjustPosts } = useCommunityStats();
   const { options, isLoading } = usePostOptions();
 
-  // Active entity type (defaults to STANDARD_POST or first allowed type)
-  const [activeEntityType, setActiveEntityType] = useState('STANDARD_POST');
+  const isEdit = mode === 'edit';
+
+  const getInitialType = () => {
+    if (!initialPost) return 'STANDARD_POST';
+    const t = (initialPost.feed_type || initialPost.entity_type || '').toUpperCase();
+    if (t === 'POST') return 'STANDARD_POST';
+    if (['STANDARD_POST', 'INTERVIEW_EXPERIENCE', 'OPPORTUNITY', 'ANNOUNCEMENT'].includes(t)) {
+      return t;
+    }
+    return 'STANDARD_POST';
+  };
+
+  // Active entity type (defaults to STANDARD_POST or initialPost's type)
+  const [activeEntityType, setActiveEntityType] = useState(getInitialType);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Sync active entity type once options are loaded
+  // Sync active entity type once options are loaded (only in create mode)
   useEffect(() => {
+    if (isEdit) return;
     if (options?.allowed_entity_types && options.allowed_entity_types.length > 0) {
       if (!options.allowed_entity_types.includes(activeEntityType)) {
         setActiveEntityType(options.allowed_entity_types[0]);
       }
     }
-  }, [options, activeEntityType]);
+  }, [options, activeEntityType, isEdit]);
 
   if (!isOpen) return null;
 
   const allowedEntityTypes = options?.allowed_entity_types || ['STANDARD_POST'];
 
-  // Handle Form Submission
+  // Handle Form Submission (Create or Edit)
   const handleFormSubmit = async (payload) => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const response = await createCommunityPost(payload);
-      
-      // Update local stats context optimistically
-      adjustPosts?.(1);
+      if (isEdit && initialPost?.id) {
+        const response = await updateCommunityPost(initialPost.id, payload, activeEntityType);
+        setSubmitSuccess(true);
+        onPostUpdated?.(response);
 
-      setSubmitSuccess(true);
-      onPostCreated?.(response);
-
-      // Auto redirect after short delay
-      setTimeout(() => {
-        if (isStandalonePage) {
-          navigate('/community');
-        } else {
+        // Auto close after short delay
+        setTimeout(() => {
           onClose?.();
-        }
-      }, 1000);
+        }, 800);
+      } else {
+        const response = await createCommunityPost(payload);
+        
+        // Update local stats context optimistically
+        adjustPosts?.(1);
+
+        setSubmitSuccess(true);
+        onPostCreated?.(response);
+
+        // Auto redirect after short delay
+        setTimeout(() => {
+          if (isStandalonePage) {
+            navigate('/community');
+          } else {
+            onClose?.();
+          }
+        }, 1000);
+      }
     } catch (err) {
-      console.error('Failed to publish post:', err);
+      console.error('Failed to submit post:', err);
       const data = err?.response?.data;
-      let errMsg = 'Failed to publish post. Please check the required fields.';
+      let errMsg = 'Failed to submit post. Please check the required fields.';
       if (data) {
         if (typeof data === 'string') {
           errMsg = data;
@@ -100,37 +127,37 @@ export default function CreatePostModal({
     }
   };
 
-  // Header info based on active post type
+  // Header info based on active post type and mode
   const headerMeta = {
     STANDARD_POST: {
       icon: FileText,
       iconBg: 'bg-blue-50 text-blue-600',
-      title: 'Create Community Post',
-      description: 'Share knowledge, technical insights, or questions with campus peers',
+      title: isEdit ? 'Edit Community Post' : 'Create Community Post',
+      description: isEdit ? 'Update your post details, knowledge, or media attachments' : 'Share knowledge, technical insights, or questions with campus peers',
     },
     INTERVIEW_EXPERIENCE: {
       icon: Award,
       iconBg: 'bg-amber-50 text-amber-600',
-      title: 'Share Interview Experience',
-      description: 'Break down your hiring rounds, questions asked, and preparation advice',
+      title: isEdit ? 'Edit Interview Experience' : 'Share Interview Experience',
+      description: isEdit ? 'Update your hiring round breakdowns, questions, and advice' : 'Break down your hiring rounds, questions asked, and preparation advice',
     },
     OPPORTUNITY: {
       icon: Briefcase,
       iconBg: 'bg-emerald-50 text-emerald-600',
-      title: 'Publish Placement / Internship Drive',
-      description: 'Broadcast campus recruitment, internships, or job openings to students',
+      title: isEdit ? 'Edit Opportunity Drive' : 'Publish Placement / Internship Drive',
+      description: isEdit ? 'Update job opening, requirements, or application deadline' : 'Broadcast campus recruitment, internships, or job openings to students',
     },
     ANNOUNCEMENT: {
       icon: Megaphone,
       iconBg: 'bg-purple-50 text-purple-600',
-      title: 'Broadcast Campus Announcement',
-      description: 'Publish official notices, placement drive schedules, or campus circulars',
+      title: isEdit ? 'Edit Campus Announcement' : 'Broadcast Campus Announcement',
+      description: isEdit ? 'Update announcement notice, circular details, or target audience' : 'Publish official notices, placement drive schedules, or campus circulars',
     },
   }[activeEntityType] || {
     icon: FileText,
     iconBg: 'bg-blue-50 text-blue-600',
-    title: 'Create Community Post',
-    description: 'Share knowledge, placement insights, or notices with campus peers',
+    title: isEdit ? 'Edit Post' : 'Create Community Post',
+    description: isEdit ? 'Update post details' : 'Share knowledge, placement insights, or notices with campus peers',
   };
   const HeaderIcon = headerMeta.icon;
 
@@ -178,8 +205,12 @@ export default function CreatePostModal({
         <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2.5 animate-in fade-in">
           <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
           <div>
-            <h4 className="font-bold text-xs">Published Successfully!</h4>
-            <p className="text-2xs mt-0.5">Your post is now live in the community feed. Redirecting...</p>
+            <h4 className="font-bold text-xs">{isEdit ? 'Updated Successfully!' : 'Published Successfully!'}</h4>
+            <p className="text-2xs mt-0.5">
+              {isEdit
+                ? 'Your changes have been saved to the post.'
+                : 'Your post is now live in the community feed. Redirecting...'}
+            </p>
           </div>
         </div>
       )}
@@ -192,8 +223,8 @@ export default function CreatePostModal({
         </div>
       ) : (
         <>
-          {/* 2. Compact Horizontal Entity Type Switcher (Only if multiple choices) */}
-          {allowedEntityTypes.length > 1 && (
+          {/* 2. Compact Horizontal Entity Type Switcher (Only in create mode when multiple formats allowed) */}
+          {!isEdit && allowedEntityTypes.length > 1 && (
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-700">
                 Post Format
@@ -270,6 +301,8 @@ export default function CreatePostModal({
                 onSubmit={handleFormSubmit}
                 isSubmitting={isSubmitting}
                 submitError={submitError}
+                initialData={initialPost}
+                mode={mode}
               />
             )}
 
@@ -279,6 +312,8 @@ export default function CreatePostModal({
                 onSubmit={handleFormSubmit}
                 isSubmitting={isSubmitting}
                 submitError={submitError}
+                initialData={initialPost}
+                mode={mode}
               />
             )}
 
@@ -288,6 +323,8 @@ export default function CreatePostModal({
                 onSubmit={handleFormSubmit}
                 isSubmitting={isSubmitting}
                 submitError={submitError}
+                initialData={initialPost}
+                mode={mode}
               />
             )}
 
@@ -297,6 +334,8 @@ export default function CreatePostModal({
                 onSubmit={handleFormSubmit}
                 isSubmitting={isSubmitting}
                 submitError={submitError}
+                initialData={initialPost}
+                mode={mode}
               />
             )}
           </div>

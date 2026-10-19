@@ -44,28 +44,66 @@ export default function OpportunityForm({
   onSubmit,
   isSubmitting,
   submitError,
+  initialData = null,
+  mode = 'create',
 }) {
   const companies = useMemo(() => options?.companies || [], [options?.companies]);
   const departments = useMemo(() => options?.departments || [], [options?.departments]);
   const batches = useMemo(() => options?.batches || [], [options?.batches]);
   const skills = useMemo(() => options?.skills || [], [options?.skills]);
 
-  // Form Fields
-  const [title, setTitle] = useState('');
-  const [roleId, setRoleId] = useState(null);
-  const [companyId, setCompanyId] = useState('');
-  const [opportunityType, setOpportunityType] = useState('PLACEMENT');
-  const [employmentType, setEmploymentType] = useState('FULL_TIME');
-  const [workMode, setWorkMode] = useState('ON_SITE');
-  const [salaryPackage, setSalaryPackage] = useState('');
-  const [location, setLocation] = useState('');
-  const [minCgpa, setMinCgpa] = useState('');
-  const [deadline, setDeadline] = useState('');
-  const [applicationUrl, setApplicationUrl] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedDepartments, setSelectedDepartments] = useState([]);
-  const [selectedBatches, setSelectedBatches] = useState([]);
-  const [selectedSkills, setSelectedSkills] = useState([]);
+  // Form Fields with initialData pre-filling
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [roleId, setRoleId] = useState(initialData?.role_id || initialData?.role?.id || null);
+  const [companyId, setCompanyId] = useState(() => {
+    if (initialData?.company_id) return String(initialData.company_id);
+    if (initialData?.company) {
+      const compName = typeof initialData.company === 'string' ? initialData.company : initialData.company?.name;
+      const matched = companies.find((c) => c.name.toLowerCase() === compName?.toLowerCase());
+      return matched ? String(matched.id) : '';
+    }
+    return '';
+  });
+  const [opportunityType, setOpportunityType] = useState(initialData?.opportunity_type || 'PLACEMENT');
+  const [employmentType, setEmploymentType] = useState(initialData?.employment_type || 'FULL_TIME');
+  const [workMode, setWorkMode] = useState(initialData?.work_mode || 'ON_SITE');
+  const [salaryPackage, setSalaryPackage] = useState(initialData?.salary_package || '');
+  const [location, setLocation] = useState(initialData?.location || '');
+  const [minCgpa, setMinCgpa] = useState(initialData?.min_cgpa != null ? String(initialData.min_cgpa) : '');
+  const [deadline, setDeadline] = useState(initialData?.deadline ? initialData.deadline.slice(0, 16) : '');
+  const [applicationUrl, setApplicationUrl] = useState(initialData?.application_url || '');
+  const [description, setDescription] = useState(initialData?.description || '');
+  const [selectedDepartments, setSelectedDepartments] = useState(() => {
+    if (Array.isArray(initialData?.eligible_departments)) {
+      return initialData.eligible_departments.map((d) => (typeof d === 'object' && d?.id ? d.id : d));
+    }
+    return [];
+  });
+  const [selectedBatches, setSelectedBatches] = useState(() => {
+    if (Array.isArray(initialData?.eligible_batches)) {
+      return initialData.eligible_batches.map((b) => (typeof b === 'object' && b?.id ? b.id : b));
+    }
+    return [];
+  });
+  const [selectedSkills, setSelectedSkills] = useState(() => {
+    if (Array.isArray(initialData?.skills)) {
+      return initialData.skills
+        .map((s) => {
+          if (typeof s === 'string') {
+            const matched = skills.find((sk) => sk.name.toLowerCase() === s.toLowerCase());
+            return matched ? { skill_id: matched.id, importance: 'REQUIRED' } : null;
+          }
+          if (typeof s === 'object' && s.skill_id) return s;
+          if (typeof s === 'object' && s.name) {
+            const matched = skills.find((sk) => sk.name.toLowerCase() === s.name.toLowerCase());
+            return matched ? { skill_id: matched.id, importance: s.importance || 'REQUIRED' } : null;
+          }
+          return null;
+        })
+        .filter(Boolean);
+    }
+    return [];
+  });
   const [validationErrors, setValidationErrors] = useState({});
 
   const handleToggleDepartment = (deptId) => {
@@ -446,12 +484,12 @@ export default function OpportunityForm({
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Publishing Opportunity...</span>
+              <span>{mode === 'edit' ? 'Saving Changes...' : 'Publishing Opportunity...'}</span>
             </>
           ) : (
             <>
               <Send className="w-4 h-4" />
-              <span>Publish Placement Drive</span>
+              <span>{mode === 'edit' ? 'Save Changes' : 'Publish Placement Drive'}</span>
             </>
           )}
         </button>

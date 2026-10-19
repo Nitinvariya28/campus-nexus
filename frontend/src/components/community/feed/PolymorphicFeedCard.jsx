@@ -14,6 +14,10 @@ export default function PolymorphicFeedCard({
   onLikeToggle,
   onBookmarkToggle,
   onCommentClick,
+  isManageMode = false,
+  onEdit,
+  onDelete,
+  onUserClick,
 }) {
   if (!item) return null;
 
@@ -21,13 +25,37 @@ export default function PolymorphicFeedCard({
 
   switch (feedType) {
     case 'INTERVIEW_EXPERIENCE':
-      return <InterviewExperienceCard post={item} />;
+      return (
+        <InterviewExperienceCard
+          post={item}
+          isManageMode={isManageMode}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onUserClick={onUserClick}
+        />
+      );
 
     case 'OPPORTUNITY':
-      return <OpportunityCard post={item} />;
+      return (
+        <OpportunityCard
+          post={item}
+          isManageMode={isManageMode}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onUserClick={onUserClick}
+        />
+      );
 
     case 'ANNOUNCEMENT':
-      return <AnnouncementCard post={item} />;
+      return (
+        <AnnouncementCard
+          post={item}
+          isManageMode={isManageMode}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onUserClick={onUserClick}
+        />
+      );
 
     case 'POST':
     case 'STANDARD_POST':
@@ -38,6 +66,10 @@ export default function PolymorphicFeedCard({
           onLikeToggle={onLikeToggle}
           onBookmarkToggle={onBookmarkToggle}
           onCommentClick={onCommentClick}
+          isManageMode={isManageMode}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onUserClick={onUserClick}
         />
       );
   }

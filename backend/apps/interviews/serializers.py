@@ -49,6 +49,23 @@ class InterviewExperienceCreateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         rounds_data = validated_data.pop('rounds', None)
+        role_id = validated_data.pop('role_id', None)
+        role_title = validated_data.pop('role_title', None)
+        company_id = validated_data.get('company_id', instance.company_id)
+
+        if not role_id and role_title:
+            from apps.companies.models import CompanyRole
+            role_obj = CompanyRole.objects.filter(company_id=company_id, role_name__iexact=role_title.strip()).first()
+            if not role_obj:
+                role_obj = CompanyRole.objects.create(
+                    company_id=company_id,
+                    role_name=role_title.strip(),
+                    role_category='OTHER'
+                )
+            role_id = role_obj.id
+
+        if role_id is not None:
+            instance.role_id = role_id
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

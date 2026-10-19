@@ -10,6 +10,7 @@ import {
   ThumbsUp,
   MessageSquare,
   ShieldCheck,
+  UserCog,
 } from 'lucide-react';
 import RoleBadgePill from '../common/RoleBadgePill';
 import { COMMUNITY_SIDEBAR_NAV } from '../../../constants/community/communityConstants';
@@ -63,26 +64,52 @@ export default function LeftProfileSidebar({ onCreatePost, onItemClick, classNam
     }
   };
 
+  const handleViewMyProfile = () => {
+    if (onItemClick) {
+      onItemClick();
+    }
+    const targetId = user?.id || 'me';
+    navigate(`/community?user=${targetId}`);
+  };
+
+  const handleUpdateProfile = (e) => {
+    e.stopPropagation();
+    if (onItemClick) {
+      onItemClick();
+    }
+    navigate('/profile');
+  };
+
   return (
     <aside className={`w-full space-y-4 ${className}`}>
       {/* 1. Mini User Profile & Create Post CTA Card */}
       <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs space-y-3">
-        <div className="flex flex-col items-center text-center">
+        {/* Clickable Profile Snapshot Area (Opens User's LinkedIn-Style Profile) */}
+        <div
+          onClick={handleViewMyProfile}
+          className="flex flex-col items-center text-center cursor-pointer group p-1.5 -m-1.5 rounded-lg hover:bg-slate-50/80 transition-all"
+          title="Click to view your profile"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') handleViewMyProfile();
+          }}
+        >
           <div className="relative mb-2">
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt={user?.first_name || 'User Avatar'}
-                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs ring-2 ring-slate-100"
+                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs ring-2 ring-slate-100 group-hover:ring-blue-400 group-hover:scale-105 transition-all"
               />
             ) : (
-              <div className="w-14 h-14 rounded-full bg-slate-900 text-amber-400 font-bold text-base flex items-center justify-center ring-2 ring-slate-100">
+              <div className="w-14 h-14 rounded-full bg-slate-900 text-amber-400 font-bold text-base flex items-center justify-center ring-2 ring-slate-100 group-hover:ring-blue-400 group-hover:scale-105 transition-all">
                 {initials}
               </div>
             )}
           </div>
 
-          <h3 className="text-sm font-semibold text-slate-900">
+          <h3 className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
             {user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Campus Member' : 'Campus Member'}
           </h3>
 
@@ -90,9 +117,22 @@ export default function LeftProfileSidebar({ onCreatePost, onItemClick, classNam
             {user?.department || 'Nirma University'}
           </p>
 
-          <div className="mt-2">
+          <div className="mt-2 flex items-center gap-1.5 flex-wrap justify-center">
             <RoleBadgePill role={user?.role || 'STUDENT'} />
           </div>
+        </div>
+
+        {/* Profile Update Option (Redirects to Navbar Profile URL: /profile) */}
+        <div className="flex justify-center pt-0.5">
+          <button
+            type="button"
+            onClick={handleUpdateProfile}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-blue-50/70 border border-slate-200/80 hover:border-blue-200 shadow-2xs"
+            title="Update Profile (Account Settings)"
+          >
+            <UserCog className="w-3.5 h-3.5 text-slate-500" />
+            <span>Update Profile</span>
+          </button>
         </div>
 
         {/* Primary "+ Create Post" CTA Button */}

@@ -13,7 +13,7 @@ import { Loader2, MessageSquare, AlertCircle } from 'lucide-react';
  * - CommentList with author image, name, content, and timestamp
  * - Pagination / Load More comments support
  */
-export default function CommentThread({ postId, entityType = 'POST', onCommentAdded }) {
+export default function CommentThread({ postId, entityType = 'POST', onCommentAdded, onUserClick }) {
   const [comments, setComments] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -121,7 +121,7 @@ export default function CommentThread({ postId, entityType = 'POST', onCommentAd
         ) : (
           <div>
             {comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} />
+              <CommentItem key={comment.id} comment={comment} onUserClick={onUserClick} />
             ))}
 
             {hasMore && (

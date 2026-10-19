@@ -222,6 +222,71 @@ export async function uploadCommunityMedia(file) {
   return response.data;
 }
 
+/**
+ * Updates an existing community post, opportunity, interview experience, or announcement.
+ * @param {number} postId
+ * @param {Object} postData
+ * @param {string} [entityType='STANDARD_POST']
+ * @returns {Promise<Object>}
+ */
+export async function updateCommunityPost(postId, postData, entityType = 'STANDARD_POST') {
+  const normType = (entityType || 'STANDARD_POST').toUpperCase();
+  const response = await api.patch(`/community/posts/${postId}/`, postData, {
+    params: { type: normType },
+  });
+  return response.data;
+}
+
+/**
+ * Deletes a community post, opportunity, interview experience, or announcement.
+ * @param {number} postId
+ * @param {string} [entityType='STANDARD_POST']
+ * @returns {Promise<{message: string}>}
+ */
+export async function deleteCommunityPost(postId, entityType = 'STANDARD_POST') {
+  const normType = (entityType || 'STANDARD_POST').toUpperCase();
+  const response = await api.delete(`/community/posts/${postId}/`, {
+    params: { type: normType },
+  });
+  return response.data;
+}
+
+/**
+ * Fetches detail of a single post by ID and entity type.
+ * @param {number} postId
+ * @param {string} [entityType='STANDARD_POST']
+ * @returns {Promise<Object>}
+ */
+export async function fetchPostDetail(postId, entityType = 'STANDARD_POST') {
+  const normType = (entityType || 'STANDARD_POST').toUpperCase();
+  const response = await api.get(`/community/posts/${postId}/`, {
+    params: { type: normType },
+  });
+  return response.data;
+}
+
+/**
+ * Fetches full public profile of a user by user_id.
+ * @param {number} userId
+ * @returns {Promise<Object>}
+ */
+export async function fetchUserProfile(userId) {
+  const response = await api.get(`/profiles/user/${userId}/`);
+  return response.data;
+}
+
+/**
+ * Searches users across first_name, last_name, email, department, company, job title.
+ * @param {string} query
+ * @returns {Promise<Array>}
+ */
+export async function searchUsers(query) {
+  const response = await api.get('/profiles/users/search/', {
+    params: { q: query },
+  });
+  return response.data;
+}
+
 export default {
   fetchUnifiedFeed,
   searchFeed,
@@ -232,6 +297,11 @@ export default {
   createPostComment,
   fetchPostCreationOptions,
   createCommunityPost,
+  updateCommunityPost,
+  deleteCommunityPost,
+  fetchPostDetail,
+  fetchUserProfile,
+  searchUsers,
   fetchCommunityUserStats,
   fetchCommunityWidgets,
   uploadCommunityMedia,

@@ -37,6 +37,8 @@ export default function StandardPostForm({
   onSubmit,
   isSubmitting,
   submitError,
+  initialData = null,
+  mode = 'create',
 }) {
   const postTypes = useMemo(() => options?.post_types || [
     { value: 'INTERNSHIP', label: 'Internship' },
@@ -48,16 +50,66 @@ export default function StandardPostForm({
   const companies = useMemo(() => options?.companies || [], [options?.companies]);
   const tags = useMemo(() => options?.tags || [], [options?.tags]);
 
-  // Form State
-  const [selectedPostType, setSelectedPostType] = useState(postTypes[0]?.value || 'GENERAL');
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [companyId, setCompanyId] = useState('');
-  const [newCompanyName, setNewCompanyName] = useState('');
-  const [selectedTagIds, setSelectedTagIds] = useState([]);
-  const [customTags, setCustomTags] = useState([]);
+  // Form State with initialData pre-filling
+  const [selectedPostType, setSelectedPostType] = useState(
+    initialData?.post_type || postTypes[0]?.value || 'GENERAL'
+  );
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [content, setContent] = useState(initialData?.content || '');
+
+  const [companyId, setCompanyId] = useState(() => {
+    if (initialData?.company_id) return String(initialData.company_id);
+    if (initialData?.company) {
+      const compName = typeof initialData.company === 'string' ? initialData.company : initialData.company?.name;
+      const matched = companies.find((c) => c.name.toLowerCase() === compName?.toLowerCase());
+      return matched ? String(matched.id) : '';
+    }
+    return '';
+  });
+
+  const [newCompanyName, setNewCompanyName] = useState(() => {
+    if (initialData?.company && !initialData?.company_id) {
+      const compName = typeof initialData.company === 'string' ? initialData.company : initialData.company?.name;
+      const matched = companies.find((c) => c.name.toLowerCase() === compName?.toLowerCase());
+      return matched ? '' : compName || '';
+    }
+    return '';
+  });
+
+  const [selectedTagIds, setSelectedTagIds] = useState(() => {
+    if (Array.isArray(initialData?.tags)) {
+      const ids = [];
+      initialData.tags.forEach((tagItem) => {
+        if (typeof tagItem === 'object' && tagItem.id) {
+          ids.push(tagItem.id);
+        } else if (typeof tagItem === 'string') {
+          const matchedTag = tags.find((t) => t.name.toLowerCase() === tagItem.toLowerCase());
+          if (matchedTag) ids.push(matchedTag.id);
+        }
+      });
+      return ids;
+    }
+    return [];
+  });
+
+  const [customTags, setCustomTags] = useState(() => {
+    if (Array.isArray(initialData?.tags)) {
+      const extras = [];
+      initialData.tags.forEach((tagItem) => {
+        if (typeof tagItem === 'string') {
+          const matchedTag = tags.find((t) => t.name.toLowerCase() === tagItem.toLowerCase());
+          if (!matchedTag && !extras.includes(tagItem)) {
+            extras.push(tagItem);
+          }
+        }
+      });
+      return extras;
+    }
+    return [];
+  });
+
   const [customTagInput, setCustomTagInput] = useState('');
-  const [mediaFiles, setMediaFiles] = useState([]);
+  const [mediaFiles, setMediaFiles] = useState(initialData?.media || []);
   const [formValidationErrors, setFormValidationErrors] = useState({});
 
   // Tag selection toggler
@@ -335,12 +387,12 @@ export default function StandardPostForm({
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Publishing...</span>
+              <span>{mode === 'edit' ? 'Saving Changes...' : 'Publishing...'}</span>
             </>
           ) : (
             <>
               <Send className="w-4 h-4" />
-              <span>Publish Post</span>
+              <span>{mode === 'edit' ? 'Save Changes' : 'Publish Post'}</span>
             </>
           )}
         </button>

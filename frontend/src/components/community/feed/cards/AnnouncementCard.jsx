@@ -3,12 +3,19 @@ import { Megaphone, Calendar, Users, AlertCircle } from 'lucide-react';
 import RoleBadgePill from '../../common/RoleBadgePill';
 import VerifiedOfficialBadge from '../../common/VerifiedOfficialBadge';
 import PostActionToolbar from './PostActionToolbar';
+import PostManageMenu from '../../common/PostManageMenu';
 
 /**
  * AnnouncementCard Component
  * Displays official university circulars, policy notifications, and placement cell alerts.
  */
-export default function AnnouncementCard({ post }) {
+export default function AnnouncementCard({
+  post,
+  isManageMode = false,
+  onEdit,
+  onDelete,
+  onUserClick,
+}) {
   if (!post) return null;
 
   const {
@@ -63,14 +70,33 @@ export default function AnnouncementCard({ post }) {
       {/* Author Row */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-600 to-orange-600 text-white font-bold flex items-center justify-center shrink-0 text-sm shadow-2xs">
-            <Megaphone className="w-5 h-5" />
-          </div>
+          <button
+            type="button"
+            onClick={() => author?.id && onUserClick?.(author.id)}
+            className="w-10 h-10 rounded-full shrink-0 shadow-2xs overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-500/50 transition-all text-left"
+            title={`View ${author.name || 'Placement Cell'}'s profile`}
+          >
+            {author.avatar ? (
+              <img
+                src={author.avatar}
+                alt={author.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-tr from-amber-600 to-orange-600 text-white font-bold flex items-center justify-center text-sm">
+                <Megaphone className="w-5 h-5" />
+              </div>
+            )}
+          </button>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-semibold text-slate-900 truncate">
+              <button
+                type="button"
+                onClick={() => author?.id && onUserClick?.(author.id)}
+                className="text-sm font-semibold text-slate-900 truncate hover:text-amber-700 hover:underline transition-colors text-left cursor-pointer"
+              >
                 {author.name || 'Placement Cell Authority'}
-              </span>
+              </button>
               <VerifiedOfficialBadge label="Official Notice" />
               <RoleBadgePill role={author.role || 'PLACEMENT_CELL'} />
             </div>
@@ -80,12 +106,20 @@ export default function AnnouncementCard({ post }) {
           </div>
         </div>
 
-        {created_at && (
-          <div className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0">
-            <Calendar className="w-3 h-3" />
-            <span>{formatDate(created_at)}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {created_at && (
+            <div className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0">
+              <Calendar className="w-3 h-3" />
+              <span>{formatDate(created_at)}</span>
+            </div>
+          )}
+          {isManageMode && (
+            <PostManageMenu
+              onEdit={() => onEdit?.(post)}
+              onDelete={() => onDelete?.(post)}
+            />
+          )}
+        </div>
       </div>
 
       {/* Main Announcement Content Box */}
@@ -107,6 +141,7 @@ export default function AnnouncementCard({ post }) {
         initialSaved={post.interactions?.is_bookmarked_by_me || false}
         initialComments={post.interactions?.comments_count || 0}
         shareTitle={title}
+        onUserClick={onUserClick}
       />
     </article>
   );

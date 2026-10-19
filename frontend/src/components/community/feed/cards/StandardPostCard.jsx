@@ -4,13 +4,22 @@ import RoleBadgePill from '../../common/RoleBadgePill';
 import VerifiedOfficialBadge from '../../common/VerifiedOfficialBadge';
 import TagBadge from '../../common/TagBadge';
 import PostActionToolbar from './PostActionToolbar';
+import PostManageMenu from '../../common/PostManageMenu';
 
 /**
  * StandardPostCard Component
  * Renders standard student/alumni posts, career advice, and general discussions.
  * Conforms to COMMUNITY_UI_THEME_AND_DESIGN_SYSTEM.md geometry and interaction states.
  */
-export default function StandardPostCard({ post, onLikeToggle, onBookmarkToggle }) {
+export default function StandardPostCard({
+  post,
+  onLikeToggle,
+  onBookmarkToggle,
+  isManageMode = false,
+  onEdit,
+  onDelete,
+  onUserClick,
+}) {
   if (!post) return null;
 
   const {
@@ -25,6 +34,12 @@ export default function StandardPostCard({ post, onLikeToggle, onBookmarkToggle 
     tags = [],
     interactions = {},
   } = post;
+
+  const handleAuthorClick = () => {
+    if (author?.id && onUserClick) {
+      onUserClick(author.id);
+    }
+  };
 
   // Format date helper
   const formatDate = (isoString) => {
@@ -46,14 +61,33 @@ export default function StandardPostCard({ post, onLikeToggle, onBookmarkToggle 
       {/* Header: Author Information */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center shrink-0 text-sm shadow-2xs">
-            {author.name ? author.name.charAt(0).toUpperCase() : 'U'}
-          </div>
+          <button
+            type="button"
+            onClick={handleAuthorClick}
+            className="w-10 h-10 rounded-full shrink-0 shadow-2xs overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500/50 transition-all text-left"
+            title={`View ${author.name || 'user'}'s profile`}
+          >
+            {author.avatar ? (
+              <img
+                src={author.avatar}
+                alt={author.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm">
+                {author.name ? author.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+            )}
+          </button>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-semibold text-slate-900 truncate">
+              <button
+                type="button"
+                onClick={handleAuthorClick}
+                className="text-sm font-semibold text-slate-900 truncate hover:text-blue-600 hover:underline transition-colors text-left cursor-pointer"
+              >
                 {author.name || 'Anonymous User'}
-              </span>
+              </button>
               {author.is_verified_official && <VerifiedOfficialBadge />}
               <RoleBadgePill role={author.role || 'STUDENT'} />
             </div>
@@ -63,13 +97,21 @@ export default function StandardPostCard({ post, onLikeToggle, onBookmarkToggle 
           </div>
         </div>
 
-        {/* Date */}
-        {created_at && (
-          <div className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0">
-            <Calendar className="w-3 h-3" />
-            <span>{formatDate(created_at)}</span>
-          </div>
-        )}
+        {/* Date and Manage Action */}
+        <div className="flex items-center gap-2 shrink-0">
+          {created_at && (
+            <div className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0">
+              <Calendar className="w-3 h-3" />
+              <span>{formatDate(created_at)}</span>
+            </div>
+          )}
+          {isManageMode && (
+            <PostManageMenu
+              onEdit={() => onEdit?.(post)}
+              onDelete={() => onDelete?.(post)}
+            />
+          )}
+        </div>
       </div>
 
       {/* Meta Bar: Sub-Category / Company */}
@@ -137,6 +179,7 @@ export default function StandardPostCard({ post, onLikeToggle, onBookmarkToggle 
         shareTitle={title}
         onLikeChange={onLikeToggle}
         onBookmarkChange={onBookmarkToggle}
+        onUserClick={onUserClick}
       />
     </article>
   );

@@ -24,6 +24,7 @@ export default function CommunityLayout({
   onSearch = () => {},
   onCreatePost,
   onTagClick = () => {},
+  onSelectUser,
 }) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
@@ -36,6 +37,7 @@ export default function CommunityLayout({
         selectedTypes={selectedTypes}
         onSelectionChange={onSelectionChange}
         onSearch={onSearch}
+        onSelectUser={onSelectUser}
         onToggleMobileMenu={() => setMobileDrawerOpen((prev) => !prev)}
       />
 

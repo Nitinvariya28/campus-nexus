@@ -27,6 +27,11 @@ export default function CommunityFeedStream({
   emptyTitle,
   emptyMessage,
   onResetFilters,
+  isManageMode = false,
+  onEditPost,
+  onDeletePost,
+  reloadKey = 0,
+  onUserClick,
 }) {
   let filterContext = null;
   try {
@@ -57,6 +62,13 @@ export default function CommunityFeedStream({
   });
 
   const observerRef = useRef(null);
+
+  // Trigger reload if reloadKey changes from parent
+  useEffect(() => {
+    if (reloadKey > 0) {
+      refreshFeed();
+    }
+  }, [reloadKey, refreshFeed]);
 
   // Clean up observer on unmount
   useEffect(() => {
@@ -183,6 +195,10 @@ export default function CommunityFeedStream({
               item={item}
               onLikeToggle={handleLikeToggle}
               onBookmarkToggle={handleBookmarkToggle}
+              isManageMode={isManageMode}
+              onEdit={onEditPost}
+              onDelete={onDeletePost}
+              onUserClick={onUserClick}
             />
           </div>
         );

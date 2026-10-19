@@ -6,9 +6,15 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 from django.db import transaction
+from django.db.models import Q
+from apps.accounts.models import User
 
 from .models import StudentProfile, AlumniProfile, StudentPlacementRecord
-from .serializers import StudentProfileMasterSerializer
+from .serializers import (
+    StudentProfileMasterSerializer,
+    PublicUserProfileSerializer,
+    UserSearchResultSerializer,
+)
 
 # Import all models needed for Options API
 from apps.university.models import Department, Batch
@@ -532,3 +538,53 @@ class ReferenceSearchAPIView(APIView):
         
         # Return standard DRF paginated response format (count, next, previous, results)
         return paginator.get_paginated_response(data)
+
+
+class UserSearchAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        if not query:
+            return Response([], status=status.HTTP_200_OK)
+
+        users_qs = User.objects.filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(email__icontains=query) |
+            Q(student_profile__department__name__icontains=query) |
+            Q(alumni_profile__department__name__icontains=query) |
+            Q(alumni_profile__current_company__name__icontains=query) |
+            Q(alumni_profile__current_job_title__icontains=query)
+        ).select_related(
+            'student_profile__department',
+            'student_profile__batch',
+            'alumni_profile__department',
+            'alumni_profile__batch',
+            'alumni_profile__current_company'
+        ).distinct()[:10]
+
+        serializer = UserSearchResultSerializer(users_qs, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PublicUserProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id=None):
+        if not user_id or str(user_id).lower() == 'me':
+            user = request.user
+        else:
+            user = get_object_or_404(
+                User.objects.select_related(
+                    'student_profile__department',
+                    'student_profile__batch',
+                    'alumni_profile__department',
+                    'alumni_profile__batch',
+                    'alumni_profile__current_company'
+                ),
+                id=user_id
+            )
+        serializer = PublicUserProfileSerializer(user, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+

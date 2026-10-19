@@ -14,6 +14,7 @@ import {
 import RoleBadgePill from '../../common/RoleBadgePill';
 import VerifiedOfficialBadge from '../../common/VerifiedOfficialBadge';
 import PostActionToolbar from './PostActionToolbar';
+import PostManageMenu from '../../common/PostManageMenu';
 
 const ROUND_TYPE_LABELS = {
   ONLINE_ASSESSMENT: 'Online Assessment (OA)',
@@ -37,7 +38,13 @@ const ROUND_MODE_LABELS = {
  * InterviewExperienceCard Component
  * Displays alumni interview breakdown, difficulty levels, round count, and preparation strategies.
  */
-export default function InterviewExperienceCard({ post }) {
+export default function InterviewExperienceCard({
+  post,
+  isManageMode = false,
+  onEdit,
+  onDelete,
+  onUserClick,
+}) {
   if (!post) return null;
 
   const [isRoundsExpanded, setIsRoundsExpanded] = useState(true);
@@ -129,14 +136,33 @@ export default function InterviewExperienceCard({ post }) {
       {/* Author Row */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-bold flex items-center justify-center shrink-0 text-sm shadow-2xs">
-            {author.name ? author.name.charAt(0).toUpperCase() : 'A'}
-          </div>
+          <button
+            type="button"
+            onClick={() => author?.id && onUserClick?.(author.id)}
+            className="w-10 h-10 rounded-full shrink-0 shadow-2xs overflow-hidden cursor-pointer hover:ring-2 hover:ring-purple-500/50 transition-all text-left"
+            title={`View ${author.name || 'alumni'}'s profile`}
+          >
+            {author.avatar ? (
+              <img
+                src={author.avatar}
+                alt={author.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm">
+                {author.name ? author.name.charAt(0).toUpperCase() : 'A'}
+              </div>
+            )}
+          </button>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-semibold text-slate-900 truncate">
+              <button
+                type="button"
+                onClick={() => author?.id && onUserClick?.(author.id)}
+                className="text-sm font-semibold text-slate-900 truncate hover:text-purple-700 hover:underline transition-colors text-left cursor-pointer"
+              >
                 {author.name || 'Alumni Contributor'}
-              </span>
+              </button>
               {author.is_verified_official && <VerifiedOfficialBadge />}
               <RoleBadgePill role={author.role || 'ALUMNI'} />
             </div>
@@ -146,12 +172,20 @@ export default function InterviewExperienceCard({ post }) {
           </div>
         </div>
 
-        {created_at && (
-          <div className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0">
-            <Calendar className="w-3 h-3" />
-            <span>{formatDate(created_at)}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {created_at && (
+            <div className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0">
+              <Calendar className="w-3 h-3" />
+              <span>{formatDate(created_at)}</span>
+            </div>
+          )}
+          {isManageMode && (
+            <PostManageMenu
+              onEdit={() => onEdit?.(post)}
+              onDelete={() => onDelete?.(post)}
+            />
+          )}
+        </div>
       </div>
 
       {/* Target Company & Role Header */}
@@ -300,6 +334,7 @@ export default function InterviewExperienceCard({ post }) {
         initialSaved={post.interactions?.is_bookmarked_by_me || false}
         initialComments={post.interactions?.comments_count || 0}
         shareTitle={company ? `${company} Interview Experience` : 'Interview Experience'}
+        onUserClick={onUserClick}
       />
     </article>
   );

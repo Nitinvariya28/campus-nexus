@@ -48,6 +48,8 @@ export default function InterviewExperienceForm({
   onSubmit,
   isSubmitting,
   submitError,
+  initialData = null,
+  mode = 'create',
 }) {
   const companies = useMemo(() => options?.companies || [], [options?.companies]);
   const roundTypes = useMemo(() => options?.round_types || [], [options?.round_types]);
@@ -57,25 +59,45 @@ export default function InterviewExperienceForm({
   const [currentStep, setCurrentStep] = useState(1);
   const step3EnteredAtRef = useRef(0);
 
-  // Form Fields
-  const [companyId, setCompanyId] = useState('');
-  const [roleId, setRoleId] = useState(null);
-  const [roleTitle, setRoleTitle] = useState('');
-  const [experienceType, setExperienceType] = useState('PLACEMENT');
-  const [result, setResult] = useState('SELECTED');
-  const [difficulty, setDifficulty] = useState('MEDIUM');
-  const [experience, setExperience] = useState('');
-  const [preparation, setPreparation] = useState('');
-  const [rounds, setRounds] = useState([
-    {
-      round_number: 1,
-      round_type: 'ONLINE_ASSESSMENT',
-      mode: 'ONLINE',
-      duration_minutes: 60,
-      topics: '',
-      description: '',
-    },
-  ]);
+  // Form Fields with initialData pre-filling
+  const [companyId, setCompanyId] = useState(() => {
+    if (initialData?.company_id) return String(initialData.company_id);
+    if (initialData?.company) {
+      const compName = typeof initialData.company === 'string' ? initialData.company : initialData.company?.name;
+      const matched = companies.find((c) => c.name.toLowerCase() === compName?.toLowerCase());
+      return matched ? String(matched.id) : '';
+    }
+    return '';
+  });
+  const [roleId, setRoleId] = useState(initialData?.role_id || initialData?.role?.id || null);
+  const [roleTitle, setRoleTitle] = useState(initialData?.role_title || initialData?.role?.role_name || '');
+  const [experienceType, setExperienceType] = useState(initialData?.experience_type || 'PLACEMENT');
+  const [result, setResult] = useState(initialData?.result || 'SELECTED');
+  const [difficulty, setDifficulty] = useState(initialData?.difficulty || 'MEDIUM');
+  const [experience, setExperience] = useState(initialData?.experience || '');
+  const [preparation, setPreparation] = useState(initialData?.preparation || '');
+  const [rounds, setRounds] = useState(() => {
+    if (Array.isArray(initialData?.rounds) && initialData.rounds.length > 0) {
+      return initialData.rounds.map((r, idx) => ({
+        round_number: idx + 1,
+        round_type: r.round_type || 'ONLINE_ASSESSMENT',
+        mode: r.mode || 'ONLINE',
+        duration_minutes: r.duration_minutes || 45,
+        topics: r.topics || '',
+        description: r.description || '',
+      }));
+    }
+    return [
+      {
+        round_number: 1,
+        round_type: 'ONLINE_ASSESSMENT',
+        mode: 'ONLINE',
+        duration_minutes: 60,
+        topics: '',
+        description: '',
+      },
+    ];
+  });
 
   const [activeRoundTab, setActiveRoundTab] = useState(0);
   const [validationErrors, setValidationErrors] = useState({});
@@ -551,12 +573,12 @@ export default function InterviewExperienceForm({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Publishing...</span>
+                  <span>{mode === 'edit' ? 'Saving Changes...' : 'Publishing...'}</span>
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  <span>Publish Interview Breakdown</span>
+                  <span>{mode === 'edit' ? 'Save Changes' : 'Publish Interview Breakdown'}</span>
                 </>
               )}
             </button>

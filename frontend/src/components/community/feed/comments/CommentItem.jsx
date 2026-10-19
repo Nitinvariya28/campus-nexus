@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import RoleBadgePill from '../../common/RoleBadgePill';
 import VerifiedOfficialBadge from '../../common/VerifiedOfficialBadge';
 
@@ -7,11 +7,14 @@ import VerifiedOfficialBadge from '../../common/VerifiedOfficialBadge';
  * CommentItem Component
  * Section 6.2 of AlumiBridge_post.docx:
  * - Horizontal layout with author profile image on the left
- * - Author name on the first line, clickable to profile view
+ * - Author name on the first line, clickable to profile view on the SAME page
  * - Comment content below
  * - Formatted relative timestamp
  */
-export default function CommentItem({ comment }) {
+export default function CommentItem({ comment, onUserClick }) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
   if (!comment) return null;
 
   const {
@@ -44,31 +47,52 @@ export default function CommentItem({ comment }) {
     }
   };
 
-  const profilePath = author.id ? `/profiles/${author.id}` : '#';
+  const handleProfileClick = (e) => {
+    e.preventDefault();
+    if (author?.id) {
+      if (onUserClick) {
+        onUserClick(author.id);
+      } else {
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.set('user', author.id);
+        navigate(`/community?${nextParams.toString()}`);
+      }
+    }
+  };
 
   return (
     <div className="flex items-start gap-2.5 py-2.5 border-b border-slate-100 last:border-b-0 text-xs">
       {/* Clickable Author Avatar */}
-      <Link
-        to={profilePath}
-        className="shrink-0 hover:opacity-85 transition-opacity"
-        title={`View ${author.name}'s profile`}
+      <button
+        type="button"
+        onClick={handleProfileClick}
+        className="shrink-0 hover:opacity-85 transition-opacity cursor-pointer"
+        title={`View ${author.name || 'user'}'s profile`}
       >
-        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[11px] shadow-2xs">
-          {initial}
-        </div>
-      </Link>
+        {author.avatar ? (
+          <img
+            src={author.avatar}
+            alt={author.name}
+            className="w-7 h-7 rounded-full object-cover border border-slate-200 shadow-2xs"
+          />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[11px] shadow-2xs">
+            {initial}
+          </div>
+        )}
+      </button>
 
       {/* Right Column: Name, Meta, Content, Time */}
       <div className="flex-1 min-w-0 space-y-1 bg-slate-50/70 p-2.5 rounded-lg border border-slate-100">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Link
-              to={profilePath}
-              className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+            <button
+              type="button"
+              onClick={handleProfileClick}
+              className="font-semibold text-slate-900 hover:text-blue-600 transition-colors text-left cursor-pointer"
             >
               {author.name || 'Community Member'}
-            </Link>
+            </button>
             {author.is_verified_official && <VerifiedOfficialBadge />}
             {author.role && <RoleBadgePill role={author.role} className="text-[9px] py-0 px-1.5" />}
           </div>

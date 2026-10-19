@@ -33,12 +33,14 @@ export default function AnnouncementForm({
   onSubmit,
   isSubmitting,
   submitError,
+  initialData = null,
+  mode = 'create',
 }) {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [announcementType, setAnnouncementType] = useState('PLACEMENT');
-  const [targetAudience, setTargetAudience] = useState('ALL');
-  const [deadline, setDeadline] = useState('');
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [content, setContent] = useState(initialData?.content || '');
+  const [announcementType, setAnnouncementType] = useState(initialData?.announcement_type || 'PLACEMENT');
+  const [targetAudience, setTargetAudience] = useState(initialData?.target_audience || 'ALL');
+  const [deadline, setDeadline] = useState(initialData?.deadline ? initialData.deadline.slice(0, 16) : '');
   const [validationErrors, setValidationErrors] = useState({});
 
   const handleSubmit = (e) => {
@@ -216,12 +218,12 @@ export default function AnnouncementForm({
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Broadcasting...</span>
+              <span>{mode === 'edit' ? 'Saving Changes...' : 'Broadcasting...'}</span>
             </>
           ) : (
             <>
               <Send className="w-4 h-4" />
-              <span>Broadcast Announcement</span>
+              <span>{mode === 'edit' ? 'Save Changes' : 'Broadcast Announcement'}</span>
             </>
           )}
         </button>

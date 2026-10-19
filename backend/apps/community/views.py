@@ -500,9 +500,9 @@ class PostDetailView(APIView):
 
     @transaction.atomic
     def patch(self, request, post_id):
-        entity_type = request.query_params.get('type', 'STANDARD_POST')
+        entity_type = (request.query_params.get('type') or request.data.get('entity_type') or 'STANDARD_POST').upper()
         
-        if entity_type == 'STANDARD_POST':
+        if entity_type in ('STANDARD_POST', 'POST'):
             post = get_object_or_404(Post, id=post_id)
             if request.user != post.author:
                 return Response({"error": "You do not have permission to edit this post."}, status=status.HTTP_403_FORBIDDEN)
@@ -510,6 +510,15 @@ class PostDetailView(APIView):
             if serializer.is_valid():
                 if 'title' in serializer.validated_data: post.title = serializer.validated_data['title']
                 if 'content' in serializer.validated_data: post.content = serializer.validated_data['content']
+                if 'post_type' in serializer.validated_data: post.post_type = serializer.validated_data['post_type']
+                
+                if 'new_company_name' in serializer.validated_data and serializer.validated_data['new_company_name']:
+                    from apps.companies.models import Company
+                    company, _ = Company.objects.get_or_create(name=serializer.validated_data['new_company_name'], defaults={"is_active": False})
+                    post.company = company
+                elif 'company_id' in serializer.validated_data:
+                    post.company_id = serializer.validated_data['company_id']
+
                 post.save()
 
                 if 'tag_ids' in serializer.validated_data or 'new_tags' in serializer.validated_data:
@@ -552,7 +561,7 @@ class PostDetailView(APIView):
             serializer = OpportunityCreateSerializer(opp, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response({"message": "Opportunity successfully updated."}, status=status.HTTP_200_OK)
+                return Response({"message": "Opportunity successfully updated.", "id": opp.id}, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         elif entity_type == 'ANNOUNCEMENT':
@@ -562,7 +571,7 @@ class PostDetailView(APIView):
             serializer = AnnouncementCreateSerializer(ann, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response({"message": "Announcement successfully updated."}, status=status.HTTP_200_OK)
+                return Response({"message": "Announcement successfully updated.", "id": ann.id}, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         elif entity_type == 'INTERVIEW_EXPERIENCE':
@@ -572,15 +581,15 @@ class PostDetailView(APIView):
             serializer = InterviewExperienceCreateSerializer(ie, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response({"message": "Interview Experience successfully updated."}, status=status.HTTP_200_OK)
+                return Response({"message": "Interview Experience successfully updated.", "id": ie.id}, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"error": "Invalid type."}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, post_id):
-        entity_type = request.query_params.get('type', 'STANDARD_POST')
+        entity_type = (request.query_params.get('type') or request.data.get('entity_type') or 'STANDARD_POST').upper()
         
-        if entity_type == 'STANDARD_POST':
+        if entity_type in ('STANDARD_POST', 'POST'):
             post = get_object_or_404(Post, id=post_id)
             if request.user != post.author:
                 return Response({"error": "You do not have permission to delete this post."}, status=status.HTTP_403_FORBIDDEN)
@@ -610,9 +619,9 @@ class PostDetailView(APIView):
         return Response({"message": "Post successfully deleted."}, status=status.HTTP_200_OK)
 
     def get(self, request, post_id):
-        entity_type = request.query_params.get('type', 'STANDARD_POST')
+        entity_type = (request.query_params.get('type') or 'STANDARD_POST').upper()
         
-        if entity_type == 'STANDARD_POST':
+        if entity_type in ('STANDARD_POST', 'POST'):
             post = get_object_or_404(
                 Post.objects.select_related(
                     'author', 'author__student_profile__department', 'author__student_profile__batch',
