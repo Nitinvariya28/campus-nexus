@@ -117,3 +117,43 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         return data
 
 
+class PasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+    new_password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
+    confirm_password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
+
+    def validate_current_password(self, value):
+        user = self.context.get('request').user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
+
+    def validate(self, data):
+        if data.get('new_password') != data.get('confirm_password'):
+            raise serializers.ValidationError({"confirm_password": "New passwords do not match."})
+        if data.get('current_password') == data.get('new_password'):
+            raise serializers.ValidationError({"new_password": "New password cannot be the same as your current password."})
+        return data
+
+
+class AlumniEmailChangeSerializer(serializers.Serializer):
+    new_email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+
+    def validate_new_email(self, value):
+        value = value.lower().strip()
+        user = self.context.get('request').user
+        if user.email.lower() == value:
+            raise serializers.ValidationError("New email cannot be the same as your current email.")
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("An account with this email already exists.")
+        return value
+
+    def validate_password(self, value):
+        user = self.context.get('request').user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Password verification failed. Incorrect password.")
+        return value
+
+
+

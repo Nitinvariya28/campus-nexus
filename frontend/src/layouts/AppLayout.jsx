@@ -23,7 +23,7 @@ export default function AppLayout() {
   }
 
   return (
-    <div className={`min-h-screen ${isCommunity ? 'bg-slate-50' : 'bg-slate-100'} flex flex-col text-slate-800`}>
+    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800">
       {/* Sticky Master Top Navbar */}
       <Navbar />
 

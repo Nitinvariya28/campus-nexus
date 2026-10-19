@@ -19,7 +19,7 @@ from .serializers import (
 # Import all models needed for Options API
 from apps.university.models import Department, Batch
 from apps.companies.models import Company, CompanyRole
-from apps.skills.models import SkillCategory, UserSkill, SocialLink, UserAIUsage, MasterLearningPlatform
+from apps.skills.models import SkillCategory, Skill, UserSkill, SocialLink, UserAIUsage, MasterLearningPlatform
 from apps.resumes.models import Resume
 from apps.community.models import Tag, Post, PostMedia
 from apps.opportunities.models import Opportunity, OpportunitySkill
@@ -68,13 +68,23 @@ class ProfileMeAPIView(APIView):
             
             try:
                 with transaction.atomic():
-                    # 1. Update Identity (StudentProfile)
+                    # 1. Update Identity (StudentProfile & User)
                     identity_data = data.get('identity', {})
                     if identity_data:
                         if 'bio' in identity_data:
                             student_profile.bio = identity_data['bio']
                         if 'semester' in identity_data:
-                            student_profile.semester = identity_data['semester']
+                            sem = identity_data['semester']
+                            if sem is not None and sem != '':
+                                try:
+                                    sem_int = int(sem)
+                                    if not (1 <= sem_int <= 8):
+                                        raise ValueError("Semester must be between 1 and 8.")
+                                    student_profile.semester = sem_int
+                                except (ValueError, TypeError):
+                                    raise ValueError("Semester must be an integer between 1 and 8.")
+                            else:
+                                student_profile.semester = None
                         if 'department_id' in identity_data:
                             dept_id = identity_data['department_id']
                             if dept_id and not Department.objects.filter(id=dept_id).exists():
@@ -86,15 +96,30 @@ class ProfileMeAPIView(APIView):
                                 raise ValueError(f"Batch with ID '{batch_id}' does not exist.")
                             student_profile.batch_id = batch_id
                         if 'phone' in identity_data:
-                            student_profile.phone = identity_data['phone']
+                            phone_val = str(identity_data['phone'] or '').strip()
+                            if len(phone_val) > 15:
+                                raise ValueError("Phone number cannot exceed 15 characters.")
+                            student_profile.phone = phone_val or None
                         if 'address' in identity_data:
                             student_profile.address = identity_data['address']
                         student_profile.save()
 
-                    # 2. Overwrite Skills
+                        # Update User avatar if provided
+                        if 'profile_photo' in identity_data:
+                            user.profile_photo = identity_data['profile_photo']
+                            user.save()
+
+                    # 2. Overwrite Skills (with deduplication to satisfy unique_user_skill)
                     if 'skills' in data:
-                        # Validate that all requested skill IDs actually exist
-                        skill_ids = [item['skill_id'] for item in data['skills']]
+                        seen_skills = set()
+                        unique_skills = []
+                        for item in data['skills']:
+                            s_id = item.get('skill_id')
+                            if s_id and s_id not in seen_skills:
+                                seen_skills.add(s_id)
+                                unique_skills.append(item)
+
+                        skill_ids = [item['skill_id'] for item in unique_skills]
                         existing_skills = Skill.objects.filter(id__in=skill_ids).values_list('id', flat=True)
                         missing_skills = set(skill_ids) - set(existing_skills)
                         if missing_skills:
@@ -102,26 +127,34 @@ class ProfileMeAPIView(APIView):
 
                         UserSkill.objects.filter(user=user).delete()
                         skills_to_create = []
-                        for skill_item in data['skills']:
+                        for skill_item in unique_skills:
                             skills_to_create.append(
                                 UserSkill(
                                     user=user, 
                                     skill_id=skill_item['skill_id'], 
-                                    proficiency=skill_item['proficiency']
+                                    proficiency=skill_item.get('proficiency', 'BEGINNER')
                                 )
                             )
                         UserSkill.objects.bulk_create(skills_to_create)
 
-                    # 3. Overwrite Social Links
+                    # 3. Overwrite Social Links (with deduplication to satisfy unique_user_social_platform)
                     if 'social_links' in data:
+                        seen_platforms = set()
+                        unique_socials = []
+                        for item in data['social_links']:
+                            platform = item.get('platform')
+                            if platform and platform not in seen_platforms:
+                                seen_platforms.add(platform)
+                                unique_socials.append(item)
+
                         SocialLink.objects.filter(user=user).delete()
                         socials_to_create = []
-                        for social_item in data['social_links']:
+                        for social_item in unique_socials:
                             socials_to_create.append(
                                 SocialLink(
                                     user=user,
                                     platform=social_item['platform'],
-                                    url=social_item['url']
+                                    url=social_item.get('url', '')
                                 )
                             )
                         SocialLink.objects.bulk_create(socials_to_create)
@@ -142,6 +175,39 @@ class ProfileMeAPIView(APIView):
                             )
                         UserAIUsage.objects.bulk_create(ai_to_create)
 
+                    # 5. Overwrite Learning Platforms (UserLearningResource)
+                    if 'learning_platforms' in data:
+                        UserLearningResource.objects.filter(user=user).delete()
+                        lps_to_create = []
+                        seen_lps = set()
+                        for lp_item in data['learning_platforms']:
+                            p_id = lp_item.get('platform_id')
+                            other_name = lp_item.get('other_platform_name')
+                            url_val = lp_item.get('url', '')
+                            if p_id:
+                                if p_id in seen_lps:
+                                    continue
+                                seen_lps.add(p_id)
+                                if not MasterLearningPlatform.objects.filter(id=p_id).exists():
+                                    raise ValueError(f"Learning platform with ID '{p_id}' does not exist.")
+                                lps_to_create.append(
+                                    UserLearningResource(
+                                        user=user,
+                                        platform_id=p_id,
+                                        url=url_val
+                                    )
+                                )
+                            elif other_name:
+                                lps_to_create.append(
+                                    UserLearningResource(
+                                        user=user,
+                                        platform=None,
+                                        other_platform_name=str(other_name)[:150],
+                                        url=url_val
+                                    )
+                                )
+                        UserLearningResource.objects.bulk_create(lps_to_create)
+
             except Exception as e:
                 return Response({"error": f"Update failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -154,7 +220,7 @@ class ProfileMeAPIView(APIView):
             
             try:
                 with transaction.atomic():
-                    # 1. Update Identity (AlumniProfile)
+                    # 1. Update Identity (AlumniProfile & User)
                     identity_data = data.get('identity', {})
                     if identity_data:
                         if 'bio' in identity_data:
@@ -170,9 +236,29 @@ class ProfileMeAPIView(APIView):
                                 raise ValueError(f"Batch with ID '{batch_id}' does not exist.")
                             alumni_profile.batch_id = batch_id
                         if 'phone' in identity_data:
-                            alumni_profile.phone = identity_data['phone']
+                            phone_val = str(identity_data['phone'] or '').strip()
+                            if len(phone_val) > 15:
+                                raise ValueError("Phone number cannot exceed 15 characters.")
+                            alumni_profile.phone = phone_val or None
                         if 'location' in identity_data:
-                            alumni_profile.location = identity_data['location']
+                            loc_val = str(identity_data['location'] or '').strip()
+                            if len(loc_val) > 150:
+                                raise ValueError("Location cannot exceed 150 characters.")
+                            alumni_profile.location = loc_val or None
+
+                        # Update User full name and avatar if provided
+                        user_dirty = False
+                        if 'full_name' in identity_data:
+                            full_name = identity_data['full_name'].strip()
+                            parts = full_name.split(" ", 1)
+                            user.first_name = parts[0]
+                            user.last_name = parts[1] if len(parts) > 1 else ""
+                            user_dirty = True
+                        if 'profile_photo' in identity_data:
+                            user.profile_photo = identity_data['profile_photo']
+                            user_dirty = True
+                        if user_dirty:
+                            user.save()
                         
                     # 2. Update Current Career
                     career_data = data.get('current_career', {})
@@ -183,17 +269,34 @@ class ProfileMeAPIView(APIView):
                                 raise ValueError(f"Company with ID '{company_id}' does not exist.")
                             alumni_profile.current_company_id = company_id
                         if 'role' in career_data:
-                            alumni_profile.current_job_title = career_data['role']
+                            role_val = str(career_data['role'] or '').strip()
+                            if len(role_val) > 150:
+                                raise ValueError("Job title cannot exceed 150 characters.")
+                            alumni_profile.current_job_title = role_val or None
                         if 'job_category' in career_data:
                             alumni_profile.job_category = career_data['job_category']
                         if 'years_of_experience' in career_data:
-                            alumni_profile.years_of_experience = career_data['years_of_experience']
+                            try:
+                                exp_val = int(career_data['years_of_experience'])
+                                if exp_val < 0:
+                                    raise ValueError("Years of experience cannot be negative.")
+                                alumni_profile.years_of_experience = exp_val
+                            except (ValueError, TypeError):
+                                raise ValueError("Years of experience must be a valid non-negative integer.")
                     
                     alumni_profile.save()
 
-                    # 3. Overwrite Skills
+                    # 3. Overwrite Skills (with deduplication to satisfy unique_user_skill)
                     if 'skills' in data:
-                        skill_ids = [item['skill_id'] for item in data['skills']]
+                        seen_skills = set()
+                        unique_skills = []
+                        for item in data['skills']:
+                            s_id = item.get('skill_id')
+                            if s_id and s_id not in seen_skills:
+                                seen_skills.add(s_id)
+                                unique_skills.append(item)
+
+                        skill_ids = [item['skill_id'] for item in unique_skills]
                         existing_skills = Skill.objects.filter(id__in=skill_ids).values_list('id', flat=True)
                         missing_skills = set(skill_ids) - set(existing_skills)
                         if missing_skills:
@@ -201,26 +304,34 @@ class ProfileMeAPIView(APIView):
 
                         UserSkill.objects.filter(user=user).delete()
                         skills_to_create = []
-                        for skill_item in data['skills']:
+                        for skill_item in unique_skills:
                             skills_to_create.append(
                                 UserSkill(
                                     user=user, 
                                     skill_id=skill_item['skill_id'], 
-                                    proficiency=skill_item['proficiency']
+                                    proficiency=skill_item.get('proficiency', 'BEGINNER')
                                 )
                             )
                         UserSkill.objects.bulk_create(skills_to_create)
 
-                    # 4. Overwrite Social Links
+                    # 4. Overwrite Social Links (with deduplication to satisfy unique_user_social_platform)
                     if 'social_links' in data:
+                        seen_platforms = set()
+                        unique_socials = []
+                        for item in data['social_links']:
+                            platform = item.get('platform')
+                            if platform and platform not in seen_platforms:
+                                seen_platforms.add(platform)
+                                unique_socials.append(item)
+
                         SocialLink.objects.filter(user=user).delete()
                         socials_to_create = []
-                        for social_item in data['social_links']:
+                        for social_item in unique_socials:
                             socials_to_create.append(
                                 SocialLink(
                                     user=user,
                                     platform=social_item['platform'],
-                                    url=social_item['url']
+                                    url=social_item.get('url', '')
                                 )
                             )
                         SocialLink.objects.bulk_create(socials_to_create)
@@ -241,6 +352,39 @@ class ProfileMeAPIView(APIView):
                             )
                         UserAIUsage.objects.bulk_create(ai_to_create)
 
+                    # 6. Overwrite Learning Platforms (UserLearningResource)
+                    if 'learning_platforms' in data:
+                        UserLearningResource.objects.filter(user=user).delete()
+                        lps_to_create = []
+                        seen_lps = set()
+                        for lp_item in data['learning_platforms']:
+                            p_id = lp_item.get('platform_id')
+                            other_name = lp_item.get('other_platform_name')
+                            url_val = lp_item.get('url', '')
+                            if p_id:
+                                if p_id in seen_lps:
+                                    continue
+                                seen_lps.add(p_id)
+                                if not MasterLearningPlatform.objects.filter(id=p_id).exists():
+                                    raise ValueError(f"Learning platform with ID '{p_id}' does not exist.")
+                                lps_to_create.append(
+                                    UserLearningResource(
+                                        user=user,
+                                        platform_id=p_id,
+                                        url=url_val
+                                    )
+                                )
+                            elif other_name:
+                                lps_to_create.append(
+                                    UserLearningResource(
+                                        user=user,
+                                        platform=None,
+                                        other_platform_name=str(other_name)[:150],
+                                        url=url_val
+                                    )
+                                )
+                        UserLearningResource.objects.bulk_create(lps_to_create)
+
             except Exception as e:
                 return Response({"error": f"Update failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -253,12 +397,19 @@ class ProfileMeAPIView(APIView):
             try:
                 with transaction.atomic():
                     identity_data = data.get('identity', {})
-                    if identity_data and 'full_name' in identity_data:
-                        full_name = identity_data['full_name'].strip()
-                        parts = full_name.split(" ", 1)
-                        user.first_name = parts[0]
-                        user.last_name = parts[1] if len(parts) > 1 else ""
-                        user.save()
+                    if identity_data:
+                        user_dirty = False
+                        if 'full_name' in identity_data:
+                            full_name = identity_data['full_name'].strip()
+                            parts = full_name.split(" ", 1)
+                            user.first_name = parts[0]
+                            user.last_name = parts[1] if len(parts) > 1 else ""
+                            user_dirty = True
+                        if 'profile_photo' in identity_data:
+                            user.profile_photo = identity_data['profile_photo']
+                            user_dirty = True
+                        if user_dirty:
+                            user.save()
             except Exception as e:
                 return Response({"error": f"Update failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 

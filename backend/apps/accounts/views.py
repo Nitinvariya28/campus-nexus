@@ -14,7 +14,9 @@ from .serializers import (
     LoginSerializer,
     PasswordResetRequestSerializer,
     PasswordResetVerifySerializer,
-    PasswordResetConfirmSerializer
+    PasswordResetConfirmSerializer,
+    PasswordChangeSerializer,
+    AlumniEmailChangeSerializer
 )
 
 class StudentRegistrationView(APIView):
@@ -405,6 +407,54 @@ class PasswordResetConfirmView(APIView):
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordChangeView(APIView):
+    """
+    POST /api/accounts/password/change/
+    Allows an authenticated user (Student, Alumni, Placement Cell) to securely change their password.
+    Requires current_password, new_password, and confirm_password.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            user = request.user
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+            return Response({"message": "Password changed successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AlumniEmailChangeView(APIView):
+    """
+    PATCH /api/accounts/alumni/change-email/
+    Allows verified ALUMNI to update their personal email address.
+    Strictly blocked for Students (emails tied to university roll numbers) and Placement Cell.
+    Requires new_email and password verification.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        if user.role != 'ALUMNI':
+            return Response(
+                {"error": "Only alumni accounts are permitted to change their email address. Student emails are permanently locked to university roll numbers."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = AlumniEmailChangeSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            new_email = serializer.validated_data['new_email']
+            user.email = new_email
+            user.save()
+            return Response({
+                "message": "Personal email address updated successfully.",
+                "email": user.email
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 

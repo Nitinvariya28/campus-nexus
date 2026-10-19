@@ -34,11 +34,13 @@ class SkillSerializer(serializers.ModelSerializer):
         fields = ['name', 'category', 'proficiency']
 
 class LearningPlatformSerializer(serializers.ModelSerializer):
+    platform_id = serializers.IntegerField(source='platform.id', read_only=True)
     platform_name = serializers.CharField(source='platform.name', read_only=True)
+    platform_type = serializers.CharField(source='platform.platform_type', read_only=True)
     
     class Meta:
         model = UserLearningResource
-        fields = ['platform_name', 'other_platform_name']
+        fields = ['id', 'platform_id', 'platform_name', 'platform_type', 'other_platform_name', 'url']
 
 class AIUsageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,8 +77,12 @@ class StudentProfileMasterSerializer(serializers.Serializer):
             "email": user.email,
             "avatar_url": user.profile_photo,
             "bio": student_profile.bio,
+            "phone": student_profile.phone,
+            "address": student_profile.address,
             "department": student_profile.department.name if student_profile.department else None,
+            "department_id": student_profile.department_id if student_profile.department else None,
             "batch": str(student_profile.batch) if student_profile.batch else None,
+            "batch_id": student_profile.batch_id if student_profile.batch else None,
             "semester": student_profile.semester
         }
 
@@ -122,6 +128,8 @@ class AlumniProfileMasterSerializer(serializers.Serializer):
     skills = serializers.SerializerMethodField()
     social_links = serializers.SerializerMethodField()
     ai_usage = serializers.SerializerMethodField()
+    learning_platforms = serializers.SerializerMethodField()
+    resumes = serializers.SerializerMethodField()
     stats = serializers.SerializerMethodField()
     interview_experiences = serializers.SerializerMethodField()
 
@@ -167,6 +175,14 @@ class AlumniProfileMasterSerializer(serializers.Serializer):
     def get_ai_usage(self, obj):
         ai = UserAIUsage.objects.filter(user=obj['user'])
         return AIUsageSerializer(ai, many=True).data
+
+    def get_learning_platforms(self, obj):
+        platforms = UserLearningResource.objects.filter(user=obj['user']).select_related('platform')
+        return LearningPlatformSerializer(platforms, many=True).data
+
+    def get_resumes(self, obj):
+        resumes = Resume.objects.filter(user=obj['user']).order_by('-is_primary', '-created_at')
+        return ResumeSerializer(resumes, many=True).data
 
     def get_interview_experiences(self, obj):
         experiences = InterviewExperience.objects.filter(author=obj['user']).prefetch_related('rounds').order_by('-created_at')
@@ -230,6 +246,7 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
     experience = serializers.SerializerMethodField()
     interview_experiences = serializers.SerializerMethodField()
     ai_usage = serializers.SerializerMethodField()
+    learning_platforms = serializers.SerializerMethodField()
     stats = serializers.SerializerMethodField()
 
     class Meta:
@@ -237,7 +254,7 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'full_name', 'role', 'profile_photo', 'is_verified',
             'date_joined', 'headline', 'identity', 'skills', 'social_links',
-            'experience', 'interview_experiences', 'ai_usage', 'stats'
+            'experience', 'interview_experiences', 'ai_usage', 'learning_platforms', 'stats'
         ]
 
     def get_full_name(self, obj):
@@ -318,6 +335,10 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
     def get_ai_usage(self, obj):
         ai = UserAIUsage.objects.filter(user=obj)
         return AIUsageSerializer(ai, many=True).data
+
+    def get_learning_platforms(self, obj):
+        platforms = UserLearningResource.objects.filter(user=obj).select_related('platform')
+        return LearningPlatformSerializer(platforms, many=True).data
 
     def get_stats(self, obj):
         return {
