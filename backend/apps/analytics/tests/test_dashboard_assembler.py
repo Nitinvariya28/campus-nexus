@@ -15,12 +15,10 @@ class TestAPI01DashboardAssembler:
 
         assert data['role_detected'] == 'STUDENT'
         assert 'common' in data
-        assert 'platform_overview' in data['common']
-        assert 'community_pulse' in data['common']
+        assert 'placement_snapshot' in data['common']
 
         assert 'student' in data
         assert 'cohort_metrics' in data['student']
-        assert 'my_resume_health' in data['student']
 
         # Ensure other role sections are not leaked
         assert 'alumni' not in data
@@ -55,8 +53,8 @@ class TestAPI01DashboardAssembler:
         assert data['role_detected'] == 'PLACEMENT_CELL'
         assert 'placement_cell' in data
         assert 'recruiter_health' in data['placement_cell']
-        assert 'resume_cohort_health' in data['placement_cell']
-        assert 'platform_health_operations' in data['placement_cell']
+        assert 'cohort_outcomes' in data['placement_cell']
+        assert 'placement_kpis' in data['placement_cell']
 
     def test_common_view_parameter(self):
         student = User.objects.create_user(email="s_common@test.com", password="pwd", role="STUDENT")

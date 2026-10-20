@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import RoleBadgePill from '../../common/RoleBadgePill';
 import VerifiedOfficialBadge from '../../common/VerifiedOfficialBadge';
+import AuthorAvatar from '../../common/AuthorAvatar';
 
 /**
  * CommentItem Component
@@ -69,17 +70,7 @@ export default function CommentItem({ comment, onUserClick }) {
         className="shrink-0 hover:opacity-85 transition-opacity cursor-pointer"
         title={`View ${author.name || 'user'}'s profile`}
       >
-        {author.avatar ? (
-          <img
-            src={author.avatar}
-            alt={author.name}
-            className="w-7 h-7 rounded-full object-cover border border-slate-200 shadow-2xs"
-          />
-        ) : (
-          <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[11px] shadow-2xs">
-            {initial}
-          </div>
-        )}
+        <AuthorAvatar author={author} size="sm" />
       </button>
 
       {/* Right Column: Name, Meta, Content, Time */}

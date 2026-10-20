@@ -24,7 +24,10 @@ class FeedAuthorSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request:
             return request.build_absolute_uri(val)
-        return val
+        from django.conf import settings
+        backend_base = getattr(settings, 'BACKEND_BASE_URL', 'http://127.0.0.1:8000').rstrip('/')
+        clean_path = val if val.startswith('/') else f"/{val}"
+        return f"{backend_base}{clean_path}"
 
     def get_name(self, obj):
         if obj.role in ['PLACEMENT_CELL', 'ADMIN']:

@@ -112,6 +112,10 @@ export const normalizeFilters = (filters = {}) => {
   return normalized;
 };
 
+// Client-side cache to eliminate redundant API requests when switching dashboard views
+const analyticsCache = new Map();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL
+
 /**
  * Universal Analytics Dashboard API Gateway
  * Consumes GET /api/analytics/dashboard/
@@ -122,16 +126,36 @@ export const normalizeFilters = (filters = {}) => {
  * @param {string} view - 'common' | 'student' | 'alumni' | 'placement_cell'
  * @param {object} filters - Dynamic contextual query parameters (year, dept, batch, range, etc.)
  * @param {AbortSignal} [signal] - Optional AbortController signal for request cancellation
+ * @param {boolean} [forceRefresh=false] - Bypass client-side cache and force fresh request
  */
-export const fetchDashboardData = async (view = 'common', filters = {}, signal = null) => {
+export const fetchDashboardData = async (view = 'common', filters = {}, signal = null, forceRefresh = false) => {
+  const normalized = normalizeFilters(filters);
+  const cacheKey = `${view}_${JSON.stringify(normalized)}`;
+
+  if (!forceRefresh && analyticsCache.has(cacheKey)) {
+    const entry = analyticsCache.get(cacheKey);
+    if (Date.now() - entry.timestamp < CACHE_TTL_MS) {
+      return entry.data;
+    }
+    analyticsCache.delete(cacheKey);
+  }
+
   const params = {
     view,
-    ...normalizeFilters(filters),
+    ...normalized,
   };
+  if (forceRefresh) {
+    params.refresh = 'true';
+  }
 
   const response = await api.get('/analytics/dashboard/', {
     params,
     signal,
+  });
+
+  analyticsCache.set(cacheKey, {
+    data: response.data,
+    timestamp: Date.now(),
   });
 
   return response.data;

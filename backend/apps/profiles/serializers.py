@@ -5,7 +5,7 @@ from apps.skills.models import SocialLink, UserSkill, UserLearningResource, User
 from apps.resumes.models import Resume
 from apps.community.models import Post
 from apps.interviews.models import InterviewExperience, InterviewRound
-from apps.university.helpers import extract_academic_info_from_email
+from apps.university.helpers import extract_academic_info_from_email, calculate_student_semester
 
 User = get_user_model();
 
@@ -89,6 +89,12 @@ class StudentProfileMasterSerializer(serializers.Serializer):
             if updated:
                 student_profile.save(update_fields=updated)
 
+        # Dynamic Automatic Semester Calculation based on admission year and current date
+        sem_info = calculate_student_semester(student_profile=student_profile)
+        if student_profile.semester != sem_info['semester']:
+            student_profile.semester = sem_info['semester']
+            student_profile.save(update_fields=['semester'])
+
         full_name = user.get_full_name()
         
         return {
@@ -104,7 +110,8 @@ class StudentProfileMasterSerializer(serializers.Serializer):
             "department_id": student_profile.department_id if student_profile.department else None,
             "batch": str(student_profile.batch) if student_profile.batch else None,
             "batch_id": student_profile.batch_id if student_profile.batch else None,
-            "semester": student_profile.semester
+            "semester": sem_info['semester'],
+            "academic_year_info": sem_info
         }
 
     def get_social_links(self, obj):
@@ -325,7 +332,8 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
             profile = obj.student_profile
             dept = profile.department.name if profile.department else "Engineering"
             batch = profile.batch.start_year if profile.batch else ""
-            sem = f"{profile.semester}th Semester" if profile.semester else ""
+            sem_info = calculate_student_semester(student_profile=profile)
+            sem = sem_info['semester_label']
             parts = [dept, sem, f"Batch of {batch}" if batch else ""]
             return " • ".join([p for p in parts if p])
         elif obj.role == 'PLACEMENT_CELL':
@@ -353,7 +361,9 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
             data["location"] = sp.address or "Ahmedabad, Gujarat"
             data["department"] = sp.department.name if sp.department else None
             data["batch"] = str(sp.batch) if sp.batch else None
-            data["semester"] = sp.semester
+            sem_info = calculate_student_semester(student_profile=sp)
+            data["semester"] = sem_info['semester']
+            data["academic_year_info"] = sem_info
         elif obj.role == 'ALUMNI' and hasattr(obj, 'alumni_profile'):
             ap = obj.alumni_profile
             data["bio"] = ap.bio or ""
@@ -406,10 +416,32 @@ class UserSearchResultSerializer(serializers.ModelSerializer):
     headline = serializers.SerializerMethodField()
     department = serializers.SerializerMethodField()
     company = serializers.SerializerMethodField()
+    profile_photo = serializers.SerializerMethodField()
+    skills = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'full_name', 'role', 'profile_photo', 'is_verified', 'headline', 'department', 'company']
+        fields = ['id', 'email', 'full_name', 'role', 'profile_photo', 'is_verified', 'headline', 'department', 'company', 'skills']
+
+    def get_skills(self, obj):
+        try:
+            return [us.skill.name for us in obj.user_skills.all()[:4] if us.skill]
+        except Exception:
+            return []
+
+    def get_profile_photo(self, obj):
+        if not obj.profile_photo:
+            return None
+        val = str(obj.profile_photo)
+        if val.startswith('http://') or val.startswith('https://'):
+            return val
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(val)
+        from django.conf import settings
+        backend_base = getattr(settings, 'BACKEND_BASE_URL', 'http://127.0.0.1:8000').rstrip('/')
+        clean_path = val if val.startswith('/') else f"/{val}"
+        return f"{backend_base}{clean_path}"
 
     def get_full_name(self, obj):
         full_name = obj.get_full_name().strip()

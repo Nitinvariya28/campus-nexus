@@ -22,6 +22,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Separate states for Student and Alumni to avoid field bleeding
   const [studentForm, setStudentForm] = useState({
@@ -42,11 +43,17 @@ export default function RegisterPage() {
 
   const handleStudentChange = (e) => {
     if (apiError) setApiError('');
+    if (fieldErrors[e.target.name]) {
+      setFieldErrors((prev) => ({ ...prev, [e.target.name]: '' }));
+    }
     setStudentForm({ ...studentForm, [e.target.name]: e.target.value });
   };
 
   const handleAlumniChange = (e) => {
     if (apiError) setApiError('');
+    if (fieldErrors[e.target.name]) {
+      setFieldErrors((prev) => ({ ...prev, [e.target.name]: '' }));
+    }
     setAlumniForm({ ...alumniForm, [e.target.name]: e.target.value });
   };
 
@@ -54,55 +61,63 @@ export default function RegisterPage() {
     if (isLoading) return;
     setRole(newRole);
     if (apiError) setApiError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setApiError('');
+    setFieldErrors({});
 
-    // 1. Strict Client-Side Validations
+    const errors = {};
+    const nirmaPattern = /^\d{2}(bce|bec|bme|bam|bch|bee|bcv)\d{3}@nirmauni\.ac\.in$/i;
+
+    // 1. Strict Client-Side In-Form Validations
     if (role === 'STUDENT') {
-      if (!studentForm.first_name.trim() || !studentForm.last_name.trim()) {
-        toast.error('Please enter both your first and last name.');
-        return;
-      }
+      if (!studentForm.first_name.trim()) errors.first_name = 'Please enter your first name.';
+      if (!studentForm.last_name.trim()) errors.last_name = 'Please enter your last name.';
       
-      const nirmaPattern = /^\d{2}(bce|bec|bme|bam|bch|bee|bcv)\d{3}@nirmauni\.ac\.in$/i;
-      if (!nirmaPattern.test(studentForm.email.trim())) {
-        toast.error("Invalid format. Roll number must be exactly 3 digits (e.g., 24bce001@nirmauni.ac.in).");
-        return;
+      if (!studentForm.email.trim()) {
+        errors.email = 'Please enter your university email address.';
+      } else if (!nirmaPattern.test(studentForm.email.trim())) {
+        errors.email = 'Invalid format. Roll number must be exactly 3 digits (e.g., 24bce001@nirmauni.ac.in).';
       }
 
-      if (studentForm.password.length < 8) {
-        toast.error('Password must be at least 8 characters long.');
-        return;
+      if (!studentForm.password) {
+        errors.password = 'Please enter a password.';
+      } else if (studentForm.password.length < 8) {
+        errors.password = 'Password must be at least 8 characters long.';
       }
     } else {
-      if (!alumniForm.first_name.trim() || !alumniForm.last_name.trim()) {
-        toast.error('Please enter both your first and last name.');
-        return;
-      }
+      if (!alumniForm.first_name.trim()) errors.first_name = 'Please enter your first name.';
+      if (!alumniForm.last_name.trim()) errors.last_name = 'Please enter your last name.';
 
-      const nirmaPattern = /^\d{2}(bce|bec|bme|bam|bch|bee|bcv)\d{3}@nirmauni\.ac\.in$/i;
-      if (!nirmaPattern.test(alumniForm.old_university_email.trim())) {
-        toast.error("Past university email must be a valid Nirma roll address (e.g., 20bce045@nirmauni.ac.in).");
-        return;
+      if (!alumniForm.old_university_email.trim()) {
+        errors.old_university_email = 'Please enter your past university email.';
+      } else if (!nirmaPattern.test(alumniForm.old_university_email.trim())) {
+        errors.old_university_email = 'Invalid format. Must be a valid Nirma roll address (e.g., 20bce045@nirmauni.ac.in).';
       }
 
       if (!alumniForm.date_of_birth) {
-        toast.error('Please select your date of birth for identity verification.');
-        return;
+        errors.date_of_birth = 'Please select your date of birth for identity verification.';
       }
 
-      if (!alumniForm.personal_email.trim() || !alumniForm.personal_email.includes('@')) {
-        toast.error('Please enter a valid personal email address.');
-        return;
+      if (!alumniForm.personal_email.trim()) {
+        errors.personal_email = 'Please enter your personal email address.';
+      } else if (!alumniForm.personal_email.includes('@') || !alumniForm.personal_email.includes('.')) {
+        errors.personal_email = 'Please enter a valid personal email address format.';
       }
 
-      if (alumniForm.password.length < 8) {
-        toast.error('Password must be at least 8 characters long.');
-        return;
+      if (!alumniForm.password) {
+        errors.password = 'Please enter a password.';
+      } else if (alumniForm.password.length < 8) {
+        errors.password = 'Password must be at least 8 characters long.';
       }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
     }
 
     // 2. Dispatch Network Request to Backend
@@ -134,7 +149,15 @@ export default function RegisterPage() {
     } catch (err) {
       const parsedError = authService.parseApiError(err);
       setApiError(parsedError);
-      toast.error(parsedError);
+      const lower = parsedError.toLowerCase();
+      if (lower.includes('email') || lower.includes('nirma') || lower.includes('roll')) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          email: parsedError,
+          old_university_email: parsedError,
+          personal_email: parsedError
+        }));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -229,9 +252,18 @@ export default function RegisterPage() {
                     onChange={handleStudentChange}
                     placeholder="Rahul"
                     disabled={isLoading}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                    required
+                    className={`w-full px-3.5 py-2.5 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                      fieldErrors.first_name
+                        ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                        : 'border-slate-300 focus:ring-blue-600/30 focus:border-blue-600'
+                    }`}
                   />
+                  {fieldErrors.first_name && (
+                    <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors.first_name}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
@@ -244,9 +276,18 @@ export default function RegisterPage() {
                     onChange={handleStudentChange}
                     placeholder="Patel"
                     disabled={isLoading}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                    required
+                    className={`w-full px-3.5 py-2.5 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                      fieldErrors.last_name
+                        ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                        : 'border-slate-300 focus:ring-blue-600/30 focus:border-blue-600'
+                    }`}
                   />
+                  {fieldErrors.last_name && (
+                    <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors.last_name}</span>
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -263,14 +304,24 @@ export default function RegisterPage() {
                     onChange={handleStudentChange}
                     placeholder="24bce001@nirmauni.ac.in"
                     disabled={isLoading}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                    required
+                    className={`w-full px-3.5 py-2.5 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                      fieldErrors.email
+                        ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                        : 'border-slate-300 focus:ring-blue-600/30 focus:border-blue-600'
+                    }`}
                   />
                   <Mail className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5 pointer-events-none" />
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  Must be your official <span className="font-semibold text-slate-700">@nirmauni.ac.in</span> address.
-                </p>
+                {fieldErrors.email ? (
+                  <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{fieldErrors.email}</span>
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    Must be your official <span className="font-semibold text-slate-700">@nirmauni.ac.in</span> address.
+                  </p>
+                )}
               </div>
 
               {/* Password */}
@@ -286,19 +337,28 @@ export default function RegisterPage() {
                     onChange={handleStudentChange}
                     placeholder="••••••••"
                     disabled={isLoading}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                    required
+                    className={`w-full px-3.5 py-2.5 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                      fieldErrors.password
+                        ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                        : 'border-slate-300 focus:ring-blue-600/30 focus:border-blue-600'
+                    }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
-                    className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 disabled:opacity-50"
+                    className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 disabled:opacity-50 cursor-pointer"
                     aria-label="Toggle password visibility"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {fieldErrors.password && (
+                  <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{fieldErrors.password}</span>
+                  </p>
+                )}
               </div>
             </>
           ) : (
@@ -319,9 +379,18 @@ export default function RegisterPage() {
                     onChange={handleAlumniChange}
                     placeholder="Rahul"
                     disabled={isLoading}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600/30 focus:border-purple-600 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                    required
+                    className={`w-full px-3.5 py-2 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                      fieldErrors.first_name
+                        ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                        : 'border-slate-300 focus:ring-purple-600/30 focus:border-purple-600'
+                    }`}
                   />
+                  {fieldErrors.first_name && (
+                    <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors.first_name}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold uppercase tracking-wider text-slate-700">
@@ -334,9 +403,18 @@ export default function RegisterPage() {
                     onChange={handleAlumniChange}
                     placeholder="Patel"
                     disabled={isLoading}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600/30 focus:border-purple-600 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                    required
+                    className={`w-full px-3.5 py-2 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                      fieldErrors.last_name
+                        ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                        : 'border-slate-300 focus:ring-purple-600/30 focus:border-purple-600'
+                    }`}
                   />
+                  {fieldErrors.last_name && (
+                    <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors.last_name}</span>
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -352,12 +430,22 @@ export default function RegisterPage() {
                   onChange={handleAlumniChange}
                   placeholder="20bce045@nirmauni.ac.in"
                   disabled={isLoading}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600/30 focus:border-purple-600 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                  required
+                  className={`w-full px-3.5 py-2 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                    fieldErrors.old_university_email
+                      ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                      : 'border-slate-300 focus:ring-purple-600/30 focus:border-purple-600'
+                  }`}
                 />
-                <p className="text-[11px] text-slate-500">
-                  Your graduation roll email used to verify student records.
-                </p>
+                {fieldErrors.old_university_email ? (
+                  <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{fieldErrors.old_university_email}</span>
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    Your graduation roll email used to verify student records.
+                  </p>
+                )}
               </div>
 
               {/* Date of Birth */}
@@ -372,14 +460,24 @@ export default function RegisterPage() {
                     value={alumniForm.date_of_birth}
                     onChange={handleAlumniChange}
                     disabled={isLoading}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600/30 focus:border-purple-600 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                    required
+                    className={`w-full px-3.5 py-2 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                      fieldErrors.date_of_birth
+                        ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                        : 'border-slate-300 focus:ring-purple-600/30 focus:border-purple-600'
+                    }`}
                   />
                   <Calendar className="w-4 h-4 text-slate-400 absolute right-3.5 top-3 pointer-events-none" />
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  Required to verify matching graduation dataset.
-                </p>
+                {fieldErrors.date_of_birth ? (
+                  <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{fieldErrors.date_of_birth}</span>
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    Required to verify matching graduation dataset.
+                  </p>
+                )}
               </div>
 
               {/* Personal Email (New Login ID) */}
@@ -394,12 +492,22 @@ export default function RegisterPage() {
                   onChange={handleAlumniChange}
                   placeholder="rahul.alumni@gmail.com"
                   disabled={isLoading}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600/30 focus:border-purple-600 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                  required
+                  className={`w-full px-3.5 py-2 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                    fieldErrors.personal_email
+                      ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                      : 'border-slate-300 focus:ring-purple-600/30 focus:border-purple-600'
+                  }`}
                 />
-                <p className="text-[11px] text-slate-500">
-                  OTP code will be dispatched to this personal address.
-                </p>
+                {fieldErrors.personal_email ? (
+                  <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{fieldErrors.personal_email}</span>
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    OTP code will be dispatched to this personal address.
+                  </p>
+                )}
               </div>
 
               {/* Password */}
@@ -415,19 +523,28 @@ export default function RegisterPage() {
                     onChange={handleAlumniChange}
                     placeholder="••••••••"
                     disabled={isLoading}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600/30 focus:border-purple-600 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                    required
+                    className={`w-full px-3.5 py-2 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                      fieldErrors.password
+                        ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
+                        : 'border-slate-300 focus:ring-purple-600/30 focus:border-purple-600'
+                    }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
-                    className="absolute right-3.5 top-2.5 text-slate-400 hover:text-slate-600 disabled:opacity-50"
+                    className="absolute right-3.5 top-2.5 text-slate-400 hover:text-slate-600 disabled:opacity-50 cursor-pointer"
                     aria-label="Toggle password visibility"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {fieldErrors.password && (
+                  <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{fieldErrors.password}</span>
+                  </p>
+                )}
               </div>
             </>
           )}

@@ -31,6 +31,7 @@ import toast from 'react-hot-toast';
 import { fetchUserProfile } from '../../../services/community/communityService';
 import { profileService } from '../../../services/profile/profileService';
 import { useAuth } from '../../../context/AuthContext';
+import { getMediaUrl } from '../../../utils/mediaUtils';
 import RoleBadgePill from '../common/RoleBadgePill';
 import VerifiedOfficialBadge from '../common/VerifiedOfficialBadge';
 import CommunityFeedStream from '../feed/CommunityFeedStream';
@@ -68,6 +69,7 @@ export default function UserProfileView({ userId, onBack }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'posts'
   const coverInputRef = React.useRef(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const handleCoverFileSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -338,11 +340,12 @@ export default function UserProfileView({ userId, onBack }) {
           {/* Overlapping Avatar Container */}
           <div className="flex justify-between items-end flex-wrap gap-3 -mt-12 sm:-mt-16 mb-3">
             <div className="relative">
-              {profile_photo ? (
+              {profile_photo && !avatarError ? (
                 <img
-                  src={profile_photo}
+                  src={getMediaUrl(profile_photo)}
                   alt={full_name}
                   className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-md object-cover bg-white"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-md bg-gradient-to-tr from-blue-600 to-indigo-700 text-white font-extrabold flex items-center justify-center text-3xl sm:text-4xl shadow-2xs">

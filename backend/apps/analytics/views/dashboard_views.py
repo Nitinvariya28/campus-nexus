@@ -1,15 +1,24 @@
+import hashlib
+import json
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
+from django.core.cache import cache
 from apps.analytics.services.dashboard_services import get_dashboard_analytics
 
 class DashboardAssemblerAPIView(APIView):
+    """
+    Universal Dashboard Assembler API Gateway.
+    Aggregates high-performance multi-section dashboard analytics.
+    Features robust caching layer to eliminate redundant database computation.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         view = request.query_params.get('view')
         sections_param = request.query_params.get('sections')
+        force_refresh = request.query_params.get('refresh') == 'true'
         
         requested_sections = None
         if sections_param:
@@ -34,6 +43,21 @@ class DashboardAssemblerAPIView(APIView):
             'salary_band': request.query_params.get('salary_band'),
         }
 
+        # Cache key calculation
+        cache_dict = {
+            "user_role": request.user.role,
+            "user_id": request.user.id if view == 'student' else None,
+            "view": view,
+            "sections": requested_sections,
+            "filters": {k: v for k, v in filters.items() if v is not None}
+        }
+        cache_key = f"dash_{hashlib.md5(json.dumps(cache_dict, sort_keys=True, default=str).encode('utf-8')).hexdigest()}"
+
+        if not force_refresh:
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                return Response(cached_data)
+
         data = get_dashboard_analytics(
             user=request.user,
             view=view,
@@ -50,4 +74,8 @@ class DashboardAssemblerAPIView(APIView):
                 "generated_at": timezone.now().isoformat()
             }
         }
+
+        # Cache response for 60 seconds
+        cache.set(cache_key, response_data, timeout=60)
+
         return Response(response_data)

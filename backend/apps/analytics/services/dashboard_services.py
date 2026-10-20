@@ -76,27 +76,7 @@ def get_dashboard_analytics(user, view=None, requested_sections=None, filters=No
 
     # Scoped common data assembly based on active view requirements
     common_data = {}
-    if active_view == 'student':
-        # Student dashboard only consumes placement & opportunity fallbacks for KPI headline cards
-        default_common = ['placement_snapshot', 'opportunities_snapshot']
-        for sec in default_common:
-            if is_selected(sec, default_common):
-                try:
-                    common_data[sec] = common_builders[sec]()
-                except Exception as e:
-                    common_data[sec] = {"error": str(e)}
-
-    elif active_view == 'common':
-        # Overview dashboard consumes platform census, community, companies, placement, and skills
-        default_common = ['platform_overview', 'community_pulse', 'company_landscape', 'placement_snapshot', 'skills_pulse']
-        for sec in default_common:
-            if is_selected(sec, default_common):
-                try:
-                    common_data[sec] = common_builders[sec]()
-                except Exception as e:
-                    common_data[sec] = {"error": str(e)}
-
-    elif requested_sections:
+    if requested_sections:
         # If user explicitly requested specific common sections
         for sec in common_builders:
             if sec in requested_sections:
@@ -104,6 +84,24 @@ def get_dashboard_analytics(user, view=None, requested_sections=None, filters=No
                     common_data[sec] = common_builders[sec]()
                 except Exception as e:
                     common_data[sec] = {"error": str(e)}
+
+    elif active_view == 'student':
+        # Student dashboard only consumes placement & opportunity fallbacks for KPI headline cards
+        default_common = ['placement_snapshot', 'opportunities_snapshot']
+        for sec in default_common:
+            try:
+                common_data[sec] = common_builders[sec]()
+            except Exception as e:
+                common_data[sec] = {"error": str(e)}
+
+    elif active_view == 'common':
+        # Overview dashboard consumes platform census, community, companies, placement, and skills
+        default_common = ['platform_overview', 'community_pulse', 'company_landscape', 'placement_snapshot', 'skills_pulse']
+        for sec in default_common:
+            try:
+                common_data[sec] = common_builders[sec]()
+            except Exception as e:
+                common_data[sec] = {"error": str(e)}
 
     # If common view requested, return early
     if active_view == 'common':

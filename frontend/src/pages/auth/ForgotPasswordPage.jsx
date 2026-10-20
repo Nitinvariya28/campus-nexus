@@ -10,18 +10,25 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [fieldError, setFieldError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const sanitizedEmail = email.trim().toLowerCase();
+    setApiError('');
+    setFieldError('');
 
     if (!sanitizedEmail) {
-      toast.error('Please enter your registered email address.');
+      setFieldError('Please enter your registered email address.');
+      return;
+    }
+
+    if (!sanitizedEmail.includes('@') || !sanitizedEmail.includes('.')) {
+      setFieldError('Please enter a valid email format (e.g., student@nirmauni.ac.in).');
       return;
     }
 
     setIsLoading(true);
-    setApiError('');
 
     try {
       // Endpoint: POST /api/auth/password-reset/request/
@@ -38,7 +45,9 @@ export default function ForgotPasswordPage() {
     } catch (err) {
       const errorMsg = authService.parseApiError(err);
       setApiError(errorMsg);
-      toast.error(errorMsg);
+      if (errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('found') || errorMsg.toLowerCase().includes('exist')) {
+        setFieldError(errorMsg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -95,18 +104,29 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => {
                   if (apiError) setApiError('');
+                  if (fieldError) setFieldError('');
                   setEmail(e.target.value);
                 }}
                 disabled={isLoading}
                 placeholder="name@nirmauni.ac.in or alumni@gmail.com"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all placeholder:text-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                required
+                className={`w-full px-4 py-2.5 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                  fieldError
+                    ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-300 focus:ring-amber-500/30 focus:border-amber-500'
+                }`}
               />
               <Mail className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5 pointer-events-none" />
             </div>
-            <p className="text-[11px] text-slate-500">
-              We'll send a 6-digit recovery OTP valid for 10 minutes.
-            </p>
+            {fieldError ? (
+              <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{fieldError}</span>
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                We'll send a 6-digit recovery OTP valid for 10 minutes.
+              </p>
+            )}
           </div>
 
           <button

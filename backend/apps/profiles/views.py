@@ -730,21 +730,29 @@ class UserSearchAPIView(APIView):
         if not query:
             return Response([], status=status.HTTP_200_OK)
 
+        clean_query = query.lstrip('#').strip()
+        search_term = clean_query if clean_query else query
+
         users_qs = User.objects.filter(
-            Q(first_name__icontains=query) |
-            Q(last_name__icontains=query) |
-            Q(email__icontains=query) |
-            Q(student_profile__department__name__icontains=query) |
-            Q(alumni_profile__department__name__icontains=query) |
-            Q(alumni_profile__current_company__name__icontains=query) |
-            Q(alumni_profile__current_job_title__icontains=query)
+            Q(first_name__icontains=search_term) |
+            Q(last_name__icontains=search_term) |
+            Q(email__icontains=search_term) |
+            Q(student_profile__department__name__icontains=search_term) |
+            Q(alumni_profile__department__name__icontains=search_term) |
+            Q(alumni_profile__current_company__name__icontains=search_term) |
+            Q(alumni_profile__current_job_title__icontains=search_term) |
+            Q(user_skills__skill__name__icontains=search_term) |
+            Q(student_profile__bio__icontains=search_term) |
+            Q(alumni_profile__bio__icontains=search_term)
         ).select_related(
             'student_profile__department',
             'student_profile__batch',
             'alumni_profile__department',
             'alumni_profile__batch',
             'alumni_profile__current_company'
-        ).distinct()[:10]
+        ).prefetch_related(
+            'user_skills__skill'
+        ).distinct()[:15]
 
         serializer = UserSearchResultSerializer(users_qs, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)

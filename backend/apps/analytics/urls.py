@@ -1,5 +1,5 @@
 from django.urls import path
-from .views.common_views import PlatformOverviewAPIView
+from .views.common_views import PlatformOverviewAPIView, LandingStatsAPIView
 from .views.community_views import CommunityAnalyticsAPIView
 from .views.resources_views import ResourcesAnnouncementsAPIView
 from .views.company_views import CompanyLandscapeAPIView
@@ -21,6 +21,7 @@ from .views.admin_security_views import AdminSecurityAPIView
 from .views.dashboard_views import DashboardAssemblerAPIView
 
 urlpatterns = [
+    path('landing-stats/', LandingStatsAPIView.as_view(), name='landing-stats'),
     path('dashboard/', DashboardAssemblerAPIView.as_view(), name='dashboard-assembler'),
     path('platform/overview/', PlatformOverviewAPIView.as_view(), name='platform-overview'),
     path('community/', CommunityAnalyticsAPIView.as_view(), name='community-analytics'),

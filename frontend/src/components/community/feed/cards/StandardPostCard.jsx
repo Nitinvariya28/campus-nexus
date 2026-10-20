@@ -5,6 +5,7 @@ import VerifiedOfficialBadge from '../../common/VerifiedOfficialBadge';
 import TagBadge from '../../common/TagBadge';
 import PostActionToolbar from './PostActionToolbar';
 import PostManageMenu from '../../common/PostManageMenu';
+import AuthorAvatar from '../../common/AuthorAvatar';
 
 /**
  * StandardPostCard Component
@@ -64,20 +65,10 @@ export default function StandardPostCard({
           <button
             type="button"
             onClick={handleAuthorClick}
-            className="w-10 h-10 rounded-full shrink-0 shadow-2xs overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500/50 transition-all text-left"
+            className="shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500/50 rounded-full transition-all text-left"
             title={`View ${author.name || 'user'}'s profile`}
           >
-            {author.avatar ? (
-              <img
-                src={author.avatar}
-                alt={author.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm">
-                {author.name ? author.name.charAt(0).toUpperCase() : 'U'}
-              </div>
-            )}
+            <AuthorAvatar author={author} size="md" />
           </button>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">

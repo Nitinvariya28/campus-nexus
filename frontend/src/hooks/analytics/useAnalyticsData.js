@@ -14,7 +14,7 @@ export function useAnalyticsData(view = 'common', filters = {}) {
   const [error, setError] = useState(null);
   const abortControllerRef = useRef(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceRefresh = false) => {
     // Cancel previous inflight request if any
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -27,7 +27,7 @@ export function useAnalyticsData(view = 'common', filters = {}) {
     setError(null);
 
     try {
-      const result = await fetchDashboardData(view, filters, controller.signal);
+      const result = await fetchDashboardData(view, filters, controller.signal, forceRefresh);
       setData(result);
     } catch (err) {
       if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
@@ -39,7 +39,7 @@ export function useAnalyticsData(view = 'common', filters = {}) {
   }, [view, JSON.stringify(filters)]);
 
   useEffect(() => {
-    loadData();
+    loadData(false);
 
     return () => {
       if (abortControllerRef.current) {
@@ -52,7 +52,7 @@ export function useAnalyticsData(view = 'common', filters = {}) {
     data,
     loading,
     error,
-    refetch: loadData,
+    refetch: () => loadData(true),
   };
 }
 

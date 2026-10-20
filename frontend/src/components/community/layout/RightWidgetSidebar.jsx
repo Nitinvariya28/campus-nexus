@@ -202,25 +202,37 @@ export default function RightWidgetSidebar({
           </div>
         ) : widgetsData.trending_topics.length > 0 ? (
           <div className="space-y-1.5">
-            {widgetsData.trending_topics.map((topic) => {
+            {widgetsData.trending_topics.map((topic, index) => {
               const cleanTopic = topic.raw_name || topic.tag.replace(/^#/, '');
               const isSelected = activeTag === cleanTopic;
 
               return (
                 <div
                   key={topic.id || topic.tag}
-                  className={`flex items-center justify-between text-xs p-1.5 rounded-lg transition-colors ${
+                  onClick={() => handleTagClick(cleanTopic)}
+                  className={`flex items-center justify-between text-xs p-2 rounded-lg transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-blue-50/80 border border-blue-200'
-                      : 'hover:bg-slate-50'
+                      ? 'bg-blue-50 border border-blue-300 ring-2 ring-blue-500/20 shadow-xs'
+                      : 'hover:bg-slate-50 border border-transparent'
                   }`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleTagClick(cleanTopic);
+                  }}
                 >
-                  <TagBadge
-                    tag={topic.tag}
-                    onClick={() => handleTagClick(cleanTopic)}
-                    className={isSelected ? 'ring-2 ring-blue-500 font-bold' : ''}
-                  />
-                  <span className="text-[11px] font-medium text-slate-400">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`text-[10px] font-bold w-4 text-center shrink-0 ${
+                      index === 0 ? 'text-amber-600' : index === 1 ? 'text-slate-600' : index === 2 ? 'text-amber-800' : 'text-slate-400'
+                    }`}>
+                      #{index + 1}
+                    </span>
+                    <TagBadge
+                      tag={topic.tag}
+                      isSelected={isSelected}
+                    />
+                  </div>
+                  <span className={`text-[11px] font-medium shrink-0 ml-2 ${isSelected ? 'text-blue-700 font-bold' : 'text-slate-500'}`}>
                     {topic.count} {topic.count === 1 ? 'post' : 'posts'}
                   </span>
                 </div>

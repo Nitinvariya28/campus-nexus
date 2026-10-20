@@ -1,5 +1,6 @@
 import React from 'react';
 import { Camera, Trash2, Loader2, GraduationCap, Calendar, Phone, MapPin, Building, Briefcase, Sparkles, MessageSquare, BriefcaseBusiness, Megaphone, BookOpen, FileText } from 'lucide-react';
+import { calculateStudentSemester } from '../../utils/academicUtils';
 
 const DEFAULT_COVER_IMAGE = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=1600&auto=format&fit=crop';
 
@@ -208,8 +209,11 @@ export default function ProfileSidebar({
               <span>{profile?.batch ? `Batch ${profile.batch}` : 'Batch not assigned'}</span>
             </div>
             <div className="flex items-center gap-2.5">
-              <span className="w-4 text-center font-bold text-slate-400 shrink-0">S</span>
-              <span>{profile?.semester ? `Semester ${profile.semester}` : 'Semester not set'}</span>
+              <span className="w-4 text-center font-bold text-blue-600 shrink-0 text-xs">S</span>
+              <span className="font-semibold text-slate-800">
+                {profile?.semester ? `Semester ${profile.semester}` : 'Semester 1'}
+                {profile?.academic_year_info?.academic_year_label ? ` (${profile.academic_year_info.academic_year_label})` : ''}
+              </span>
             </div>
           </>
         )}

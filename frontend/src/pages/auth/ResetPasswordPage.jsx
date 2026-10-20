@@ -17,6 +17,7 @@ export default function ResetPasswordPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [formData, setFormData] = useState({
     new_password: '',
@@ -25,29 +26,41 @@ export default function ResetPasswordPage() {
 
   const handleChange = (e) => {
     if (apiError) setApiError('');
+    if (fieldErrors[e.target.name]) {
+      setFieldErrors(prev => ({ ...prev, [e.target.name]: '' }));
+    }
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError('');
+    setFieldErrors({});
 
     if (!resetToken) {
-      toast.error('No reset token available. Please verify OTP first.');
+      setApiError('No reset token available. Please request a new recovery code and verify OTP first.');
       return;
     }
 
-    if (formData.new_password.length < 8) {
-      toast.error('Password must be at least 8 characters long.');
-      return;
+    const errors = {};
+    if (!formData.new_password) {
+      errors.new_password = 'Please enter your new password.';
+    } else if (formData.new_password.length < 8) {
+      errors.new_password = 'Password must be at least 8 characters long.';
     }
 
-    if (formData.new_password !== formData.confirm_password) {
-      toast.error('Passwords do not match. Please verify.');
+    if (!formData.confirm_password) {
+      errors.confirm_password = 'Please confirm your new password.';
+    } else if (formData.new_password !== formData.confirm_password) {
+      errors.confirm_password = 'Passwords do not match. Please verify.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
     setIsLoading(true);
-    setApiError('');
 
     try {
       // Endpoint: POST /api/auth/password-reset/confirm/
@@ -66,7 +79,6 @@ export default function ResetPasswordPage() {
     } catch (err) {
       const errorMsg = authService.parseApiError(err);
       setApiError(errorMsg);
-      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -147,22 +159,32 @@ export default function ResetPasswordPage() {
                 onChange={handleChange}
                 disabled={isLoading || !resetToken}
                 placeholder="••••••••"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600/30 focus:border-purple-600 transition-all placeholder:text-slate-400 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                required
+                className={`w-full px-4 py-2.5 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-slate-400 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                  fieldErrors.new_password
+                    ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-300 focus:ring-purple-600/30 focus:border-purple-600'
+                }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading || !resetToken}
-                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 disabled:opacity-50"
+                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 disabled:opacity-50 cursor-pointer"
                 aria-label="Toggle password visibility"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[11px] text-slate-500">
-              Must be at least 8 characters long.
-            </p>
+            {fieldErrors.new_password ? (
+              <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{fieldErrors.new_password}</span>
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                Must be at least 8 characters long.
+              </p>
+            )}
           </div>
 
           {/* Confirm Password */}
@@ -178,19 +200,28 @@ export default function ResetPasswordPage() {
                 onChange={handleChange}
                 disabled={isLoading || !resetToken}
                 placeholder="••••••••"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600/30 focus:border-purple-600 transition-all placeholder:text-slate-400 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                required
+                className={`w-full px-4 py-2.5 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-slate-400 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                  fieldErrors.confirm_password
+                    ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-300 focus:ring-purple-600/30 focus:border-purple-600'
+                }`}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
                 disabled={isLoading || !resetToken}
-                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 disabled:opacity-50"
+                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 disabled:opacity-50 cursor-pointer"
                 aria-label="Toggle password visibility"
               >
                 {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {fieldErrors.confirm_password && (
+              <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{fieldErrors.confirm_password}</span>
+              </p>
+            )}
           </div>
 
           {/* Submit Action */}

@@ -41,6 +41,19 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(true);
   };
 
+  // User update handler (e.g. after profile edits, avatar changes)
+  const updateUser = (userData) => {
+    setUser((prevUser) => {
+      const updated = typeof userData === 'function' ? userData(prevUser) : { ...prevUser, ...userData };
+      try {
+        localStorage.setItem('user', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Failed to save user in localStorage', err);
+      }
+      return updated;
+    });
+  };
+
   // Logout handler
   const logout = async () => {
     const refresh = localStorage.getItem('refresh_token');
@@ -83,6 +96,7 @@ export const AuthProvider = ({ children }) => {
         accessToken,
         isAuthenticated,
         login,
+        updateUser,
         logout,
         toggleDevAuth,
       }}

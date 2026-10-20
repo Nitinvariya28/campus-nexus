@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import {
@@ -15,6 +15,7 @@ import {
 import RoleBadgePill from '../common/RoleBadgePill';
 import { COMMUNITY_SIDEBAR_NAV } from '../../../constants/community/communityConstants';
 import { useCommunityStats } from '../../../context/CommunityStatsContext';
+import { getMediaUrl } from '../../../utils/mediaUtils';
 
 /**
  * LeftProfileSidebar Component
@@ -37,9 +38,8 @@ export default function LeftProfileSidebar({ onCreatePost, onItemClick, classNam
     ? `${user.first_name?.[0] || 'U'}${user.last_name?.[0] || ''}`.toUpperCase()
     : 'U';
 
-  const avatarUrl = user?.avatar
-    ? `${import.meta.env.VITE_BACKEND_MEDIA_URL || 'http://127.0.0.1:8000'}${user.avatar}`
-    : null;
+  const [imgError, setImgError] = useState(false);
+  const avatarUrl = getMediaUrl(user?.avatar || user?.profile_photo);
 
   const iconMap = {
     FileText,
@@ -96,11 +96,12 @@ export default function LeftProfileSidebar({ onCreatePost, onItemClick, classNam
           }}
         >
           <div className="relative mb-2">
-            {avatarUrl ? (
+            {avatarUrl && !imgError ? (
               <img
                 src={avatarUrl}
                 alt={user?.first_name || 'User Avatar'}
                 className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs ring-2 ring-slate-100 group-hover:ring-blue-400 group-hover:scale-105 transition-all"
+                onError={() => setImgError(true)}
               />
             ) : (
               <div className="w-14 h-14 rounded-full bg-slate-900 text-amber-400 font-bold text-base flex items-center justify-center ring-2 ring-slate-100 group-hover:ring-blue-400 group-hover:scale-105 transition-all">

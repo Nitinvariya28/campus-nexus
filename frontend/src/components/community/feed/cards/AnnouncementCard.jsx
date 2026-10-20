@@ -4,6 +4,7 @@ import RoleBadgePill from '../../common/RoleBadgePill';
 import VerifiedOfficialBadge from '../../common/VerifiedOfficialBadge';
 import PostActionToolbar from './PostActionToolbar';
 import PostManageMenu from '../../common/PostManageMenu';
+import AuthorAvatar from '../../common/AuthorAvatar';
 
 /**
  * AnnouncementCard Component
@@ -73,20 +74,10 @@ export default function AnnouncementCard({
           <button
             type="button"
             onClick={() => author?.id && onUserClick?.(author.id)}
-            className="w-10 h-10 rounded-full shrink-0 shadow-2xs overflow-hidden cursor-pointer hover:ring-2 hover:ring-amber-500/50 transition-all text-left"
+            className="shrink-0 cursor-pointer hover:ring-2 hover:ring-amber-500/50 rounded-full transition-all text-left"
             title={`View ${author.name || 'Placement Cell'}'s profile`}
           >
-            {author.avatar ? (
-              <img
-                src={author.avatar}
-                alt={author.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-tr from-amber-600 to-orange-600 text-white font-bold flex items-center justify-center text-sm">
-                <Megaphone className="w-5 h-5" />
-              </div>
-            )}
+            <AuthorAvatar author={author} size="md" />
           </button>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">

@@ -69,13 +69,13 @@ export default function VerifyOtpPage() {
     e.preventDefault();
 
     if (!email) {
-      toast.error('No target email address found. Please initiate the request again.');
+      setApiError('No target email address found. Please initiate the request again.');
       return;
     }
 
     const fullCode = otp.join('');
     if (fullCode.length !== 6) {
-      toast.error('Please enter the full 6-digit verification code.');
+      setApiError('Please enter the full 6-digit verification code.');
       return;
     }
 
@@ -118,7 +118,6 @@ export default function VerifyOtpPage() {
     } catch (err) {
       const parsedError = authService.parseApiError(err);
       setApiError(parsedError);
-      toast.error(parsedError);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +125,7 @@ export default function VerifyOtpPage() {
 
   const handleResend = async () => {
     if (!email) {
-      toast.error('No email address available to resend code.');
+      setApiError('No email address available to resend code.');
       return;
     }
 
@@ -141,7 +140,7 @@ export default function VerifyOtpPage() {
       }
     } catch (err) {
       const msg = authService.parseApiError(err);
-      toast.error(msg);
+      setApiError(msg);
     } finally {
       setIsResending(false);
     }

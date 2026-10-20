@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   
   const [formData, setFormData] = useState({
     email: location.state?.email || '',
@@ -24,6 +25,9 @@ export default function LoginPage() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     if (apiError) setApiError('');
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -32,14 +36,27 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError('');
+    setFieldErrors({});
 
-    if (!formData.email.trim() || !formData.password) {
-      toast.error('Please enter both email and password.');
+    const errors = {};
+    const trimmedEmail = formData.email.trim();
+    if (!trimmedEmail) {
+      errors.email = 'Please enter your email address.';
+    } else if (!trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
+      errors.email = 'Please enter a valid email format (e.g. student@nirmauni.ac.in).';
+    }
+
+    if (!formData.password) {
+      errors.password = 'Please enter your password.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
     setIsLoading(true);
-    setApiError('');
 
     try {
       // 1. Call DRF Login Endpoint POST /api/auth/login/
@@ -59,8 +76,9 @@ export default function LoginPage() {
 
       toast.success(`Welcome back, ${data.user?.first_name || 'User'}!`);
 
-      // 3. Navigate directly to Community Feed on login
-      navigate('/community');
+      // 3. Navigate to intended target route (or default to Community Feed)
+      const destination = location.state?.from?.pathname || location.state?.from || '/community';
+      navigate(destination, { replace: true });
     } catch (err) {
       const parsedMessage = authService.parseApiError(err);
       setApiError(parsedMessage);
@@ -70,14 +88,14 @@ export default function LoginPage() {
         parsedMessage.toLowerCase().includes('not verified') ||
         parsedMessage.toLowerCase().includes('otp verification')
       ) {
-        toast.error('Account not verified. Redirecting to OTP verification...', { duration: 4000 });
+        setApiError('Account not verified. Redirecting to OTP verification...');
         setTimeout(() => {
           navigate('/verify-otp', {
             state: { email: formData.email.trim().toLowerCase() }
           });
         }, 1500);
-      } else {
-        toast.error(parsedMessage);
+      } else if (parsedMessage.toLowerCase().includes('credential') || parsedMessage.toLowerCase().includes('password')) {
+        setFieldErrors({ password: 'Incorrect email or password.' });
       }
     } finally {
       setIsLoading(false);
@@ -135,11 +153,20 @@ export default function LoginPage() {
                 onChange={handleChange}
                 placeholder="student@nirmauni.ac.in or alumni@gmail.com"
                 disabled={isLoading}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition-all placeholder:text-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                required
+                className={`w-full px-4 py-2.5 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                  fieldErrors.email
+                    ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-300 focus:ring-blue-600/30 focus:border-blue-600'
+                }`}
               />
               <Mail className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5 pointer-events-none" />
             </div>
+            {fieldErrors.email && (
+              <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{fieldErrors.email}</span>
+              </p>
+            )}
           </div>
 
           {/* Password Field */}
@@ -163,19 +190,28 @@ export default function LoginPage() {
                 onChange={handleChange}
                 placeholder="••••••••"
                 disabled={isLoading}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition-all placeholder:text-slate-400 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed"
-                required
+                className={`w-full px-4 py-2.5 rounded-xl border bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 transition-all placeholder:text-slate-400 pr-10 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                  fieldErrors.password
+                    ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-300 focus:ring-blue-600/30 focus:border-blue-600'
+                }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
-                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50"
+                className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50 cursor-pointer"
                 aria-label="Toggle password visibility"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {fieldErrors.password && (
+              <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{fieldErrors.password}</span>
+              </p>
+            )}
           </div>
 
           {/* Remember Me */}

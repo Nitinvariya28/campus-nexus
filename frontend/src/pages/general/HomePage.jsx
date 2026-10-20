@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import {
   ArrowRight,
   Users,
@@ -14,16 +15,43 @@ import {
   FileText,
   Compass,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from 'lucide-react';
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
+  const [stats, setStats] = useState({
+    students_count: null,
+    alumni_count: null,
+    companies_count: null,
+    posts_count: null,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    api.get('/analytics/landing-stats/')
+      .then((res) => {
+        if (isMounted && res.data?.data) {
+          setStats(res.data.data);
+        }
+      })
+      .catch((err) => {
+        // Fallback gracefully without breaking UI
+        console.warn('Landing stats fetch fallback:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="py-4 space-y-16">
       
-      
+      {/* =========================================================================
+          SECTION 1: HERO
+         ========================================================================= */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-2">
         {/* Left Column: Copy & Actions */}
         <div className="lg:col-span-7 space-y-5">
@@ -204,13 +232,13 @@ export default function HomePage() {
             AlumiBridge serves the entire Nirma University community, each with unique goals and benefits.
           </p>
           <div className="pt-2">
-            <Link
-              to="/about"
+            <a
+              href="#features"
               className="inline-flex items-center space-x-2 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm px-4 py-2.5 rounded-xl border border-slate-300 shadow-xs transition-colors"
             >
               <span>Explore All Features</span>
               <ArrowRight className="w-4 h-4 text-slate-500" />
-            </Link>
+            </a>
           </div>
         </div>
 
@@ -229,10 +257,10 @@ export default function HomePage() {
             </div>
             <div className="pt-4">
               <Link
-                to="/register"
+                to={isAuthenticated ? "/community" : "/register"}
                 className="inline-flex items-center space-x-1 text-xs sm:text-sm font-semibold text-blue-700 hover:text-blue-800"
               >
-                <span>For Students</span>
+                <span>{isAuthenticated ? "Go to Community" : "For Students"}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -251,10 +279,10 @@ export default function HomePage() {
             </div>
             <div className="pt-4">
               <Link
-                to="/register"
+                to={isAuthenticated ? "/analytics/alumni" : "/register"}
                 className="inline-flex items-center space-x-1 text-xs sm:text-sm font-semibold text-purple-700 hover:text-purple-800"
               >
-                <span>For Alumni</span>
+                <span>{isAuthenticated ? "Alumni Dashboard" : "For Alumni"}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -273,10 +301,10 @@ export default function HomePage() {
             </div>
             <div className="pt-4">
               <Link
-                to="/login"
+                to={isAuthenticated ? "/analytics/placement" : "/login"}
                 className="inline-flex items-center space-x-1 text-xs sm:text-sm font-semibold text-emerald-700 hover:text-emerald-800"
               >
-                <span>For Placement Cell</span>
+                <span>{isAuthenticated ? "Placement Dashboard" : "For Placement Cell"}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -284,7 +312,9 @@ export default function HomePage() {
         </div>
       </section>
 
-    
+      {/* =========================================================================
+          SECTION 4: HOW IT WORKS (4-Step Horizontal)
+         ========================================================================= */}
       <section className="space-y-10 pt-2">
         <div className="text-center max-w-xl mx-auto space-y-1.5">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -354,54 +384,70 @@ export default function HomePage() {
         </div>
       </section>
 
-   
+      {/* =========================================================================
+          SECTION 5: LIVE PLATFORM STATS STRIP
+         ========================================================================= */}
       <section className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-center">
           
-          {/* Stat 1 */}
+          {/* Stat 1: Students */}
           <div className="flex items-center space-x-3.5 sm:border-r border-slate-100 sm:pr-4">
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-black text-slate-900">1000+</div>
+              <div className="text-xl sm:text-2xl font-black text-slate-900">
+                {stats.students_count !== null ? `${stats.students_count}+` : '300+'}
+              </div>
               <div className="text-xs text-slate-500 font-medium">Students</div>
             </div>
           </div>
 
-          {/* Stat 2 */}
+          {/* Stat 2: Alumni */}
           <div className="flex items-center space-x-3.5 lg:border-r border-slate-100 lg:pr-4">
             <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
               <GraduationCap className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-black text-slate-900">500+</div>
+              <div className="text-xl sm:text-2xl font-black text-slate-900">
+                {stats.alumni_count !== null ? `${stats.alumni_count}+` : '500+'}
+              </div>
               <div className="text-xs text-slate-500 font-medium">Alumni</div>
             </div>
           </div>
 
-          {/* Stat 3 */}
+          {/* Stat 3: Recruiters / Companies */}
           <div className="flex items-center space-x-3.5 lg:border-r border-slate-100 lg:pr-4">
             <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-black text-slate-900">50+</div>
-              <div className="text-xs text-slate-500 font-medium">Recruiters</div>
+              <div className="text-xl sm:text-2xl font-black text-slate-900">
+                {stats.companies_count !== null ? `${stats.companies_count}+` : '150+'}
+              </div>
+              <div className="text-xs text-slate-500 font-medium">Recruiters & Companies</div>
             </div>
           </div>
 
-          {/* Stylized Handwritten Tagline */}
-          <div className="text-center lg:text-right">
-            <span className="font-serif italic text-lg sm:text-xl text-blue-700 font-bold tracking-wide">
-              Together for a stronger tomorrow
-            </span>
+          {/* Stat 4: Community Discussions / Posts */}
+          <div className="flex items-center space-x-3.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xl sm:text-2xl font-black text-slate-900">
+                {stats.posts_count !== null ? `${stats.posts_count}+` : '500+'}
+              </div>
+              <div className="text-xs text-slate-500 font-medium">Shared Experiences</div>
+            </div>
           </div>
 
         </div>
       </section>
 
-   
+      {/* =========================================================================
+          SECTION 6: BOTTOM CALL TO ACTION
+         ========================================================================= */}
       <section className="bg-[#0B3954] text-white rounded-2xl sm:rounded-3xl p-8 sm:p-12 shadow-lg">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           {/* Left Info */}
@@ -421,18 +467,37 @@ export default function HomePage() {
 
           {/* Right Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-start md:justify-end">
-            <Link
-              to="/register"
-              className="bg-white hover:bg-slate-100 text-slate-900 font-bold px-6 py-3 rounded-xl shadow-xs transition-colors text-sm"
-            >
-              Create Account
-            </Link>
-            <Link
-              to="/login"
-              className="bg-transparent hover:bg-white/10 text-white border border-white/30 font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
-            >
-              Login
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/community"
+                  className="bg-white hover:bg-slate-100 text-slate-900 font-bold px-6 py-3 rounded-xl shadow-xs transition-colors text-sm"
+                >
+                  Explore Community
+                </Link>
+                <Link
+                  to="/analytics"
+                  className="bg-transparent hover:bg-white/10 text-white border border-white/30 font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
+                >
+                  Analytics Dashboard
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/register"
+                  className="bg-white hover:bg-slate-100 text-slate-900 font-bold px-6 py-3 rounded-xl shadow-xs transition-colors text-sm"
+                >
+                  Create Account
+                </Link>
+                <Link
+                  to="/login"
+                  className="bg-transparent hover:bg-white/10 text-white border border-white/30 font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
+                >
+                  Login
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>
