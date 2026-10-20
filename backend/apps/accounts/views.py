@@ -109,22 +109,16 @@ class VerifyOTPView(APIView):
 
             # 4. Auto-Generate Profile
             if user.role == 'STUDENT':
-                from apps.university.models import Department, Batch
-                
-                
-                year_str = email[:2]
-                dept_code = email[2:5].upper()
-                
-                department = Department.objects.filter(code=dept_code).first()
-                start_year = 2000 + int(year_str)
-                batch = Batch.objects.filter(start_year=start_year).first()
+                from apps.university.helpers import extract_academic_info_from_email, calculate_student_semester
+                department, batch = extract_academic_info_from_email(email)
+                progression = calculate_student_semester(email=email, admission_year=batch.start_year if batch else None)
                 
                 StudentProfile.objects.get_or_create(
                     user=user, 
                     defaults={
                         'department': department,
                         'batch': batch,
-                        'semester': 1 # Default starting semester
+                        'semester': progression.get('semester', 1)
                     }
                 )
             elif user.role == 'ALUMNI':

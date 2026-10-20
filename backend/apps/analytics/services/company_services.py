@@ -41,8 +41,11 @@ def get_company_landscape_analytics(filters):
     placement_year = filters.get('placement_year')
     
     if department_id and department_id != 'None':
-        alumni_qs = alumni_qs.filter(department_id=department_id)
-        placements_qs = placements_qs.filter(student__department_id=department_id)
+        from apps.university.helpers import resolve_department_ids
+        dept_ids = resolve_department_ids(department_id)
+        if dept_ids:
+            alumni_qs = alumni_qs.filter(department_id__in=dept_ids)
+            placements_qs = placements_qs.filter(student__department_id__in=dept_ids)
         
     if batch_id and batch_id != 'None':
         alumni_qs = alumni_qs.filter(batch_id=batch_id)

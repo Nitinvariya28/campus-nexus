@@ -24,7 +24,10 @@ def get_company_performance_analytics(filters):
     if industry and industry != 'None':
         placements_qs = placements_qs.filter(company__industry=industry)
     if dept_id and dept_id != 'None':
-        placements_qs = placements_qs.filter(student__department_id=dept_id)
+        from apps.university.helpers import resolve_department_ids
+        dept_ids = resolve_department_ids(dept_id)
+        if dept_ids:
+            placements_qs = placements_qs.filter(student__department_id__in=dept_ids)
     if batch_id and batch_id != 'None':
         placements_qs = placements_qs.filter(student__batch_id=batch_id)
     if hiring_mode and hiring_mode != 'None':

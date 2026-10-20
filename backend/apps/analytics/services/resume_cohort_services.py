@@ -11,12 +11,15 @@ def get_cohort_resume_readiness(filters):
     department_id = filters.get('department_id')
     batch_id = filters.get('batch_id')
     
-    if department_id:
-        q_resume &= Q(user__studentprofile__department_id=department_id)
-        q_analysis &= Q(resume__user__studentprofile__department_id=department_id)
+    if department_id and department_id != 'None':
+        from apps.university.helpers import resolve_department_ids
+        dept_ids = resolve_department_ids(department_id)
+        if dept_ids:
+            q_resume &= Q(user__student_profile__department_id__in=dept_ids)
+            q_analysis &= Q(resume__user__student_profile__department_id__in=dept_ids)
     if batch_id:
-        q_resume &= Q(user__studentprofile__batch_id=batch_id)
-        q_analysis &= Q(resume__user__studentprofile__batch_id=batch_id)
+        q_resume &= Q(user__student_profile__batch_id=batch_id)
+        q_analysis &= Q(resume__user__student_profile__batch_id=batch_id)
         
     # Get latest analysis per resume
     latest_analyses = ResumeAnalysis.objects.filter(resume=OuterRef('resume')).order_by('-created_at')

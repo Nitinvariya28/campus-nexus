@@ -19,13 +19,15 @@ def get_platform_overview(filters):
     date_from = filters.get('date_from')
     date_to = filters.get('date_to')
     
-    if department_id and department_id != 'None':
+    from apps.university.helpers import resolve_department_ids
+    dept_ids = resolve_department_ids(department_id)
+    if dept_ids:
         users_qs = users_qs.filter(
-            Q(student_profile__department_id=department_id) | 
-            Q(alumni_profile__department_id=department_id)
+            Q(student_profile__department_id__in=dept_ids) | 
+            Q(alumni_profile__department_id__in=dept_ids)
         ).distinct()
-        students_qs = students_qs.filter(department_id=department_id)
-        alumni_qs = alumni_qs.filter(department_id=department_id)
+        students_qs = students_qs.filter(department_id__in=dept_ids)
+        alumni_qs = alumni_qs.filter(department_id__in=dept_ids)
         
     if batch_id and batch_id != 'None':
         users_qs = users_qs.filter(

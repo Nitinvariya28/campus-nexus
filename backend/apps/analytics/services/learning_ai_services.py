@@ -91,7 +91,10 @@ def get_learning_ai_analytics(filters):
     # Apply Student filters (department, batch, semester)
     student_users_qs = StudentProfile.objects.filter(user__role='STUDENT')
     if department_id and department_id != 'None':
-        student_users_qs = student_users_qs.filter(department_id=department_id)
+        from apps.university.helpers import resolve_department_ids
+        dept_ids = resolve_department_ids(department_id)
+        if dept_ids:
+            student_users_qs = student_users_qs.filter(department_id__in=dept_ids)
     if batch_id and batch_id != 'None':
         student_users_qs = student_users_qs.filter(batch_id=batch_id)
     if semester and semester != 'None':

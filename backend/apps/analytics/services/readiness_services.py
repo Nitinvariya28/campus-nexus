@@ -15,7 +15,10 @@ def get_readiness_analytics(filters):
 
     # Apply filters to the unplaced cohort
     if department_id and department_id != 'None':
-        unplaced_qs = unplaced_qs.filter(department_id=department_id)
+        from apps.university.helpers import resolve_department_ids
+        dept_ids = resolve_department_ids(department_id)
+        if dept_ids:
+            unplaced_qs = unplaced_qs.filter(department_id__in=dept_ids)
     if batch_id and batch_id != 'None':
         unplaced_qs = unplaced_qs.filter(batch_id=batch_id)
 

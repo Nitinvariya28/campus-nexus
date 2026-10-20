@@ -42,7 +42,10 @@ def get_community_analytics(filters):
     if department_id and department_id != 'None' or batch_id and batch_id != 'None':
         author_filters = Q()
         if department_id and department_id != 'None':
-            author_filters &= (Q(author__student_profile__department_id=department_id) | Q(author__alumni_profile__department_id=department_id))
+            from apps.university.helpers import resolve_department_ids
+            dept_ids = resolve_department_ids(department_id)
+            if dept_ids:
+                author_filters &= (Q(author__student_profile__department_id__in=dept_ids) | Q(author__alumni_profile__department_id__in=dept_ids))
         if batch_id and batch_id != 'None':
             author_filters &= (Q(author__student_profile__batch_id=batch_id) | Q(author__alumni_profile__batch_id=batch_id))
         posts_qs = posts_qs.filter(author_filters).distinct()

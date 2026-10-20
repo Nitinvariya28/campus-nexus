@@ -16,8 +16,11 @@ def get_student_cohort_analytics(filters):
     
     # 1. Base Student Cohort Filters
     if dept_id and dept_id != 'None':
-        students_qs = students_qs.filter(department_id=dept_id)
-        placements_qs = placements_qs.filter(student__department_id=dept_id)
+        from apps.university.helpers import resolve_department_ids
+        dept_ids = resolve_department_ids(dept_id)
+        if dept_ids:
+            students_qs = students_qs.filter(department_id__in=dept_ids)
+            placements_qs = placements_qs.filter(student__department_id__in=dept_ids)
     if batch_id and batch_id != 'None':
         students_qs = students_qs.filter(batch_id=batch_id)
         placements_qs = placements_qs.filter(student__batch_id=batch_id)

@@ -3,25 +3,47 @@ from datetime import date
 from .models import Department, Batch
 
 DEPT_ALIASES = {
-    'BCE': ['BCE', 'CSE', 'CE'],
-    'CSE': ['BCE', 'CSE', 'CE'],
+    'BCE': ['BCE', 'CSE'],
+    'CSE': ['CSE', 'BCE'],
     'BEC': ['BEC', 'ECE', 'EC'],
-    'ECE': ['BEC', 'ECE', 'EC'],
+    'ECE': ['ECE', 'BEC', 'EC'],
     'BIT': ['IT', 'BIT'],
     'IT': ['IT', 'BIT'],
     'BEE': ['BEE', 'EE'],
-    'EE': ['BEE', 'EE'],
+    'EE': ['EE', 'BEE'],
     'BME': ['BME', 'ME'],
-    'ME': ['BME', 'ME'],
+    'ME': ['ME', 'BME'],
     'BCV': ['BCV', 'CE', 'CL'],
     'BCL': ['BCV', 'CE', 'CL'],
-    'CE': ['BCV', 'CE', 'CL'],
+    'CE': ['CE', 'BCV', 'CL'],
     'BCH': ['BCH', 'CH'],
     'CH': ['BCH', 'CH'],
     'BAM': ['BAM', 'AM'],
     'AM': ['BAM', 'AM'],
     'AIDS': ['AIDS', 'AI'],
 }
+
+def resolve_department_ids(department_id):
+    """
+    Returns a list of integer department IDs including any historical or code aliases.
+    E.g. selecting BCE (22) returns [22, 27] to include CSE (27), and vice-versa.
+    """
+    if not department_id or str(department_id).lower() in ('none', 'all', ''):
+        return []
+    try:
+        did = int(department_id)
+    except (ValueError, TypeError):
+        return []
+    
+    dept = Department.objects.filter(id=did).first()
+    if not dept:
+        return [did]
+        
+    alias_codes = DEPT_ALIASES.get(dept.code.upper(), [dept.code.upper()])
+    matched_ids = list(Department.objects.filter(code__in=alias_codes).values_list('id', flat=True))
+    if did not in matched_ids:
+        matched_ids.append(did)
+    return matched_ids
 
 def extract_academic_info_from_email(email):
     """
