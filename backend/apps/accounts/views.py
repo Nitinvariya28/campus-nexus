@@ -427,12 +427,91 @@ class PasswordChangeView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+
+class AlumniRequestEmailOTPView(APIView):
+    """
+    POST /api/accounts/alumni/request-email-otp/
+    Initiates personal email change for verified Alumni.
+    Verifies current account password, validates new email format and uniqueness,
+    generates a 6-digit OTP and dispatches it via SMTP to the new email address.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.role != 'ALUMNI':
+            return Response(
+                {"error": "Only alumni accounts are permitted to change their personal email address."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        password = request.data.get('password', '')
+        if not password:
+            return Response({"password": ["Account password is required for verification."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.check_password(password):
+            return Response({"password": ["Current account password is incorrect."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        new_email = str(request.data.get('new_email', '')).strip().lower()
+        if not new_email:
+            return Response({"new_email": ["New email address is required."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            validate_email(new_email)
+        except ValidationError:
+            return Response({"new_email": ["Please enter a valid email address."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_email == user.email.lower():
+            return Response({"new_email": ["New email cannot be the same as your current email."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(email=new_email).exists():
+            return Response({"new_email": ["An account with this email address already exists."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate 6-digit OTP
+        otp_code = f"{random.randint(100000, 999999)}"
+
+        # Store in OTPVerification with purpose='EMAIL_CHANGE'
+        OTPVerification.objects.update_or_create(
+            email=new_email,
+            purpose='EMAIL_CHANGE',
+            defaults={'otp_code': otp_code}
+        )
+
+        # Dispatch verification email
+        try:
+            greeting = f"Hello {user.first_name}," if user.first_name else "Hello,"
+            send_mail(
+                subject="AlumiBridge - Verify Your New Email Address",
+                message=(
+                    f"{greeting}\n\n"
+                    f"You requested to update your AlumiBridge personal email address to {new_email}.\n\n"
+                    f"Your 6-digit verification code is:\n\n"
+                    f"{otp_code}\n\n"
+                    f"This code will expire in 10 minutes. If you did not make this request, your account is secure and no change has been made.\n\n"
+                    f"Regards,\nAlumiBridge Security Team"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[new_email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to send verification email to {new_email}. Please ensure the address is correct."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response({
+            "message": f"Verification code sent to {new_email}. Please enter the 6-digit OTP to complete your email update."
+        }, status=status.HTTP_200_OK)
+
+
 class AlumniEmailChangeView(APIView):
     """
     PATCH /api/accounts/alumni/change-email/
-    Allows verified ALUMNI to update their personal email address.
-    Strictly blocked for Students (emails tied to university roll numbers) and Placement Cell.
-    Requires new_email and password verification.
+    Allows verified ALUMNI to finalize updating their personal email address by validating OTP.
+    Requires new_email and otp_code.
     """
     permission_classes = [IsAuthenticated]
 
@@ -440,20 +519,58 @@ class AlumniEmailChangeView(APIView):
         user = request.user
         if user.role != 'ALUMNI':
             return Response(
-                {"error": "Only alumni accounts are permitted to change their email address. Student emails are permanently locked to university roll numbers."},
+                {"error": "Only alumni accounts are permitted to change their email address."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        serializer = AlumniEmailChangeSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            new_email = serializer.validated_data['new_email']
-            user.email = new_email
-            user.save()
-            return Response({
-                "message": "Personal email address updated successfully.",
-                "email": user.email
-            }, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        new_email = str(request.data.get('new_email', '')).strip().lower()
+        otp_code = str(request.data.get('otp_code', '')).strip()
+
+        if not new_email:
+            return Response({"new_email": ["New email address is required."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not otp_code:
+            return Response({"otp_code": ["Verification code is required."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify OTP record
+        otp_record = OTPVerification.objects.filter(
+            email=new_email,
+            otp_code=otp_code,
+            purpose='EMAIL_CHANGE'
+        ).first()
+
+        if not otp_record:
+            return Response(
+                {"error": "Invalid verification code. Please check your email and try again."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        expiration_time = otp_record.created_at + timedelta(minutes=10)
+        if timezone.now() > expiration_time:
+            otp_record.delete()
+            return Response(
+                {"error": "Verification code has expired. Please request a new code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Double check uniqueness
+        if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+            return Response(
+                {"error": "An account with this email address already exists."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update user's email
+        user.email = new_email
+        user.save(update_fields=['email'])
+
+        # Cleanup OTP record
+        otp_record.delete()
+
+        return Response({
+            "message": "Personal email address updated successfully.",
+            "email": user.email
+        }, status=status.HTTP_200_OK)
 
 
 

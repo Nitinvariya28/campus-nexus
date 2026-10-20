@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, MessageSquare, Bookmark, Share2 } from 'lucide-react';
 import CommentThread from '../comments/CommentThread';
 import { togglePostLike, togglePostBookmark } from '../../../../services/community/communityService';
@@ -25,12 +25,20 @@ export default function PostActionToolbar({
   onBookmarkChange,
   onUserClick,
 }) {
-  const [isLiked, setIsLiked] = useState(initialLiked);
-  const [likesCount, setLikesCount] = useState(initialLikes);
-  const [isBookmarked, setIsBookmarked] = useState(initialSaved);
-  const [commentsCount, setCommentsCount] = useState(initialComments);
+  const [isLiked, setIsLiked] = useState(Boolean(initialLiked));
+  const [likesCount, setLikesCount] = useState(Number(initialLikes) || 0);
+  const [isBookmarked, setIsBookmarked] = useState(Boolean(initialSaved));
+  const [commentsCount, setCommentsCount] = useState(Number(initialComments) || 0);
   const [isCommentsExpanded, setIsCommentsExpanded] = useState(false);
   const { adjustLikes, adjustSaved } = useCommunityStats();
+
+  // Synchronize state whenever initial interaction props change or arrive
+  useEffect(() => {
+    setIsLiked(Boolean(initialLiked));
+    setLikesCount(Number(initialLikes) || 0);
+    setIsBookmarked(Boolean(initialSaved));
+    setCommentsCount(Number(initialComments) || 0);
+  }, [initialLikes, initialLiked, initialSaved, initialComments]);
 
   // Like Toggle
   const handleLike = async () => {
@@ -162,6 +170,7 @@ export default function PostActionToolbar({
         <CommentThread
           postId={postId}
           entityType={entityType}
+          onCommentsCountSync={(count) => setCommentsCount(count)}
           onCommentAdded={() => setCommentsCount((prev) => prev + 1)}
           onUserClick={onUserClick}
         />

@@ -2,11 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 from django.db import transaction
 from django.db.models import Q
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import os
+import uuid
 from apps.accounts.models import User
 
 from .models import StudentProfile, AlumniProfile, StudentPlacementRecord
@@ -16,10 +22,10 @@ from .serializers import (
     UserSearchResultSerializer,
 )
 
-# Import all models needed for Options API
 from apps.university.models import Department, Batch
+from apps.university.helpers import extract_academic_info_from_email
 from apps.companies.models import Company, CompanyRole
-from apps.skills.models import SkillCategory, Skill, UserSkill, SocialLink, UserAIUsage, MasterLearningPlatform
+from apps.skills.models import SkillCategory, Skill, UserSkill, SocialLink, UserAIUsage, MasterLearningPlatform, UserLearningResource
 from apps.resumes.models import Resume
 from apps.community.models import Tag, Post, PostMedia
 from apps.opportunities.models import Opportunity, OpportunitySkill
@@ -85,23 +91,21 @@ class ProfileMeAPIView(APIView):
                                     raise ValueError("Semester must be an integer between 1 and 8.")
                             else:
                                 student_profile.semester = None
-                        if 'department_id' in identity_data:
-                            dept_id = identity_data['department_id']
-                            if dept_id and not Department.objects.filter(id=dept_id).exists():
-                                raise ValueError(f"Department with ID '{dept_id}' does not exist.")
-                            student_profile.department_id = dept_id
-                        if 'batch_id' in identity_data:
-                            batch_id = identity_data['batch_id']
-                            if batch_id and not Batch.objects.filter(id=batch_id).exists():
-                                raise ValueError(f"Batch with ID '{batch_id}' does not exist.")
-                            student_profile.batch_id = batch_id
                         if 'phone' in identity_data:
                             phone_val = str(identity_data['phone'] or '').strip()
-                            if len(phone_val) > 15:
-                                raise ValueError("Phone number cannot exceed 15 characters.")
-                            student_profile.phone = phone_val or None
+                            student_profile.phone = phone_val[:15] if phone_val else None
                         if 'address' in identity_data:
                             student_profile.address = identity_data['address']
+
+                        # Note: For students, department and batch cohort are permanently fixed
+                        # to their university enrollment ID and cannot be modified.
+                        if not student_profile.department_id or not student_profile.batch_id:
+                            d, b = extract_academic_info_from_email(user.email)
+                            if not student_profile.department_id and d:
+                                student_profile.department = d
+                            if not student_profile.batch_id and b:
+                                student_profile.batch = b
+
                         student_profile.save()
 
                         # Update User avatar if provided
@@ -110,7 +114,7 @@ class ProfileMeAPIView(APIView):
                             user.save()
 
                     # 2. Overwrite Skills (with deduplication to satisfy unique_user_skill)
-                    if 'skills' in data:
+                    if 'skills' in data and data['skills'] is not None:
                         seen_skills = set()
                         unique_skills = []
                         for item in data['skills']:
@@ -138,7 +142,7 @@ class ProfileMeAPIView(APIView):
                         UserSkill.objects.bulk_create(skills_to_create)
 
                     # 3. Overwrite Social Links (with deduplication to satisfy unique_user_social_platform)
-                    if 'social_links' in data:
+                    if 'social_links' in data and data['social_links'] is not None:
                         seen_platforms = set()
                         unique_socials = []
                         for item in data['social_links']:
@@ -160,20 +164,24 @@ class ProfileMeAPIView(APIView):
                         SocialLink.objects.bulk_create(socials_to_create)
 
                     # 4. Overwrite AI Usage
-                    if 'ai_usage' in data:
+                    if 'ai_usage' in data and data['ai_usage'] is not None:
                         UserAIUsage.objects.filter(user=user).delete()
                         ai_to_create = []
                         for ai_item in data['ai_usage']:
+                            tool = ai_item.get('ai_tool')
+                            if not tool:
+                                continue
                             ai_to_create.append(
                                 UserAIUsage(
                                     user=user,
-                                    ai_tool=ai_item['ai_tool'],
-                                    usage_frequency=ai_item['usage_frequency'],
-                                    daily_time_range=ai_item['daily_time_range'],
-                                    usage_purpose=ai_item['usage_purpose']
+                                    ai_tool=tool,
+                                    usage_frequency=ai_item.get('usage_frequency') or 'REGULARLY',
+                                    daily_time_range=ai_item.get('daily_time_range') or 'LESS_THAN_30_MIN',
+                                    usage_purpose=ai_item.get('usage_purpose') or 'CODING'
                                 )
                             )
-                        UserAIUsage.objects.bulk_create(ai_to_create)
+                        if ai_to_create:
+                            UserAIUsage.objects.bulk_create(ai_to_create)
 
                     # 5. Overwrite Learning Platforms (UserLearningResource)
                     if 'learning_platforms' in data:
@@ -227,33 +235,38 @@ class ProfileMeAPIView(APIView):
                             alumni_profile.bio = identity_data['bio']
                         if 'department_id' in identity_data:
                             dept_id = identity_data['department_id']
-                            if dept_id and not Department.objects.filter(id=dept_id).exists():
-                                raise ValueError(f"Department with ID '{dept_id}' does not exist.")
-                            alumni_profile.department_id = dept_id
+                            if dept_id and str(dept_id).strip() != '':
+                                if Department.objects.filter(id=dept_id).exists():
+                                    alumni_profile.department_id = int(dept_id)
                         if 'batch_id' in identity_data:
                             batch_id = identity_data['batch_id']
-                            if batch_id and not Batch.objects.filter(id=batch_id).exists():
-                                raise ValueError(f"Batch with ID '{batch_id}' does not exist.")
-                            alumni_profile.batch_id = batch_id
+                            if batch_id and str(batch_id).strip() != '':
+                                if Batch.objects.filter(id=batch_id).exists():
+                                    alumni_profile.batch_id = int(batch_id)
                         if 'phone' in identity_data:
                             phone_val = str(identity_data['phone'] or '').strip()
-                            if len(phone_val) > 15:
-                                raise ValueError("Phone number cannot exceed 15 characters.")
-                            alumni_profile.phone = phone_val or None
+                            alumni_profile.phone = phone_val[:15] if phone_val else None
                         if 'location' in identity_data:
                             loc_val = str(identity_data['location'] or '').strip()
-                            if len(loc_val) > 150:
-                                raise ValueError("Location cannot exceed 150 characters.")
-                            alumni_profile.location = loc_val or None
+                            alumni_profile.location = loc_val[:150] if loc_val else None
+
+                        # Ensure valid department and batch exist before saving
+                        if not alumni_profile.department_id or not alumni_profile.batch_id:
+                            d, b = extract_academic_info_from_email(user.email)
+                            if not alumni_profile.department_id and d:
+                                alumni_profile.department = d
+                            if not alumni_profile.batch_id and b:
+                                alumni_profile.batch = b
 
                         # Update User full name and avatar if provided
                         user_dirty = False
                         if 'full_name' in identity_data:
-                            full_name = identity_data['full_name'].strip()
-                            parts = full_name.split(" ", 1)
-                            user.first_name = parts[0]
-                            user.last_name = parts[1] if len(parts) > 1 else ""
-                            user_dirty = True
+                            full_name = str(identity_data['full_name'] or '').strip()
+                            if full_name:
+                                parts = full_name.split(" ", 1)
+                                user.first_name = parts[0]
+                                user.last_name = parts[1] if len(parts) > 1 else ""
+                                user_dirty = True
                         if 'profile_photo' in identity_data:
                             user.profile_photo = identity_data['profile_photo']
                             user_dirty = True
@@ -265,29 +278,32 @@ class ProfileMeAPIView(APIView):
                     if career_data:
                         if 'company_id' in career_data:
                             company_id = career_data['company_id']
-                            if company_id and not Company.objects.filter(id=company_id).exists():
-                                raise ValueError(f"Company with ID '{company_id}' does not exist.")
-                            alumni_profile.current_company_id = company_id
+                            if company_id:
+                                if not Company.objects.filter(id=company_id).exists():
+                                    raise ValueError(f"Company with ID '{company_id}' does not exist.")
+                                alumni_profile.current_company_id = int(company_id)
+                            else:
+                                alumni_profile.current_company_id = None
                         if 'role' in career_data:
                             role_val = str(career_data['role'] or '').strip()
-                            if len(role_val) > 150:
-                                raise ValueError("Job title cannot exceed 150 characters.")
                             alumni_profile.current_job_title = role_val or None
                         if 'job_category' in career_data:
-                            alumni_profile.job_category = career_data['job_category']
+                            alumni_profile.job_category = career_data['job_category'] or None
                         if 'years_of_experience' in career_data:
-                            try:
-                                exp_val = int(career_data['years_of_experience'])
-                                if exp_val < 0:
-                                    raise ValueError("Years of experience cannot be negative.")
-                                alumni_profile.years_of_experience = exp_val
-                            except (ValueError, TypeError):
-                                raise ValueError("Years of experience must be a valid non-negative integer.")
+                            val = career_data['years_of_experience']
+                            if val is not None and str(val).strip() != '':
+                                try:
+                                    exp_val = int(val)
+                                    alumni_profile.years_of_experience = max(0, exp_val)
+                                except (ValueError, TypeError):
+                                    alumni_profile.years_of_experience = 0
+                            else:
+                                alumni_profile.years_of_experience = 0
                     
                     alumni_profile.save()
 
                     # 3. Overwrite Skills (with deduplication to satisfy unique_user_skill)
-                    if 'skills' in data:
+                    if 'skills' in data and data['skills'] is not None:
                         seen_skills = set()
                         unique_skills = []
                         for item in data['skills']:
@@ -315,7 +331,7 @@ class ProfileMeAPIView(APIView):
                         UserSkill.objects.bulk_create(skills_to_create)
 
                     # 4. Overwrite Social Links (with deduplication to satisfy unique_user_social_platform)
-                    if 'social_links' in data:
+                    if 'social_links' in data and data['social_links'] is not None:
                         seen_platforms = set()
                         unique_socials = []
                         for item in data['social_links']:
@@ -337,20 +353,24 @@ class ProfileMeAPIView(APIView):
                         SocialLink.objects.bulk_create(socials_to_create)
 
                     # 5. Overwrite AI Usage
-                    if 'ai_usage' in data:
+                    if 'ai_usage' in data and data['ai_usage'] is not None:
                         UserAIUsage.objects.filter(user=user).delete()
                         ai_to_create = []
                         for ai_item in data['ai_usage']:
+                            tool = ai_item.get('ai_tool')
+                            if not tool:
+                                continue
                             ai_to_create.append(
                                 UserAIUsage(
                                     user=user,
-                                    ai_tool=ai_item['ai_tool'],
-                                    usage_frequency=ai_item['usage_frequency'],
-                                    daily_time_range=ai_item['daily_time_range'],
-                                    usage_purpose=ai_item['usage_purpose']
+                                    ai_tool=tool,
+                                    usage_frequency=ai_item.get('usage_frequency') or 'REGULARLY',
+                                    daily_time_range=ai_item.get('daily_time_range') or 'LESS_THAN_30_MIN',
+                                    usage_purpose=ai_item.get('usage_purpose') or 'CODING'
                                 )
                             )
-                        UserAIUsage.objects.bulk_create(ai_to_create)
+                        if ai_to_create:
+                            UserAIUsage.objects.bulk_create(ai_to_create)
 
                     # 6. Overwrite Learning Platforms (UserLearningResource)
                     if 'learning_platforms' in data:
@@ -467,13 +487,15 @@ class ProfileOptionsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_choices(self, choices):
-        return [c[0] for c in choices]
+        return [{"value": c[0], "display_name": c[1]} for c in choices]
 
     def get_top_20_grouped_skills(self):
         categories = SkillCategory.objects.prefetch_related('skills').filter(is_active=True)
         return [
             {
+                "category_name": cat.name,
                 "category_type": cat.category_type,
+                "category_display": cat.name or cat.get_category_type_display(),
                 "skills": [{"id": s.id, "name": s.name} for s in cat.skills.filter(is_active=True)[:20]]
             }
             for cat in categories if cat.skills.filter(is_active=True).exists()
@@ -494,7 +516,16 @@ class ProfileOptionsAPIView(APIView):
 
         # Common Data & Top 20 Tables
         departments = [{"id": d.id, "name": d.name} for d in Department.objects.all()]
-        batches = [{"id": b.id, "name": str(b)} for b in Batch.objects.all()]
+        batches = [
+            {
+                "id": b.id,
+                "name": str(b),
+                "batch_name": str(b),
+                "start_year": b.start_year,
+                "end_year": b.end_year
+            }
+            for b in Batch.objects.all()
+        ]
         top_20_tags = [{"id": t.id, "name": t.name} for t in Tag.objects.filter(is_active=True)[:20]]
         
         company_qs = Company.objects.filter(is_active=True)[:20]
@@ -738,4 +769,100 @@ class PublicUserProfileAPIView(APIView):
             )
         serializer = PublicUserProfileSerializer(user, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProfileAvatarUploadAPIView(APIView):
+    """
+    POST /api/profiles/avatar/
+    Uploads user's profile photo/avatar.
+    Enforces format (.jpg, .png, .webp) and max 5MB size limit.
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file_obj = (
+            request.FILES.get('avatar') or 
+            request.FILES.get('profile_photo') or 
+            request.FILES.get('file')
+        )
+        if not file_obj:
+            return Response({"error": "No image file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in valid_extensions:
+            return Response({"error": "Only JPG, PNG, and WebP images are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if file_obj.size > 5 * 1024 * 1024:
+            return Response({"error": "Image file size exceeds the 5MB limit."}, status=status.HTTP_400_BAD_REQUEST)
+
+        clean_name = f"{uuid.uuid4().hex[:8]}_{file_obj.name.replace(' ', '_')}"
+        storage_rel_path = f"avatars/user_{request.user.id}/{clean_name}"
+        saved_path = default_storage.save(storage_rel_path, ContentFile(file_obj.read()))
+
+        avatar_url = f"{settings.MEDIA_URL}{saved_path}"
+        request.user.profile_photo = avatar_url
+        request.user.save(update_fields=['profile_photo'])
+
+        return Response({
+            "message": "Profile photo updated successfully.",
+            "avatar_url": avatar_url
+        }, status=status.HTTP_200_OK)
+
+
+class ProfileCoverUploadAPIView(APIView):
+    """
+    POST /api/profiles/cover/
+    Uploads user's profile cover banner image.
+    DELETE /api/profiles/cover/
+    Resets cover image to default.
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file_obj = (
+            request.FILES.get('cover') or 
+            request.FILES.get('cover_image') or 
+            request.FILES.get('banner') or 
+            request.FILES.get('file')
+        )
+        if not file_obj:
+            return Response({"error": "No image file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in valid_extensions:
+            return Response({"error": "Only JPG, PNG, and WebP images are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if file_obj.size > 10 * 1024 * 1024:
+            return Response({"error": "Cover image file size exceeds the 10MB limit."}, status=status.HTTP_400_BAD_REQUEST)
+
+        clean_name = f"{uuid.uuid4().hex[:8]}_{file_obj.name.replace(' ', '_')}"
+        storage_rel_path = f"covers/user_{request.user.id}/{clean_name}"
+        saved_path = default_storage.save(storage_rel_path, ContentFile(file_obj.read()))
+
+        cover_url = f"{settings.MEDIA_URL}{saved_path}"
+        request.user.cover_image = cover_url
+        request.user.save(update_fields=['cover_image'])
+
+        full_url = request.build_absolute_uri(cover_url) if request else cover_url
+
+        return Response({
+            "message": "Cover image updated successfully.",
+            "cover_url": cover_url,
+            "cover_image": full_url
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        request.user.cover_image = None
+        request.user.save(update_fields=['cover_image'])
+        return Response({
+            "message": "Cover image removed successfully.",
+            "cover_url": None,
+            "cover_image": None
+        }, status=status.HTTP_200_OK)
+
+
 

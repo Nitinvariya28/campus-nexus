@@ -3,16 +3,24 @@ from django.db import models
 
 class Notification(models.Model):
     NOTIFICATION_TYPE_CHOICES = [
-        ("POST_LIKE", "Post Like"), ("POST_COMMENT", "Post Comment"),
-        ("NEW_ANNOUNCEMENT", "New Announcement"), ("NEW_OPPORTUNITY", "New Opportunity"),
-        ("REPORT_UPDATE", "Report Update"), ("SYSTEM", "System"),
+        ("POST_LIKE", "Post Like"),
+        ("POST_COMMENT", "Post Comment"),
+        ("POST_SAVE", "Post Saved"),
+        ("NEW_ANNOUNCEMENT", "New Announcement"),
+        ("NEW_OPPORTUNITY", "New Opportunity"),
+        ("REPORT_UPDATE", "Report Update"),
+        ("SYSTEM", "System"),
     ]
     REFERENCE_TYPE_CHOICES = [
-        ("POST", "Post"), ("COMMENT", "Comment"),
-        ("ANNOUNCEMENT", "Announcement"), ("OPPORTUNITY", "Opportunity"),
-        ("REPORT", "Report"), ("NONE", "None"),
+        ("POST", "Post"),
+        ("COMMENT", "Comment"),
+        ("ANNOUNCEMENT", "Announcement"),
+        ("OPPORTUNITY", "Opportunity"),
+        ("REPORT", "Report"),
+        ("NONE", "None"),
     ]
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="notifications_triggered")
     notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPE_CHOICES)
     title = models.CharField(max_length=250)
     message = models.CharField(max_length=500)

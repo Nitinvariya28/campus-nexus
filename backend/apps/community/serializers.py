@@ -74,27 +74,55 @@ class PostFeedSerializer(serializers.ModelSerializer):
     media = PostMediaSerializer(many=True)
     tags = serializers.SerializerMethodField()
     interactions = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    is_liked_by_me = serializers.SerializerMethodField()
+    is_bookmarked_by_me = serializers.SerializerMethodField()
     company = serializers.CharField(source='company.name', read_only=True)
     company_id = serializers.IntegerField(source='company.id', read_only=True, allow_null=True)
 
     class Meta:
         model = Post
-        fields = ['feed_type', 'id', 'title', 'content', 'post_type', 'created_at', 'author', 'company', 'company_id', 'media', 'tags', 'interactions']
+        fields = [
+            'feed_type', 'id', 'title', 'content', 'post_type', 'created_at',
+            'author', 'company', 'company_id', 'media', 'tags', 'interactions',
+            'likes_count', 'comments_count', 'is_liked_by_me', 'is_bookmarked_by_me'
+        ]
         
     def get_tags(self, obj):
         return [pt.tag.name for pt in obj.post_tags.all()]
         
     def get_interactions(self, obj):
         request = self.context.get('request')
-        user_id = request.user.id if request and request.user.is_authenticated else None
-        
-        likes_list = obj.likes.all()
+        user_id = request.user.id if request and getattr(request, 'user', None) and request.user.is_authenticated else None
+        likes_count = obj.likes.count()
+        comments_count = obj.comments.count()
+        is_liked = obj.likes.filter(user_id=user_id).exists() if user_id else False
+        is_saved = obj.saved_by_users.filter(user_id=user_id).exists() if user_id else False
         return {
-            "likes_count": len(likes_list),
-            "comments_count": len(obj.comments.all()),
-            "is_liked_by_me": any(like.user_id == user_id for like in likes_list),
-            "is_bookmarked_by_me": obj.saved_by_users.filter(user_id=user_id).exists() if user_id else False,
+            "likes_count": likes_count,
+            "comments_count": comments_count,
+            "is_liked_by_me": is_liked,
+            "is_bookmarked_by_me": is_saved,
         }
+
+    def get_likes_count(self, obj):
+        return obj.likes.count()
+
+    def get_comments_count(self, obj):
+        return obj.comments.count()
+
+    def get_is_liked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
+            return obj.likes.filter(user=request.user).exists()
+        return False
+
+    def get_is_bookmarked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
+            return obj.saved_by_users.filter(user=request.user).exists()
+        return False
 
 class OpportunityFeedSerializer(serializers.ModelSerializer):
     feed_type = serializers.CharField(default="OPPORTUNITY", read_only=True)
@@ -104,24 +132,39 @@ class OpportunityFeedSerializer(serializers.ModelSerializer):
     company_id = serializers.IntegerField(source='company.id', read_only=True, allow_null=True)
     role_id = serializers.IntegerField(source='role.id', read_only=True, allow_null=True)
     interactions = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    is_liked_by_me = serializers.SerializerMethodField()
+    is_bookmarked_by_me = serializers.SerializerMethodField()
     
     class Meta:
         model = Opportunity
-        fields = ['feed_type', 'id', 'title', 'description', 'opportunity_type', 'work_mode', 'employment_type', 'application_url', 'deadline', 'created_at', 'author', 'company', 'company_id', 'role_id', 'skills', 'interactions']
+        fields = [
+            'feed_type', 'id', 'title', 'description', 'opportunity_type', 'work_mode',
+            'employment_type', 'application_url', 'deadline', 'created_at', 'author',
+            'company', 'company_id', 'role_id', 'skills', 'interactions',
+            'likes_count', 'comments_count', 'is_liked_by_me', 'is_bookmarked_by_me'
+        ]
 
     def get_skills(self, obj):
         return [os.skill.name for os in obj.opportunity_skills.all()]
 
+    def _get_shadow_post(self, obj):
+        return (
+            Post.objects.filter(title__startswith=f"[Opportunity #{obj.id}]").first()
+            or Post.objects.filter(title__contains=f"#{obj.id}]").first()
+            or Post.objects.filter(title=f"[Opportunity] {obj.title}").first()
+        )
+
     def get_interactions(self, obj):
         request = self.context.get('request')
-        user_id = request.user.id if request and request.user.is_authenticated else None
-        post = Post.objects.filter(title=f"[Opportunity] {obj.title}").first()
+        user_id = request.user.id if request and getattr(request, 'user', None) and request.user.is_authenticated else None
+        post = self._get_shadow_post(obj)
         if post:
-            likes_list = post.likes.all()
             return {
-                "likes_count": len(likes_list),
-                "comments_count": len(post.comments.all()),
-                "is_liked_by_me": any(like.user_id == user_id for like in likes_list),
+                "likes_count": post.likes.count(),
+                "comments_count": post.comments.count(),
+                "is_liked_by_me": post.likes.filter(user_id=user_id).exists() if user_id else False,
                 "is_bookmarked_by_me": post.saved_by_users.filter(user_id=user_id).exists() if user_id else False,
             }
         return {
@@ -130,26 +173,62 @@ class OpportunityFeedSerializer(serializers.ModelSerializer):
             "is_liked_by_me": False,
             "is_bookmarked_by_me": False,
         }
+
+    def get_likes_count(self, obj):
+        post = self._get_shadow_post(obj)
+        return post.likes.count() if post else 0
+
+    def get_comments_count(self, obj):
+        post = self._get_shadow_post(obj)
+        return post.comments.count() if post else 0
+
+    def get_is_liked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
+            post = self._get_shadow_post(obj)
+            return post.likes.filter(user=request.user).exists() if post else False
+        return False
+
+    def get_is_bookmarked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
+            post = self._get_shadow_post(obj)
+            return post.saved_by_users.filter(user=request.user).exists() if post else False
+        return False
 
 class AnnouncementFeedSerializer(serializers.ModelSerializer):
     feed_type = serializers.CharField(default="ANNOUNCEMENT", read_only=True)
     author = FeedAuthorSerializer(source='created_by')
     interactions = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    is_liked_by_me = serializers.SerializerMethodField()
+    is_bookmarked_by_me = serializers.SerializerMethodField()
     
     class Meta:
         model = Announcement
-        fields = ['feed_type', 'id', 'title', 'content', 'announcement_type', 'target_audience', 'created_at', 'author', 'interactions']
+        fields = [
+            'feed_type', 'id', 'title', 'content', 'announcement_type', 'target_audience',
+            'created_at', 'author', 'interactions', 'likes_count', 'comments_count',
+            'is_liked_by_me', 'is_bookmarked_by_me'
+        ]
+
+    def _get_shadow_post(self, obj):
+        return (
+            Post.objects.filter(title__startswith=f"[Announcement #{obj.id}]").first()
+            or Post.objects.filter(title__contains=f"#{obj.id}]").first()
+            or Post.objects.filter(title=f"[Announcement] {obj.title}").first()
+        )
 
     def get_interactions(self, obj):
         request = self.context.get('request')
-        user_id = request.user.id if request and request.user.is_authenticated else None
-        post = Post.objects.filter(title=f"[Announcement] {obj.title}").first()
+        user_id = request.user.id if request and getattr(request, 'user', None) and request.user.is_authenticated else None
+        post = self._get_shadow_post(obj)
         if post:
-            likes_list = post.likes.all()
             return {
-                "likes_count": len(likes_list),
-                "comments_count": len(post.comments.all()),
-                "is_liked_by_me": any(like.user_id == user_id for like in likes_list),
+                "likes_count": post.likes.count(),
+                "comments_count": post.comments.count(),
+                "is_liked_by_me": post.likes.filter(user_id=user_id).exists() if user_id else False,
                 "is_bookmarked_by_me": post.saved_by_users.filter(user_id=user_id).exists() if user_id else False,
             }
         return {
@@ -158,6 +237,28 @@ class AnnouncementFeedSerializer(serializers.ModelSerializer):
             "is_liked_by_me": False,
             "is_bookmarked_by_me": False,
         }
+
+    def get_likes_count(self, obj):
+        post = self._get_shadow_post(obj)
+        return post.likes.count() if post else 0
+
+    def get_comments_count(self, obj):
+        post = self._get_shadow_post(obj)
+        return post.comments.count() if post else 0
+
+    def get_is_liked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
+            post = self._get_shadow_post(obj)
+            return post.likes.filter(user=request.user).exists() if post else False
+        return False
+
+    def get_is_bookmarked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
+            post = self._get_shadow_post(obj)
+            return post.saved_by_users.filter(user=request.user).exists() if post else False
+        return False
 
 class InterviewRoundDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -177,28 +278,40 @@ class InterviewExperienceFeedSerializer(serializers.ModelSerializer):
     rounds_count = serializers.SerializerMethodField()
     rounds = InterviewRoundDetailSerializer(many=True, read_only=True)
     interactions = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    is_liked_by_me = serializers.SerializerMethodField()
+    is_bookmarked_by_me = serializers.SerializerMethodField()
 
     class Meta:
         model = InterviewExperience
         fields = [
             'feed_type', 'id', 'author', 'company', 'company_id', 'role_id', 'role_title', 'experience_type',
-            'result', 'difficulty', 'experience', 'preparation', 'rounds_count', 'rounds', 'created_at', 'interactions'
+            'result', 'difficulty', 'experience', 'preparation', 'rounds_count', 'rounds', 'created_at',
+            'interactions', 'likes_count', 'comments_count', 'is_liked_by_me', 'is_bookmarked_by_me'
         ]
 
     def get_rounds_count(self, obj):
         return obj.rounds.count()
 
+    def _get_shadow_post(self, obj):
+        company_name = obj.company.name if obj.company else 'Company'
+        role_name = obj.role.role_name if obj.role else 'Process'
+        return (
+            Post.objects.filter(title__startswith=f"[Interview #{obj.id}]").first()
+            or Post.objects.filter(title__contains=f"#{obj.id}]").first()
+            or Post.objects.filter(title=f"[Interview] {company_name} - {role_name}", author=obj.author).first()
+        )
+
     def get_interactions(self, obj):
         request = self.context.get('request')
-        user_id = request.user.id if request and request.user.is_authenticated else None
-        role_name = obj.role.role_name if obj.role else 'Process'
-        post = Post.objects.filter(title=f"[Interview] {obj.company.name} - {role_name}").first()
+        user_id = request.user.id if request and getattr(request, 'user', None) and request.user.is_authenticated else None
+        post = self._get_shadow_post(obj)
         if post:
-            likes_list = post.likes.all()
             return {
-                "likes_count": len(likes_list),
-                "comments_count": len(post.comments.all()),
-                "is_liked_by_me": any(like.user_id == user_id for like in likes_list),
+                "likes_count": post.likes.count(),
+                "comments_count": post.comments.count(),
+                "is_liked_by_me": post.likes.filter(user_id=user_id).exists() if user_id else False,
                 "is_bookmarked_by_me": post.saved_by_users.filter(user_id=user_id).exists() if user_id else False,
             }
         return {
@@ -207,6 +320,28 @@ class InterviewExperienceFeedSerializer(serializers.ModelSerializer):
             "is_liked_by_me": False,
             "is_bookmarked_by_me": False,
         }
+
+    def get_likes_count(self, obj):
+        post = self._get_shadow_post(obj)
+        return post.likes.count() if post else 0
+
+    def get_comments_count(self, obj):
+        post = self._get_shadow_post(obj)
+        return post.comments.count() if post else 0
+
+    def get_is_liked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
+            post = self._get_shadow_post(obj)
+            return post.likes.filter(user=request.user).exists() if post else False
+        return False
+
+    def get_is_bookmarked_by_me(self, obj):
+        request = self.context.get('request')
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
+            post = self._get_shadow_post(obj)
+            return post.saved_by_users.filter(user=request.user).exists() if post else False
+        return False
 
 class OpportunityDetailSerializer(serializers.ModelSerializer):
     feed_type = serializers.CharField(default="OPPORTUNITY", read_only=True)

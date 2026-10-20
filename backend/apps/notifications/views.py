@@ -27,7 +27,7 @@ class NotificationListView(APIView):
 
     def get(self, request):
         user = request.user
-        queryset = Notification.objects.filter(recipient=user)
+        queryset = Notification.objects.filter(recipient=user).select_related('actor')
 
         # Optional Filter by Read Status
         is_read_param = request.query_params.get('is_read')
@@ -48,7 +48,7 @@ class NotificationListView(APIView):
 
         paginator = NotificationPagination()
         paginated_queryset = paginator.paginate_queryset(queryset, request, view=self)
-        serializer = NotificationSerializer(paginated_queryset, many=True)
+        serializer = NotificationSerializer(paginated_queryset, many=True, context={'request': request})
 
         return paginator.get_paginated_response(serializer.data, unread_count=unread_count)
 
@@ -68,7 +68,7 @@ class MarkNotificationReadView(APIView):
             notification.read_at = timezone.now()
             notification.save(update_fields=['is_read', 'read_at'])
 
-        serializer = NotificationSerializer(notification)
+        serializer = NotificationSerializer(notification, context={'request': request})
         return Response({
             "message": "Notification marked as read.",
             "notification": serializer.data

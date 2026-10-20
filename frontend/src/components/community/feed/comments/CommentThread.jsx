@@ -13,7 +13,7 @@ import { Loader2, MessageSquare, AlertCircle } from 'lucide-react';
  * - CommentList with author image, name, content, and timestamp
  * - Pagination / Load More comments support
  */
-export default function CommentThread({ postId, entityType = 'POST', onCommentAdded, onUserClick }) {
+export default function CommentThread({ postId, entityType = 'POST', onCommentAdded, onCommentsCountSync, onUserClick }) {
   const [comments, setComments] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -31,18 +31,21 @@ export default function CommentThread({ postId, entityType = 'POST', onCommentAd
     try {
       const data = await fetchPostComments(postId, { limit: 10, offset: 0, type: entityType });
       const results = data.results || [];
-      const count = data.count || results.length;
+      const count = data.count !== undefined ? data.count : results.length;
       setComments(results);
       setTotalCount(count);
       setOffset(0);
       setHasMore(results.length < count && Boolean(data.next));
+      if (onCommentsCountSync) {
+        onCommentsCountSync(count);
+      }
     } catch (err) {
       console.error('Failed to load comments:', err);
       setError('Unable to load comments at this time.');
     } finally {
       setIsLoading(false);
     }
-  }, [postId, entityType]);
+  }, [postId, entityType, onCommentsCountSync]);
 
   useEffect(() => {
     loadInitialComments();

@@ -5,8 +5,9 @@ from apps.skills.models import SocialLink, UserSkill, UserLearningResource, User
 from apps.resumes.models import Resume
 from apps.community.models import Post
 from apps.interviews.models import InterviewExperience, InterviewRound
+from apps.university.helpers import extract_academic_info_from_email
 
-User = get_user_model()
+User = get_user_model();
 
 class SocialLinkSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,12 +27,18 @@ class ResumeSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'file', 'file_type', 'is_primary', 'created_at']
 
 class SkillSerializer(serializers.ModelSerializer):
+    skill_id = serializers.IntegerField(source='skill.id', read_only=True)
     name = serializers.CharField(source='skill.name', read_only=True)
-    category = serializers.CharField(source='skill.category.category_type', read_only=True)
+    category = serializers.SerializerMethodField()
     
     class Meta:
         model = UserSkill
-        fields = ['name', 'category', 'proficiency']
+        fields = ['id', 'skill_id', 'name', 'category', 'proficiency']
+
+    def get_category(self, obj):
+        if obj.skill and obj.skill.category:
+            return obj.skill.category.name or obj.skill.category.get_category_type_display()
+        return "Technical"
 
 class LearningPlatformSerializer(serializers.ModelSerializer):
     platform_id = serializers.IntegerField(source='platform.id', read_only=True)
@@ -63,12 +70,25 @@ class StudentProfileMasterSerializer(serializers.Serializer):
     resumes = serializers.SerializerMethodField()
     analytics_data = serializers.SerializerMethodField()
     activity = serializers.SerializerMethodField()
+    stats = serializers.SerializerMethodField()
 
     def get_identity(self, obj):
         user = obj['user']
         student_profile = obj['student_profile']
         
-        # AbstractUser provides get_full_name() which combines first_name and last_name
+        # Auto-extract academic info from student university email if missing
+        if not student_profile.department_id or not student_profile.batch_id:
+            d, b = extract_academic_info_from_email(user.email)
+            updated = []
+            if not student_profile.department_id and d:
+                student_profile.department = d
+                updated.append('department')
+            if not student_profile.batch_id and b:
+                student_profile.batch = b
+                updated.append('batch')
+            if updated:
+                student_profile.save(update_fields=updated)
+
         full_name = user.get_full_name()
         
         return {
@@ -76,6 +96,7 @@ class StudentProfileMasterSerializer(serializers.Serializer):
             "full_name": full_name if full_name else user.email.split("@")[0],
             "email": user.email,
             "avatar_url": user.profile_photo,
+            "cover_image": user.cover_image,
             "bio": student_profile.bio,
             "phone": student_profile.phone,
             "address": student_profile.address,
@@ -117,11 +138,20 @@ class StudentProfileMasterSerializer(serializers.Serializer):
             "recent_posts": RecentPostSerializer(posts[:5], many=True).data # Top 5 recent posts
         }
 
+    def get_stats(self, obj):
+        user = obj['user']
+        return {
+            "total_posts": Post.objects.filter(author=user).count(),
+            "total_skills": UserSkill.objects.filter(user=user).count(),
+            "total_resumes": Resume.objects.filter(user=user).count()
+        }
+
 class AlumniProfileMasterSerializer(serializers.Serializer):
     user_id = serializers.IntegerField(source='user.id')
     email = serializers.EmailField(source='user.email')
     full_name = serializers.SerializerMethodField()
-    profile_photo = serializers.URLField(source='user.profile_photo')
+    profile_photo = serializers.CharField(source='user.profile_photo', allow_null=True, required=False)
+    cover_image = serializers.CharField(source='user.cover_image', allow_null=True, required=False)
     is_verified = serializers.BooleanField(source='user.is_verified')
     identity = serializers.SerializerMethodField()
     current_career = serializers.SerializerMethodField()
@@ -140,10 +170,14 @@ class AlumniProfileMasterSerializer(serializers.Serializer):
 
     def get_identity(self, obj):
         alumni = obj['alumni_profile']
+        user = obj['user']
         return {
+            "email": user.email,
             "bio": alumni.bio,
             "department": {"id": alumni.department.id, "name": alumni.department.name} if alumni.department else None,
+            "department_id": alumni.department_id if alumni.department else None,
             "batch": {"id": alumni.batch.id, "name": str(alumni.batch)} if alumni.batch else None,
+            "batch_id": alumni.batch_id if alumni.batch else None,
             "phone": alumni.phone,
             "location": alumni.location
         }
@@ -192,6 +226,7 @@ class AlumniProfileMasterSerializer(serializers.Serializer):
         user = obj['user']
         return {
             "total_posts": Post.objects.filter(author=user).count(),
+            "total_skills": UserSkill.objects.filter(user=user).count(),
             "total_interview_experiences": InterviewExperience.objects.filter(author=user).count()
         }
 
@@ -219,7 +254,8 @@ class PlacementCellProfileMasterSerializer(serializers.Serializer):
     user_id = serializers.IntegerField(source='user.id')
     email = serializers.EmailField(source='user.email')
     full_name = serializers.SerializerMethodField()
-    profile_photo = serializers.URLField(source='user.profile_photo')
+    profile_photo = serializers.CharField(source='user.profile_photo', allow_null=True, required=False)
+    cover_image = serializers.CharField(source='user.cover_image', allow_null=True, required=False)
     is_verified = serializers.BooleanField(source='user.is_verified')
     stats = serializers.SerializerMethodField()
 
@@ -247,15 +283,31 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
     interview_experiences = serializers.SerializerMethodField()
     ai_usage = serializers.SerializerMethodField()
     learning_platforms = serializers.SerializerMethodField()
+    cover_image = serializers.SerializerMethodField()
     stats = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'full_name', 'role', 'profile_photo', 'is_verified',
+            'id', 'email', 'full_name', 'role', 'profile_photo', 'cover_image', 'is_verified',
             'date_joined', 'headline', 'identity', 'skills', 'social_links',
             'experience', 'interview_experiences', 'ai_usage', 'learning_platforms', 'stats'
         ]
+
+    def get_cover_image(self, obj):
+        if not obj.cover_image:
+            return ""
+        val = str(obj.cover_image)
+        if val.startswith('http://') or val.startswith('https://'):
+            return val
+        path = val if val.startswith('/media/') else f"/media/{val.lstrip('/')}"
+        request = self.context.get('request')
+        if request:
+            try:
+                return request.build_absolute_uri(path)
+            except Exception:
+                return path
+        return path
 
     def get_full_name(self, obj):
         full_name = obj.get_full_name().strip()
@@ -292,6 +344,7 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
             "current_company_id": None,
             "current_job_title": None,
             "years_of_experience": 0,
+            "cover_image": self.get_cover_image(obj),
         }
         if obj.role == 'STUDENT' and hasattr(obj, 'student_profile'):
             sp = obj.student_profile

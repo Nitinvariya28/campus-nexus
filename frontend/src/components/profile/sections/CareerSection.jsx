@@ -1,11 +1,34 @@
 import React from 'react';
-import { Briefcase, Building, Edit3 } from 'lucide-react';
+import { Briefcase } from 'lucide-react';
+import CompanyCombobox from '../../community/common/CompanyCombobox';
+import CustomSelect from '../common/CustomSelect';
 
 /**
  * CareerSection Component
  * Alumni-specific corporate career tracking: Company, Role, Category, and Experience.
+ * Uses searchable CompanyCombobox and dynamic job categories.
  */
 export default function CareerSection({ formData, onChange, options }) {
+  const companies = options?.current_career_form?.top_20_companies || [];
+  const jobCategories = options?.current_career_form?.job_categories || [];
+
+  const handleCompanyChange = ({ companyId, newCompanyName }) => {
+    onChange?.({
+      target: {
+        name: 'company_id',
+        value: companyId || '',
+      },
+    });
+    if (newCompanyName) {
+      onChange?.({
+        target: {
+          name: 'company_name',
+          value: newCompanyName,
+        },
+      });
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-5 sm:p-6 space-y-5">
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -13,36 +36,21 @@ export default function CareerSection({ formData, onChange, options }) {
           <Briefcase className="w-5 h-5 text-purple-600" />
           <h2 className="text-base font-semibold text-slate-900">Current Career Information</h2>
         </div>
-        <button
-          type="button"
-          className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
-        >
-          <Edit3 className="w-3.5 h-3.5" /> Edit
-        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Company with Tier Badge */}
+        {/* Company with Searchable Combobox */}
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
             Current Company
           </label>
-          <div className="flex items-center gap-2">
-            <select
-              name="company_id"
-              defaultValue={formData?.company_id || 1}
-              onChange={onChange}
-              className="flex-1 bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              <option value="1">Microsoft</option>
-              <option value="2">Google</option>
-              <option value="3">Amazon</option>
-              <option value="4">Oracle</option>
-            </select>
-            <span className="px-2.5 py-1 text-2xs font-semibold rounded-md bg-purple-50 text-purple-700 border border-purple-200 whitespace-nowrap">
-              Super Dream
-            </span>
-          </div>
+          <CompanyCombobox
+            companies={companies}
+            selectedCompanyId={formData?.company_id || ''}
+            newCompanyName={formData?.company_name && !formData?.company_id ? formData.company_name : ''}
+            onChange={handleCompanyChange}
+            placeholder="Search verified employer (e.g. Google, Microsoft)..."
+          />
         </div>
 
         {/* Job Title / Role */}
@@ -54,32 +62,26 @@ export default function CareerSection({ formData, onChange, options }) {
             type="text"
             name="role"
             maxLength={150}
-            defaultValue={formData?.role || 'Senior Cloud Solutions Architect'}
+            value={formData?.role || ''}
             onChange={onChange}
+            placeholder="e.g. Senior Software Engineer"
             className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
 
-        {/* Job Category */}
+        {/* Job Category with CustomSelect */}
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
             Job Category
           </label>
-          <select
+          <CustomSelect
             name="job_category"
-            defaultValue={formData?.job_category || 'DEVOPS_CLOUD'}
+            value={formData?.job_category || ''}
             onChange={onChange}
-            className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          >
-            <option value="SOFTWARE">Software & Engineering</option>
-            <option value="DATA_SCIENCE">Data Science & AI</option>
-            <option value="PRODUCT_MANAGEMENT">Product Management</option>
-            <option value="DESIGN">Design & UI/UX</option>
-            <option value="DEVOPS_CLOUD">DevOps & Cloud</option>
-            <option value="SECURITY">Cyber Security</option>
-            <option value="BUSINESS_SALES">Business & Sales</option>
-            <option value="OTHER">Other</option>
-          </select>
+            options={jobCategories}
+            placeholder="Select Domain Category..."
+            icon={Briefcase}
+          />
         </div>
 
         {/* Years of Experience */}
@@ -92,7 +94,7 @@ export default function CareerSection({ formData, onChange, options }) {
             min="0"
             max="50"
             name="years_of_experience"
-            defaultValue={formData?.years_of_experience || 4}
+            value={formData?.years_of_experience ?? 0}
             onChange={onChange}
             className="w-full bg-white border border-slate-200 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />

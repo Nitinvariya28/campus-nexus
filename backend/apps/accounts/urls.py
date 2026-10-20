@@ -9,6 +9,7 @@ from .views import (
     PasswordResetVerifyOTPView,
     PasswordResetConfirmView,
     PasswordChangeView,
+    AlumniRequestEmailOTPView,
     AlumniEmailChangeView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -23,6 +24,7 @@ urlpatterns = [
     
     # Authenticated Profile Security Workflows
     path('password/change/', PasswordChangeView.as_view(), name='password-change'),
+    path('alumni/request-email-otp/', AlumniRequestEmailOTPView.as_view(), name='alumni-request-email-otp'),
     path('alumni/change-email/', AlumniEmailChangeView.as_view(), name='alumni-change-email'),
     
     # Password Reset Workflow (Public POST APIs)

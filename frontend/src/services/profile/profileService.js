@@ -35,10 +35,10 @@ export const profileService = {
 
   /**
    * Change account password
-   * POST /api/accounts/password/change/
+   * POST /api/auth/password/change/
    */
   changePassword: async ({ current_password, new_password, confirm_password }) => {
-    const response = await api.post('/accounts/password/change/', {
+    const response = await api.post('/auth/password/change/', {
       current_password,
       new_password,
       confirm_password,
@@ -47,13 +47,56 @@ export const profileService = {
   },
 
   /**
-   * Update alumni personal email address
-   * PATCH /api/accounts/alumni/change-email/
+   * Upload user profile avatar photo
+   * POST /api/profiles/avatar/
    */
-  changeAlumniEmail: async ({ new_email, password }) => {
-    const response = await api.patch('/accounts/alumni/change-email/', {
+  uploadAvatar: async (formData) => {
+    const response = await api.post('/profiles/avatar/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  /**
+   * Upload user profile cover banner image
+   * POST /api/profiles/cover/
+   */
+  uploadCover: async (formData) => {
+    const response = await api.post('/profiles/cover/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  /**
+   * Delete custom cover image and revert to default
+   * DELETE /api/profiles/cover/
+   */
+  deleteCover: async () => {
+    const response = await api.delete('/profiles/cover/');
+    return response.data;
+  },
+
+  /**
+   * Request OTP to update alumni personal email address
+   * POST /api/auth/alumni/request-email-otp/
+   */
+  requestAlumniEmailOTP: async ({ new_email, password }) => {
+    const response = await api.post('/auth/alumni/request-email-otp/', {
       new_email,
       password,
+    });
+    return response.data;
+  },
+
+  /**
+   * Finalize updating alumni personal email address with OTP
+   * PATCH /api/auth/alumni/change-email/
+   */
+  changeAlumniEmail: async ({ new_email, otp_code }) => {
+    const response = await api.patch('/auth/alumni/change-email/', {
+      new_email,
+      otp_code,
     });
     return response.data;
   },

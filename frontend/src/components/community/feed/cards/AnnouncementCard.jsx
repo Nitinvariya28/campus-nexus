@@ -136,10 +136,10 @@ export default function AnnouncementCard({
       <PostActionToolbar
         postId={post.id}
         entityType="ANNOUNCEMENT"
-        initialLikes={post.interactions?.likes_count || 0}
-        initialLiked={post.interactions?.is_liked_by_me || false}
-        initialSaved={post.interactions?.is_bookmarked_by_me || false}
-        initialComments={post.interactions?.comments_count || 0}
+        initialLikes={post.interactions?.likes_count ?? post.likes_count ?? 0}
+        initialLiked={post.interactions?.is_liked_by_me ?? post.is_liked_by_me ?? false}
+        initialSaved={post.interactions?.is_bookmarked_by_me ?? post.is_bookmarked_by_me ?? false}
+        initialComments={post.interactions?.comments_count ?? post.comments_count ?? 0}
         shareTitle={title}
         onUserClick={onUserClick}
       />

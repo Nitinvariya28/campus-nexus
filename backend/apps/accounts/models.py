@@ -36,6 +36,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, max_length=254)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     profile_photo = models.CharField(max_length=500, blank=True, null=True)
+    cover_image = models.CharField(max_length=500, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
     
     USERNAME_FIELD = "email"
@@ -50,6 +51,7 @@ class OTPVerification(models.Model):
     PURPOSE_CHOICES = [
         ("REGISTRATION", "Registration"),
         ("PASSWORD_RESET", "Password Reset"),
+        ("EMAIL_CHANGE", "Email Change"),
     ]
     email = models.EmailField()
     otp_code = models.CharField(max_length=6)

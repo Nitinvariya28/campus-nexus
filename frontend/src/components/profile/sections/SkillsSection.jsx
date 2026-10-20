@@ -4,15 +4,9 @@ import { Sparkles, Plus, X } from 'lucide-react';
 /**
  * SkillsSection Component
  * Interactive chip badges with ADVANCED, INTERMEDIATE, and BEGINNER proficiency indicators.
+ * Strictly zero dummy data - shows real user skills or clean empty state.
  */
-export default function SkillsSection({ skills, onAddSkill, onRemoveSkill }) {
-  const sampleSkills = skills && skills.length > 0 ? skills : [
-    { id: 1, name: 'Python', proficiency: 'ADVANCED' },
-    { id: 2, name: 'React', proficiency: 'INTERMEDIATE' },
-    { id: 3, name: 'Docker', proficiency: 'BEGINNER' },
-    { id: 4, name: 'SQL', proficiency: 'ADVANCED' },
-  ];
-
+export default function SkillsSection({ skills = [], onAddSkill, onRemoveSkill }) {
   const getProficiencyClass = (level) => {
     switch (level) {
       case 'ADVANCED':
@@ -41,31 +35,45 @@ export default function SkillsSection({ skills, onAddSkill, onRemoveSkill }) {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2.5">
-        {sampleSkills.map((skill) => (
-          <div
-            key={skill.id || skill.name}
-            className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200/80 text-xs font-medium text-slate-800 shadow-2xs"
-          >
-            <span>{skill.name}</span>
-            <span
-              className={`px-2 py-0.5 text-2xs font-semibold rounded-full border ${getProficiencyClass(
-                skill.proficiency
-              )}`}
-            >
-              {skill.proficiency}
-            </span>
-            <button
-              type="button"
-              onClick={() => onRemoveSkill && onRemoveSkill(skill.id)}
-              className="text-slate-400 hover:text-slate-600 p-0.5 rounded-sm hover:bg-slate-200 transition"
-              title="Remove skill"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        ))}
-      </div>
+      {skills && skills.length > 0 ? (
+        <div className="flex flex-wrap gap-2.5">
+          {skills.map((skill, index) => {
+            const skillName = skill.name || skill.skill_name || 'Skill';
+            const proficiency = skill.proficiency || 'BEGINNER';
+            const skillKey = skill.skill_id || skill.id || index;
+
+            return (
+              <div
+                key={skillKey}
+                className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200/80 text-xs font-medium text-slate-800 shadow-2xs"
+              >
+                <span>{skillName}</span>
+                <span
+                  className={`px-2 py-0.5 text-2xs font-semibold rounded-full border ${getProficiencyClass(
+                    proficiency
+                  )}`}
+                >
+                  {proficiency}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveSkill && onRemoveSkill(skill.skill_id || skill.id || skill.name)}
+                  className="text-slate-400 hover:text-red-600 p-0.5 rounded-sm hover:bg-slate-200 transition"
+                  title={`Remove ${skillName}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="p-6 text-center rounded-lg border border-dashed border-slate-200 bg-slate-50/50">
+          <p className="text-xs text-slate-500">
+            No technical skills added yet. Click &apos;+ Add Skill&apos; above to highlight your core engineering proficiencies.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,8 +5,13 @@ import { Link } from 'react-router-dom';
 /**
  * InstitutionalTelemetrySection Component
  * Placement Cell specific governance activity telemetry and dashboard shortcut.
+ * Strictly zero dummy numbers.
  */
 export default function InstitutionalTelemetrySection({ stats }) {
+  const opportunitiesCount = stats?.total_opportunities_posted ?? 0;
+  const announcementsCount = stats?.total_announcements_sent ?? 0;
+  const resourcesCount = stats?.total_resources_uploaded ?? 0;
+
   return (
     <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-5 sm:p-6 space-y-5">
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -23,7 +28,7 @@ export default function InstitutionalTelemetrySection({ stats }) {
           </div>
           <div>
             <div className="text-xl font-bold text-slate-900">
-              {stats?.total_opportunities_posted || 45}
+              {opportunitiesCount}
             </div>
             <div className="text-xs text-slate-500">Placement Drives</div>
           </div>
@@ -35,7 +40,7 @@ export default function InstitutionalTelemetrySection({ stats }) {
           </div>
           <div>
             <div className="text-xl font-bold text-slate-900">
-              {stats?.total_announcements_sent || 18}
+              {announcementsCount}
             </div>
             <div className="text-xs text-slate-500">Announcements</div>
           </div>
@@ -47,7 +52,7 @@ export default function InstitutionalTelemetrySection({ stats }) {
           </div>
           <div>
             <div className="text-xl font-bold text-slate-900">
-              {stats?.total_resources_uploaded || 32}
+              {resourcesCount}
             </div>
             <div className="text-xs text-slate-500">Shared Resources</div>
           </div>

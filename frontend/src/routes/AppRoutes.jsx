@@ -37,6 +37,9 @@ import MemberDiscoveryPage from '../pages/community/MemberDiscoveryPage';
 // Profile Settings Page (Protected)
 import AccountSettingsPage from '../pages/profile/AccountSettingsPage';
 
+// Notifications Page (Protected)
+import NotificationsPage from '../pages/notifications/NotificationsPage';
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -77,9 +80,9 @@ export default function AppRoutes() {
           <Route path="community/discover" element={<MemberDiscoveryPage />} />
           <Route path="community/*" element={<Navigate to="/community" replace />} />
 
-          {/* Graceful redirects for modules not yet implemented */}
-          <Route path="notifications" element={<Navigate to="/analytics" replace />} />
-          <Route path="notifications/*" element={<Navigate to="/analytics" replace />} />
+          {/* Notifications Module */}
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="notifications/*" element={<NotificationsPage />} />
         </Route>
 
         {/* 4. Explicit Error Routes & Catch-All (Always accessible) */}

@@ -24,12 +24,27 @@ import {
   FileText,
   UserCheck,
   UserCog,
+  Camera,
+  Trash2,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { fetchUserProfile } from '../../../services/community/communityService';
+import { profileService } from '../../../services/profile/profileService';
 import { useAuth } from '../../../context/AuthContext';
 import RoleBadgePill from '../common/RoleBadgePill';
 import VerifiedOfficialBadge from '../common/VerifiedOfficialBadge';
 import CommunityFeedStream from '../feed/CommunityFeedStream';
+
+const DEFAULT_COVER_IMAGE = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=1600&auto=format&fit=crop';
+
+const resolveImageUrl = (imgUrl) => {
+  if (!imgUrl) return null;
+  if (typeof imgUrl === 'string' && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://'))) {
+    return imgUrl;
+  }
+  const base = import.meta.env.VITE_BACKEND_MEDIA_URL || 'http://127.0.0.1:8000';
+  return `${base}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
+};
 
 /**
  * UserProfileView Component
@@ -51,6 +66,73 @@ export default function UserProfileView({ userId, onBack }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'posts'
+  const coverInputRef = React.useRef(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+
+  const handleCoverFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (JPG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image size must be less than 10MB.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('cover_image', file);
+
+    setIsUploadingCover(true);
+    const toastId = toast.loading('Uploading cover photo...');
+    try {
+      const res = await profileService.uploadCover(formData);
+      const newCover = res.cover_image || res.cover_url;
+      setProfile((prev) => ({
+        ...prev,
+        cover_image: newCover,
+        identity: {
+          ...prev?.identity,
+          cover_image: newCover,
+        },
+      }));
+      toast.success('Cover photo updated successfully!', { id: toastId });
+    } catch (err) {
+      console.error('Failed to upload cover:', err);
+      toast.error(err?.response?.data?.error || 'Failed to update cover photo.', { id: toastId });
+    } finally {
+      setIsUploadingCover(false);
+      if (coverInputRef.current) {
+        coverInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveCover = async () => {
+    if (!window.confirm('Reset cover image to default academic campus banner?')) return;
+    setIsUploadingCover(true);
+    const toastId = toast.loading('Resetting cover photo...');
+    try {
+      await profileService.deleteCover();
+      setProfile((prev) => ({
+        ...prev,
+        cover_image: null,
+        identity: {
+          ...prev?.identity,
+          cover_image: null,
+        },
+      }));
+      toast.success('Cover photo reset to default.', { id: toastId });
+    } catch (err) {
+      console.error('Failed to remove cover:', err);
+      toast.error(err?.response?.data?.error || 'Failed to remove cover photo.', { id: toastId });
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -134,6 +216,7 @@ export default function UserProfileView({ userId, onBack }) {
     email,
     role,
     profile_photo,
+    cover_image,
     is_verified,
     headline,
     identity = {},
@@ -144,6 +227,10 @@ export default function UserProfileView({ userId, onBack }) {
     ai_usage = [],
     stats = {},
   } = profile;
+
+  const rawCover = cover_image || identity?.cover_image || null;
+  const resolvedCoverImage = resolveImageUrl(rawCover) || DEFAULT_COVER_IMAGE;
+  const hasCustomCover = Boolean(rawCover);
 
   const initial = full_name ? full_name.charAt(0).toUpperCase() : 'U';
 
@@ -170,30 +257,79 @@ export default function UserProfileView({ userId, onBack }) {
       {/* 1. TOP HERO: LinkedIn-Style Banner & Header Card */}
       <div className="bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-2xs relative">
         {/* Cover Banner */}
-        <div className="h-32 sm:h-44 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 relative">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/10 via-transparent to-black/30 pointer-events-none" />
+        <div className="h-36 sm:h-52 md:h-64 relative overflow-hidden bg-slate-900 group">
+          <img
+            src={resolvedCoverImage}
+            alt="Profile Cover"
+            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
+            onError={(e) => {
+              if (e.currentTarget.src !== DEFAULT_COVER_IMAGE) {
+                e.currentTarget.src = DEFAULT_COVER_IMAGE;
+              }
+            }}
+          />
+          {/* Subtle dark gradient overlay for text and button contrast */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-900/25 to-slate-950/40 pointer-events-none" />
 
           {/* Top Left: Back to Feed CTA Button */}
           <button
             type="button"
             onClick={onBack}
-            className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-900 bg-white/95 hover:bg-white shadow-xs backdrop-blur-xs transition-all cursor-pointer"
+            className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-800 bg-white/95 hover:bg-white shadow-xs backdrop-blur-md transition-all cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Feed</span>
           </button>
 
-          {/* Top Right: Update Profile CTA Button if Viewing Own Profile */}
+          {/* Top Right: Actions when Viewing Own Profile */}
           {isOwnProfile && (
-            <button
-              type="button"
-              onClick={() => navigate('/profile')}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-900 bg-white/95 hover:bg-white shadow-xs backdrop-blur-xs transition-all cursor-pointer"
-              title="Edit Profile in Account Settings"
-            >
-              <UserCog className="w-3.5 h-3.5 text-blue-600" />
-              <span>Update Profile</span>
-            </button>
+            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex items-center gap-2">
+              <input
+                type="file"
+                ref={coverInputRef}
+                accept="image/*"
+                onChange={handleCoverFileSelect}
+                className="hidden"
+              />
+
+              {hasCustomCover && (
+                <button
+                  type="button"
+                  onClick={handleRemoveCover}
+                  disabled={isUploadingCover}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-700 bg-white/95 hover:bg-rose-50 shadow-xs backdrop-blur-md transition-all cursor-pointer disabled:opacity-60"
+                  title="Remove custom cover and restore default academic banner"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span className="hidden sm:inline">Reset</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                disabled={isUploadingCover}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-800 bg-white/95 hover:bg-white shadow-xs backdrop-blur-md transition-all cursor-pointer disabled:opacity-60"
+                title="Change Cover Banner Photo"
+              >
+                {isUploadingCover ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                ) : (
+                  <Camera className="w-3.5 h-3.5 text-blue-600" />
+                )}
+                <span>{hasCustomCover ? 'Change Cover' : 'Add Cover'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-800 bg-white/95 hover:bg-white shadow-xs backdrop-blur-md transition-all cursor-pointer"
+                title="Edit Profile in Account Settings"
+              >
+                <UserCog className="w-3.5 h-3.5 text-blue-600" />
+                <span className="hidden md:inline">Update Profile</span>
+              </button>
+            </div>
           )}
         </div>
 

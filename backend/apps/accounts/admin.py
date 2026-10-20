@@ -11,7 +11,7 @@ class CustomUserAdmin(UserAdmin):
     ordering = ("email",)
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal Information", {"fields": ("first_name", "last_name", "profile_photo")}),
+        ("Personal Information", {"fields": ("first_name", "last_name", "profile_photo", "cover_image")}),
         ("Platform Role", {"fields": ("role", "is_verified")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important Dates", {"fields": ("last_login", "date_joined")}),

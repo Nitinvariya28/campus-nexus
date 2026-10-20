@@ -172,10 +172,10 @@ export default function StandardPostCard({
       <PostActionToolbar
         postId={id}
         entityType="POST"
-        initialLikes={interactions.likes_count || 0}
-        initialLiked={interactions.is_liked_by_me || false}
-        initialSaved={interactions.is_bookmarked_by_me || false}
-        initialComments={interactions.comments_count || 0}
+        initialLikes={interactions?.likes_count ?? post?.likes_count ?? 0}
+        initialLiked={interactions?.is_liked_by_me ?? post?.is_liked_by_me ?? false}
+        initialSaved={interactions?.is_bookmarked_by_me ?? post?.is_bookmarked_by_me ?? false}
+        initialComments={interactions?.comments_count ?? post?.comments_count ?? 0}
         shareTitle={title}
         onLikeChange={onLikeToggle}
         onBookmarkChange={onBookmarkToggle}

@@ -14,6 +14,8 @@ from rest_framework.exceptions import PermissionDenied
 
 # Core Models
 from .models import Post, Tag, PostTag, PostMedia, Comment, PostLike, SavedPost
+from apps.accounts.models import User
+from apps.notifications.models import Notification
 from apps.opportunities.models import Opportunity, OpportunitySkill
 from apps.announcements.models import Announcement
 from apps.interviews.models import InterviewExperience, InterviewRound
@@ -81,7 +83,7 @@ class BaseFeedView(APIView):
         posts_data = Post.objects.filter(id__in=post_ids).select_related(
             'author', 'author__student_profile__department', 'author__student_profile__batch',
             'author__alumni_profile__current_company', 'company'
-        ).prefetch_related('media', 'post_tags__tag', 'likes')
+        ).prefetch_related('media', 'post_tags__tag', 'likes', 'comments', 'saved_by_users')
         
         opps_data = Opportunity.objects.filter(id__in=opp_ids).select_related(
             'company', 'role', 'posted_by'
@@ -149,7 +151,7 @@ class UnifiedFeedView(BaseFeedView):
         # Sort: ?sort=latest or ?sort=popular
         sort = request.query_params.get('sort', 'latest').strip().lower()
 
-        posts_qs = Post.objects.all()
+        posts_qs = Post.objects.exclude(title__startswith='[')
         opps_qs = Opportunity.objects.filter(status='OPEN')
         anns_qs = Announcement.objects.filter(is_published=True)
         interviews_qs = InterviewExperience.objects.all()
@@ -242,7 +244,7 @@ class FeedSearchView(BaseFeedView):
         elif len(roles) == 1 and ',' in roles[0]:
             roles = [r.strip() for r in roles[0].split(',') if r.strip()]
 
-        posts_qs = Post.objects.filter(
+        posts_qs = Post.objects.exclude(title__startswith='[').filter(
             Q(title__icontains=query) |
             Q(content__icontains=query) |
             Q(company__name__icontains=query) |
@@ -476,6 +478,24 @@ class CreatePostView(APIView):
             serializer = OpportunityCreateSerializer(data=request.data)
             if serializer.is_valid():
                 opp = serializer.save(posted_by=user)
+                try:
+                    recipients = User.objects.filter(role__in=['STUDENT', 'ALUMNI'], is_active=True).exclude(id=user.id)
+                    notifs = [
+                        Notification(
+                            recipient=r,
+                            actor=user,
+                            notification_type="NEW_OPPORTUNITY",
+                            title=f"New Opportunity: {opp.title}",
+                            message=f"{opp.company_name or 'Placement Cell'} posted a new drive ({opp.opportunity_type})",
+                            reference_type="OPPORTUNITY",
+                            reference_id=opp.id
+                        )
+                        for r in recipients
+                    ]
+                    if notifs:
+                        Notification.objects.bulk_create(notifs)
+                except Exception:
+                    pass
                 return Response({"message": "Opportunity created successfully.", "id": opp.id}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -483,6 +503,24 @@ class CreatePostView(APIView):
             serializer = AnnouncementCreateSerializer(data=request.data)
             if serializer.is_valid():
                 ann = serializer.save(created_by=user)
+                try:
+                    recipients = User.objects.filter(role__in=['STUDENT', 'ALUMNI'], is_active=True).exclude(id=user.id)
+                    notifs = [
+                        Notification(
+                            recipient=r,
+                            actor=user,
+                            notification_type="NEW_ANNOUNCEMENT",
+                            title=f"Official Announcement: {ann.title}",
+                            message=(ann.content or ann.title)[:120],
+                            reference_type="ANNOUNCEMENT",
+                            reference_id=ann.id
+                        )
+                        for r in recipients
+                    ]
+                    if notifs:
+                        Notification.objects.bulk_create(notifs)
+                except Exception:
+                    pass
                 return Response({"message": "Announcement created successfully.", "id": ann.id}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -490,6 +528,20 @@ class CreatePostView(APIView):
             serializer = InterviewExperienceCreateSerializer(data=request.data)
             if serializer.is_valid():
                 ie = serializer.save(author=user)
+                try:
+                    company_name = ie.company.name if ie.company else "Company"
+                    role_name = ie.role.role_name if ie.role else "Process"
+                    Post.objects.get_or_create(
+                        title=f"[Interview #{ie.id}] {company_name} - {role_name}",
+                        defaults={
+                            'author': user,
+                            'company': ie.company,
+                            'post_type': 'INTERVIEW_EXPERIENCE',
+                            'content': ie.experience or 'Interview Experience',
+                        }
+                    )
+                except Exception as e:
+                    print(f"Error creating post shadow for interview experience: {e}")
                 return Response({"message": "Interview Experience created successfully.", "id": ie.id}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
@@ -671,56 +723,117 @@ class PostDetailView(APIView):
         return Response({"error": "Invalid type."}, status=status.HTTP_400_BAD_REQUEST)
 
 def get_post_for_interaction(post_id, entity_type=None):
-    post_obj = Post.objects.filter(id=post_id).first()
-    if post_obj:
-        return post_obj
-
     entity_type = (entity_type or '').upper()
 
-    if entity_type == 'OPPORTUNITY' or not entity_type:
+    if entity_type == 'INTERVIEW_EXPERIENCE':
+        ie = InterviewExperience.objects.filter(id=post_id).first()
+        if ie:
+            company_name = ie.company.name if ie.company else "Company"
+            role_name = ie.role.role_name if ie.role else "Process"
+            title = f"[Interview #{ie.id}] {company_name} - {role_name}"
+            post = Post.objects.filter(title=title).first()
+            if not post:
+                post = Post.objects.filter(title=f"[Interview] {company_name} - {role_name}", author=ie.author).first()
+            if not post:
+                post = Post.objects.create(
+                    author=ie.author,
+                    company=ie.company,
+                    post_type='INTERVIEW_EXPERIENCE',
+                    title=title,
+                    content=ie.experience or 'Interview Experience',
+                )
+            elif post.author != ie.author:
+                post.author = ie.author
+                post.save(update_fields=['author'])
+            return post
+
+    elif entity_type == 'OPPORTUNITY':
         opp = Opportunity.objects.filter(id=post_id).first()
         if opp:
             from apps.accounts.models import User
             author = opp.posted_by or User.objects.filter(role='PLACEMENT_CELL').first() or User.objects.first()
-            post, _ = Post.objects.get_or_create(
-                title=f"[Opportunity] {opp.title}",
-                defaults={
-                    'author': author,
-                    'company': opp.company,
-                    'post_type': 'PLACEMENT_EXPERIENCE',
-                    'content': opp.description or opp.title,
-                }
-            )
+            title = f"[Opportunity #{opp.id}] {opp.title}"
+            post = Post.objects.filter(title=title).first() or Post.objects.filter(title=f"[Opportunity] {opp.title}").first()
+            if not post:
+                post = Post.objects.create(
+                    author=author,
+                    company=opp.company,
+                    post_type='PLACEMENT_EXPERIENCE',
+                    title=title,
+                    content=opp.description or opp.title,
+                )
             return post
 
-    if entity_type == 'ANNOUNCEMENT' or not entity_type:
+    elif entity_type == 'ANNOUNCEMENT':
         ann = Announcement.objects.filter(id=post_id).first()
         if ann:
             from apps.accounts.models import User
             author = ann.created_by or User.objects.filter(role='PLACEMENT_CELL').first() or User.objects.first()
-            post, _ = Post.objects.get_or_create(
-                title=f"[Announcement] {ann.title}",
-                defaults={
-                    'author': author,
-                    'post_type': 'GENERAL',
-                    'content': ann.content or ann.title,
-                }
-            )
+            title = f"[Announcement #{ann.id}] {ann.title}"
+            post = Post.objects.filter(title=title).first() or Post.objects.filter(title=f"[Announcement] {ann.title}").first()
+            if not post:
+                post = Post.objects.create(
+                    author=author,
+                    post_type='GENERAL',
+                    title=title,
+                    content=ann.content or ann.title,
+                )
             return post
 
-    if entity_type == 'INTERVIEW_EXPERIENCE' or not entity_type:
-        ie = InterviewExperience.objects.filter(id=post_id).first()
-        if ie:
-            post, _ = Post.objects.get_or_create(
-                title=f"[Interview] {ie.company.name} - {ie.role.role_name if ie.role else 'Process'}",
-                defaults={
-                    'author': ie.author,
-                    'company': ie.company,
-                    'post_type': 'INTERVIEW_EXPERIENCE',
-                    'content': ie.experience or 'Interview Experience',
-                }
+    elif entity_type in ['POST', 'STANDARD_POST']:
+        return get_object_or_404(Post, id=post_id)
+
+    # Fallback if entity_type is empty or None
+    post_obj = Post.objects.filter(id=post_id).first()
+    if post_obj:
+        return post_obj
+
+    ie = InterviewExperience.objects.filter(id=post_id).first()
+    if ie:
+        company_name = ie.company.name if ie.company else "Company"
+        role_name = ie.role.role_name if ie.role else "Process"
+        title = f"[Interview #{ie.id}] {company_name} - {role_name}"
+        post = Post.objects.filter(title=title).first()
+        if not post:
+            post = Post.objects.create(
+                author=ie.author,
+                company=ie.company,
+                post_type='INTERVIEW_EXPERIENCE',
+                title=title,
+                content=ie.experience or 'Interview Experience',
             )
-            return post
+        return post
+
+    opp = Opportunity.objects.filter(id=post_id).first()
+    if opp:
+        from apps.accounts.models import User
+        author = opp.posted_by or User.objects.filter(role='PLACEMENT_CELL').first() or User.objects.first()
+        title = f"[Opportunity #{opp.id}] {opp.title}"
+        post = Post.objects.filter(title=title).first() or Post.objects.filter(title=f"[Opportunity] {opp.title}").first()
+        if not post:
+            post = Post.objects.create(
+                author=author,
+                company=opp.company,
+                post_type='PLACEMENT_EXPERIENCE',
+                title=title,
+                content=opp.description or opp.title,
+            )
+        return post
+
+    ann = Announcement.objects.filter(id=post_id).first()
+    if ann:
+        from apps.accounts.models import User
+        author = ann.created_by or User.objects.filter(role='PLACEMENT_CELL').first() or User.objects.first()
+        title = f"[Announcement #{ann.id}] {ann.title}"
+        post = Post.objects.filter(title=title).first() or Post.objects.filter(title=f"[Announcement] {ann.title}").first()
+        if not post:
+            post = Post.objects.create(
+                author=author,
+                post_type='GENERAL',
+                title=title,
+                content=ann.content or ann.title,
+            )
+        return post
 
     return get_object_or_404(Post, id=post_id)
 
@@ -748,6 +861,30 @@ class CreateCommentView(APIView):
             author=request.user,
             content=serializer.validated_data['content']
         )
+        if post_obj.author and post_obj.author != request.user:
+            try:
+                actor_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.email.split('@')[0]
+                post_title = post_obj.title or "Post"
+                if post_title.startswith('[Interview'):
+                    entity_label = "interview experience"
+                elif post_title.startswith('[Opportunity'):
+                    entity_label = "opportunity"
+                elif post_title.startswith('[Announcement'):
+                    entity_label = "announcement"
+                else:
+                    entity_label = "post"
+
+                Notification.objects.create(
+                    recipient=post_obj.author,
+                    actor=request.user,
+                    notification_type="POST_COMMENT",
+                    title=f"{actor_name} commented on your {entity_label}",
+                    message=f'"{comment.content[:100]}"',
+                    reference_type="POST",
+                    reference_id=post_obj.id,
+                )
+            except Exception as e:
+                print(f"Failed to create comment notification: {e}")
         response_serializer = CommentSerializer(comment, context={'request': request})
         return Response({"message": "Comment added successfully.", "comment": response_serializer.data}, status=status.HTTP_201_CREATED)
 
@@ -763,6 +900,34 @@ class ToggleLikeView(APIView):
             return Response({"message": "Post unliked.", "likes_count": post_obj.likes.count(), "is_liked_by_me": False}, status=status.HTTP_200_OK)
         else:
             PostLike.objects.create(post=post_obj, user=user)
+            if post_obj.author and post_obj.author != user:
+                try:
+                    actor_name = f"{user.first_name} {user.last_name}".strip() or user.email.split('@')[0]
+                    post_title = post_obj.title or "Post"
+                    if post_title.startswith('[Interview'):
+                        entity_label = "interview experience"
+                        clean_title = post_title.split('] ', 1)[-1] if '] ' in post_title else post_title
+                    elif post_title.startswith('[Opportunity'):
+                        entity_label = "opportunity"
+                        clean_title = post_title.split('] ', 1)[-1] if '] ' in post_title else post_title
+                    elif post_title.startswith('[Announcement'):
+                        entity_label = "announcement"
+                        clean_title = post_title.split('] ', 1)[-1] if '] ' in post_title else post_title
+                    else:
+                        entity_label = "post"
+                        clean_title = post_title
+
+                    Notification.objects.create(
+                        recipient=post_obj.author,
+                        actor=user,
+                        notification_type="POST_LIKE",
+                        title=f"{actor_name} liked your {entity_label}",
+                        message=f'"{clean_title[:80]}"',
+                        reference_type="POST",
+                        reference_id=post_obj.id,
+                    )
+                except Exception as e:
+                    print(f"Failed to create like notification: {e}")
             return Response({"message": "Post liked.", "likes_count": post_obj.likes.count(), "is_liked_by_me": True}, status=status.HTTP_200_OK)
 
 class ManageCommentView(APIView):
@@ -799,6 +964,34 @@ class ToggleBookmarkView(APIView):
             return Response({"message": "Post removed from bookmarks.", "is_bookmarked_by_me": False}, status=status.HTTP_200_OK)
         else:
             SavedPost.objects.create(post=post_obj, user=user)
+            if post_obj.author and post_obj.author != user:
+                try:
+                    actor_name = f"{user.first_name} {user.last_name}".strip() or user.email.split('@')[0]
+                    post_title = post_obj.title or "Post"
+                    if post_title.startswith('[Interview'):
+                        entity_label = "interview experience"
+                        clean_title = post_title.split('] ', 1)[-1] if '] ' in post_title else post_title
+                    elif post_title.startswith('[Opportunity'):
+                        entity_label = "opportunity"
+                        clean_title = post_title.split('] ', 1)[-1] if '] ' in post_title else post_title
+                    elif post_title.startswith('[Announcement'):
+                        entity_label = "announcement"
+                        clean_title = post_title.split('] ', 1)[-1] if '] ' in post_title else post_title
+                    else:
+                        entity_label = "post"
+                        clean_title = post_title
+
+                    Notification.objects.create(
+                        recipient=post_obj.author,
+                        actor=user,
+                        notification_type="POST_SAVE",
+                        title=f"{actor_name} saved your {entity_label}",
+                        message=f'"{clean_title[:80]}"',
+                        reference_type="POST",
+                        reference_id=post_obj.id,
+                    )
+                except Exception as e:
+                    print(f"Failed to create save notification: {e}")
             return Response({"message": "Post bookmarked successfully.", "is_bookmarked_by_me": True}, status=status.HTTP_200_OK)
 
 class BookmarkListView(APIView):
