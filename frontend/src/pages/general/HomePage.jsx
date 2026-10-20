@@ -27,6 +27,7 @@ export default function HomePage() {
     companies_count: null,
     posts_count: null,
   });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -34,11 +35,14 @@ export default function HomePage() {
       .then((res) => {
         if (isMounted && res.data?.data) {
           setStats(res.data.data);
+          setLoadingStats(false);
         }
       })
       .catch((err) => {
-        // Fallback gracefully without breaking UI
         console.warn('Landing stats fetch fallback:', err);
+        if (isMounted) {
+          setLoadingStats(false);
+        }
       });
 
     return () => {
@@ -397,7 +401,13 @@ export default function HomePage() {
             </div>
             <div>
               <div className="text-xl sm:text-2xl font-black text-slate-900">
-                {stats.students_count !== null ? `${stats.students_count}+` : '300+'}
+                {loadingStats ? (
+                  <span className="inline-block w-16 h-7 bg-slate-200 animate-pulse rounded" />
+                ) : stats.students_count !== null ? (
+                  `${stats.students_count.toLocaleString()}+`
+                ) : (
+                  '0'
+                )}
               </div>
               <div className="text-xs text-slate-500 font-medium">Students</div>
             </div>
@@ -410,7 +420,13 @@ export default function HomePage() {
             </div>
             <div>
               <div className="text-xl sm:text-2xl font-black text-slate-900">
-                {stats.alumni_count !== null ? `${stats.alumni_count}+` : '500+'}
+                {loadingStats ? (
+                  <span className="inline-block w-16 h-7 bg-slate-200 animate-pulse rounded" />
+                ) : stats.alumni_count !== null ? (
+                  `${stats.alumni_count.toLocaleString()}+`
+                ) : (
+                  '0'
+                )}
               </div>
               <div className="text-xs text-slate-500 font-medium">Alumni</div>
             </div>
@@ -423,7 +439,13 @@ export default function HomePage() {
             </div>
             <div>
               <div className="text-xl sm:text-2xl font-black text-slate-900">
-                {stats.companies_count !== null ? `${stats.companies_count}+` : '150+'}
+                {loadingStats ? (
+                  <span className="inline-block w-16 h-7 bg-slate-200 animate-pulse rounded" />
+                ) : stats.companies_count !== null ? (
+                  `${stats.companies_count.toLocaleString()}+`
+                ) : (
+                  '0'
+                )}
               </div>
               <div className="text-xs text-slate-500 font-medium">Recruiters & Companies</div>
             </div>
@@ -436,7 +458,13 @@ export default function HomePage() {
             </div>
             <div>
               <div className="text-xl sm:text-2xl font-black text-slate-900">
-                {stats.posts_count !== null ? `${stats.posts_count}+` : '500+'}
+                {loadingStats ? (
+                  <span className="inline-block w-16 h-7 bg-slate-200 animate-pulse rounded" />
+                ) : stats.posts_count !== null ? (
+                  `${stats.posts_count.toLocaleString()}+`
+                ) : (
+                  '0'
+                )}
               </div>
               <div className="text-xs text-slate-500 font-medium">Shared Experiences</div>
             </div>

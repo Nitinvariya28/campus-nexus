@@ -36,7 +36,7 @@ export default function CreatePostModal({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { adjustPosts } = useCommunityStats();
-  const { options, isLoading } = usePostOptions();
+  const { options, isLoading, error: optionsError, retry: reloadOptions } = usePostOptions();
 
   const isEdit = mode === 'edit';
 
@@ -220,6 +220,20 @@ export default function CreatePostModal({
         <div className="py-8 text-center space-y-2">
           <Loader2 className="w-6 h-6 text-blue-600 animate-spin mx-auto" />
           <p className="text-xs text-slate-500">Loading role permissions & form options...</p>
+        </div>
+      ) : optionsError && !options ? (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-3">
+          <div>
+            <h4 className="font-bold">Unable to load form options</h4>
+            <p className="text-2xs text-rose-600 mt-0.5">{optionsError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={reloadOptions}
+            className="px-3 py-1.5 bg-rose-600 text-white rounded-lg font-medium text-xs hover:bg-rose-700 transition"
+          >
+            Retry
+          </button>
         </div>
       ) : (
         <>

@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return Boolean(localStorage.getItem('access_token') || localStorage.getItem('dev_auth') === 'true');
+    return Boolean(localStorage.getItem('access_token'));
   });
 
   // Login handler
@@ -37,7 +37,6 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
     }
-    localStorage.removeItem('dev_auth');
     setIsAuthenticated(true);
   };
 
@@ -63,29 +62,15 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
-    localStorage.removeItem('dev_auth');
     setUser(null);
     setAccessToken(null);
     setIsAuthenticated(false);
   };
 
-  // Development helper to quickly toggle between Guest and Logged-In view
+  // Development toggle (removed dummy user to enforce genuine API authentication)
   const toggleDevAuth = () => {
     if (isAuthenticated) {
       logout();
-    } else {
-      const dummyUser = {
-        id: 1,
-        first_name: 'Nitin',
-        last_name: 'Variya',
-        email: '24bce006@nirmauni.ac.in',
-        role: 'STUDENT',
-        avatar: null,
-      };
-      localStorage.setItem('dev_auth', 'true');
-      localStorage.setItem('user', JSON.stringify(dummyUser));
-      setUser(dummyUser);
-      setIsAuthenticated(true);
     }
   };
 
