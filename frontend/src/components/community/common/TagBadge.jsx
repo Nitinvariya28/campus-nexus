@@ -32,21 +32,30 @@ export const getTagStyle = (rawTag, isSelected = false) => {
 /**
  * TagBadge Component
  * Category hashtag chip with deterministic palette generation and consistent visual contrast.
+ * When onClick is not provided, renders as non-interactive span with pointer-events-none
+ * to allow parent clickable containers (e.g. trending topic rows) to receive click events cleanly.
  */
 export default function TagBadge({ tag, onClick, isSelected = false, className = '' }) {
   const normalizedTag = tag?.startsWith('#') ? tag : `#${tag || 'General'}`;
   const styleClass = getTagStyle(normalizedTag, isSelected);
 
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`px-2.5 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1 w-fit transition-all hover:opacity-90 cursor-pointer border ${styleClass} ${className}`}
+      >
+        <span>{normalizedTag}</span>
+      </button>
+    );
+  }
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!onClick}
-      className={`px-2.5 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1 w-fit transition-all ${
-        onClick ? 'hover:opacity-90 cursor-pointer' : 'cursor-default'
-      } border ${styleClass} ${className}`}
+    <span
+      className={`px-2.5 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1 w-fit border select-none pointer-events-none ${styleClass} ${className}`}
     >
       <span>{normalizedTag}</span>
-    </button>
+    </span>
   );
 }

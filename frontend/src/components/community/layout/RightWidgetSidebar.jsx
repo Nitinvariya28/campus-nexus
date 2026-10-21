@@ -182,8 +182,15 @@ export default function RightWidgetSidebar({
           {activeTag && (
             <button
               type="button"
-              onClick={() => handleTagClick(activeTag)}
+              onClick={() => {
+                if (filterContext?.clearTag) {
+                  filterContext.clearTag();
+                } else {
+                  handleTagClick(activeTag);
+                }
+              }}
               className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
+              title="Clear active topic filter"
             >
               <span>Clear</span>
               <X className="w-3 h-3" />
@@ -203,8 +210,8 @@ export default function RightWidgetSidebar({
         ) : widgetsData.trending_topics.length > 0 ? (
           <div className="space-y-1.5">
             {widgetsData.trending_topics.map((topic, index) => {
-              const cleanTopic = topic.raw_name || topic.tag.replace(/^#/, '');
-              const isSelected = activeTag === cleanTopic;
+              const cleanTopic = (topic.raw_name || topic.tag || '').replace(/^#/, '').trim();
+              const isSelected = Boolean(activeTag) && activeTag.toLowerCase() === cleanTopic.toLowerCase();
 
               return (
                 <div
@@ -218,8 +225,12 @@ export default function RightWidgetSidebar({
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleTagClick(cleanTopic);
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleTagClick(cleanTopic);
+                    }
                   }}
+                  title={isSelected ? `Click to deselect #${cleanTopic}` : `Filter feed by #${cleanTopic}`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`text-[10px] font-bold w-4 text-center shrink-0 ${

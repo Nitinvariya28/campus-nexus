@@ -32,14 +32,14 @@ export function CommunityFilterProvider({ children }) {
     setSelectedCategories(Array.isArray(cats) ? cats : []);
   }, []);
 
-  // Select or toggle trending tag
+  // Select or switch trending tag, or toggle off if the same tag is clicked again
   const selectTag = useCallback((tagName) => {
     if (!tagName) {
       setActiveTag(null);
       return;
     }
-    const cleanTag = tagName.startsWith('#') ? tagName.slice(1) : tagName;
-    setActiveTag((prev) => (prev === cleanTag ? null : cleanTag));
+    const cleanTag = tagName.replace(/^#/, '').trim();
+    setActiveTag((prev) => (prev && prev.toLowerCase() === cleanTag.toLowerCase() ? null : cleanTag));
   }, []);
 
   // Explicit clear for active tag
