@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "apps.resumes",
     "apps.reports",
     "apps.analytics",
+    "apps.ai_module",
 ]
 
 MIDDLEWARE = [
@@ -216,3 +217,12 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+
+# ==========================================
+# AI Module Configurations
+# ==========================================
+QDRANT_STORAGE_PATH = BASE_DIR / "storage" / "qdrant_data"
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_DIMENSION = 384
+PROFILE_CHUNK_TOKEN_TARGET = 200
+PROFILE_CHUNK_TOKEN_OVERLAP = 25

@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/reports/', include('apps.reports.urls')),
     path('api/resumes/', include('apps.resumes.urls')),
+    path('api/ai/', include('apps.ai_module.urls')),
 ]
 
 from django.conf import settings
