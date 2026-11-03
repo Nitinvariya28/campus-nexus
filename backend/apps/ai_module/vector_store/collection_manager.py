@@ -65,28 +65,40 @@ class CollectionManager:
         """
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
-            # 1. Indexes for student_vectors
+            # 1. Full-field Indexes for student_vectors
             self._safe_create_index(COLLECTION_STUDENT_VECTORS, "mysql_user_id", PayloadSchemaType.INTEGER)
             self._safe_create_index(COLLECTION_STUDENT_VECTORS, "department_id", PayloadSchemaType.INTEGER)
+            self._safe_create_index(COLLECTION_STUDENT_VECTORS, "batch_id", PayloadSchemaType.INTEGER)
+            self._safe_create_index(COLLECTION_STUDENT_VECTORS, "semester", PayloadSchemaType.INTEGER)
             self._safe_create_index(COLLECTION_STUDENT_VECTORS, "chunk_type", PayloadSchemaType.KEYWORD)
             self._safe_create_index(COLLECTION_STUDENT_VECTORS, "is_active", PayloadSchemaType.BOOL)
 
-            # 2. Indexes for alumni_vectors
+            # 2. Full-field Indexes for alumni_vectors
             self._safe_create_index(COLLECTION_ALUMNI_VECTORS, "mysql_user_id", PayloadSchemaType.INTEGER)
             self._safe_create_index(COLLECTION_ALUMNI_VECTORS, "company_id", PayloadSchemaType.INTEGER)
             self._safe_create_index(COLLECTION_ALUMNI_VECTORS, "department_id", PayloadSchemaType.INTEGER)
+            self._safe_create_index(COLLECTION_ALUMNI_VECTORS, "job_category", PayloadSchemaType.KEYWORD)
+            self._safe_create_index(COLLECTION_ALUMNI_VECTORS, "company_tier", PayloadSchemaType.KEYWORD)
+            self._safe_create_index(COLLECTION_ALUMNI_VECTORS, "experience_years", PayloadSchemaType.FLOAT)
             self._safe_create_index(COLLECTION_ALUMNI_VECTORS, "chunk_type", PayloadSchemaType.KEYWORD)
             self._safe_create_index(COLLECTION_ALUMNI_VECTORS, "is_active", PayloadSchemaType.BOOL)
 
-            # 3. Indexes for opportunity_post_vectors
+            # 3. Full-field Indexes for opportunity_post_vectors
             self._safe_create_index(COLLECTION_OPPORTUNITY_POST_VECTORS, "post_id", PayloadSchemaType.INTEGER)
             self._safe_create_index(COLLECTION_OPPORTUNITY_POST_VECTORS, "company_id", PayloadSchemaType.INTEGER)
+            self._safe_create_index(COLLECTION_OPPORTUNITY_POST_VECTORS, "status", PayloadSchemaType.KEYWORD)
+            self._safe_create_index(COLLECTION_OPPORTUNITY_POST_VECTORS, "opportunity_type", PayloadSchemaType.KEYWORD)
+            self._safe_create_index(COLLECTION_OPPORTUNITY_POST_VECTORS, "company_tier", PayloadSchemaType.KEYWORD)
             self._safe_create_index(COLLECTION_OPPORTUNITY_POST_VECTORS, "author_role", PayloadSchemaType.KEYWORD)
+            self._safe_create_index(COLLECTION_OPPORTUNITY_POST_VECTORS, "eligible_department_ids", PayloadSchemaType.INTEGER)
+            self._safe_create_index(COLLECTION_OPPORTUNITY_POST_VECTORS, "eligible_batch_ids", PayloadSchemaType.INTEGER)
             self._safe_create_index(COLLECTION_OPPORTUNITY_POST_VECTORS, "is_active", PayloadSchemaType.BOOL)
 
-            # 4. Indexes for knowledge_vectors
+            # 4. Full-field Indexes for knowledge_vectors
             self._safe_create_index(COLLECTION_KNOWLEDGE_VECTORS, "source_id", PayloadSchemaType.KEYWORD)
             self._safe_create_index(COLLECTION_KNOWLEDGE_VECTORS, "category", PayloadSchemaType.KEYWORD)
+            self._safe_create_index(COLLECTION_KNOWLEDGE_VECTORS, "company_id", PayloadSchemaType.INTEGER)
+            self._safe_create_index(COLLECTION_KNOWLEDGE_VECTORS, "access_level", PayloadSchemaType.KEYWORD)
 
     def _safe_create_index(self, collection_name: str, field_name: str, schema_type: PayloadSchemaType):
         """Safely creates a payload index without failing if it already exists."""
