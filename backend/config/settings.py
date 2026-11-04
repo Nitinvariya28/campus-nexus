@@ -226,3 +226,25 @@ EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIMENSION = 384
 PROFILE_CHUNK_TOKEN_TARGET = 200
 PROFILE_CHUNK_TOKEN_OVERLAP = 25
+
+# LLM Provider Configurations (Supports 100% Free Tiers: Google Gemini, Groq, Hugging Face)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", os.getenv("HF_TOKEN", ""))
+
+# Auto-detect default provider based on configured keys
+if os.getenv("LLM_PROVIDER"):
+    LLM_PROVIDER = os.getenv("LLM_PROVIDER")
+elif GEMINI_API_KEY:
+    LLM_PROVIDER = "GEMINI"
+elif GROQ_API_KEY:
+    LLM_PROVIDER = "GROQ"
+else:
+    LLM_PROVIDER = "HUGGINGFACE"
+
+LLM_MODEL_NAME = os.getenv(
+    "LLM_MODEL_NAME",
+    "gemini-1.5-flash" if LLM_PROVIDER == "GEMINI" else (
+        "llama-3.3-70b-versatile" if LLM_PROVIDER == "GROQ" else "Qwen/Qwen2.5-7B-Instruct"
+    )
+)
