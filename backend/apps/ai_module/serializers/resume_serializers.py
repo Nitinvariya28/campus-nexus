@@ -1,0 +1,110 @@
+import os
+from rest_framework import serializers
+
+MAX_RESUME_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB limit
+
+
+class PrimaryResumeDetailSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    file_url = serializers.CharField(allow_blank=True)
+    file_type = serializers.CharField()
+    created_at = serializers.DateTimeField()
+
+
+class PrimaryResumeResponseSerializer(serializers.Serializer):
+    has_primary_resume = serializers.BooleanField()
+    resume = PrimaryResumeDetailSerializer(allow_null=True)
+
+
+class ResumeAnalyzeRequestSerializer(serializers.Serializer):
+    job_description = serializers.CharField(
+        required=True,
+        min_length=50,
+        error_messages={
+            "required": "Job description is required.",
+            "min_length": "Job description must be at least 50 characters long for meaningful ATS evaluation.",
+        },
+    )
+    use_primary = serializers.BooleanField(required=False, default=False)
+    resume_id = serializers.IntegerField(required=False, allow_null=True, default=None)
+    resume_file = serializers.FileField(required=False, allow_null=True, default=None)
+    save_to_profile = serializers.BooleanField(required=False, default=False)
+
+    def validate_resume_file(self, value):
+        if value:
+            # Check file extension
+            _, ext = os.path.splitext(value.name)
+            if ext.lower() not in [".pdf", ".docx"]:
+                raise serializers.ValidationError("Only PDF and DOCX resume formats are supported.")
+            if value.size > MAX_RESUME_SIZE_BYTES:
+                raise serializers.ValidationError("Resume file size must not exceed 10 MB.")
+        return value
+
+    def validate(self, attrs):
+        use_primary = attrs.get("use_primary", False)
+        resume_id = attrs.get("resume_id")
+        resume_file = attrs.get("resume_file")
+
+        # If user did not supply a specific ID or file, and did not set use_primary explicitly to False,
+        # we allow default behavior to attempt primary resume resolution.
+        if not use_primary and not resume_id and not resume_file:
+            # Mark use_primary as True by default so caller can evaluate their primary resume seamlessly
+            attrs["use_primary"] = True
+
+        return attrs
+
+
+class DimensionScoreSerializer(serializers.Serializer):
+    score = serializers.FloatField()
+    weight = serializers.FloatField()
+
+
+class DimensionsSerializer(serializers.Serializer):
+    semantic_similarity = DimensionScoreSerializer()
+    skills_match = DimensionScoreSerializer()
+    experience_match = DimensionScoreSerializer()
+    education_match = DimensionScoreSerializer()
+    formatting_parseability = DimensionScoreSerializer()
+
+
+class AtsScoreResponseSerializer(serializers.Serializer):
+    overall_score = serializers.FloatField()
+    rating = serializers.CharField()
+    dimensions = DimensionsSerializer()
+    matched_skills = serializers.ListField(child=serializers.CharField())
+    missing_skills = serializers.ListField(child=serializers.CharField())
+
+
+class BulletPointImprovementSerializer(serializers.Serializer):
+    section = serializers.CharField()
+    original = serializers.CharField()
+    improved = serializers.CharField()
+    reason = serializers.CharField()
+
+
+class MissingKeywordsPrioritySerializer(serializers.Serializer):
+    high = serializers.ListField(child=serializers.CharField())
+    medium = serializers.ListField(child=serializers.CharField())
+
+
+class AiSuggestionsResponseSerializer(serializers.Serializer):
+    summary_recommendation = serializers.CharField()
+    missing_keywords_priority = MissingKeywordsPrioritySerializer()
+    bullet_point_improvements = serializers.ListField(child=BulletPointImprovementSerializer())
+    strengths = serializers.ListField(child=serializers.CharField())
+
+
+class ResumeInfoSerializer(serializers.Serializer):
+    resume_id = serializers.IntegerField(allow_null=True)
+    title = serializers.CharField()
+    is_primary = serializers.BooleanField()
+    file_type = serializers.CharField()
+
+
+class ResumeAnalyzeResponseSerializer(serializers.Serializer):
+    status = serializers.CharField(default="SUCCESS")
+    resume_info = ResumeInfoSerializer()
+    ats_score = AtsScoreResponseSerializer()
+    ai_suggestions = AiSuggestionsResponseSerializer()
+    analysis_id = serializers.IntegerField(allow_null=True)

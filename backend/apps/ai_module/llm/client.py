@@ -210,3 +210,113 @@ def check_llm_health() -> Dict[str, Any]:
             "api_key_configured": True,
             "error": str(e),
         }
+
+
+def generate_completion(
+    prompt: str,
+    system_instruction: Optional[str] = None,
+    max_tokens: int = 1500,
+    temperature: float = 0.2,
+    timeout: float = 20.0,
+) -> str:
+    """
+    Executes a generative prompt against the configured LLM provider.
+    Supports Google Gemini (with multi-model fallback), Groq, and Hugging Face.
+    Returns the raw generated string.
+    """
+    cfg = get_llm_provider_config()
+    provider = cfg["provider"]
+    api_key = cfg["api_key"]
+    model_name = cfg["model"]
+
+    if not api_key:
+        raise RuntimeError(f"{provider}_API_KEY is not configured.")
+
+    if provider == "GEMINI":
+        candidate_models = [model_name]
+        for fallback in ["gemini-3.1-flash-lite-preview", "gemini-3-flash-preview", "gemini-flash-latest"]:
+            if fallback not in candidate_models:
+                candidate_models.append(fallback)
+
+        last_error = None
+        for m in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
+            req_data: Dict[str, Any] = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "maxOutputTokens": max_tokens,
+                    "temperature": temperature,
+                },
+            }
+            if system_instruction:
+                req_data["systemInstruction"] = {
+                    "parts": [{"text": system_instruction}]
+                }
+
+            payload = json.dumps(req_data).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    if resp.status == 200:
+                        res_json = json.loads(resp.read().decode("utf-8"))
+                        candidates = res_json.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            if parts:
+                                return parts[0].get("text", "")
+            except Exception as e:
+                logger.warning(f"[LLM] Gemini model {m} completion failed: {e}. Trying fallback...")
+                last_error = e
+                continue
+
+        if last_error:
+            raise last_error
+        raise RuntimeError("All Gemini completion candidates failed.")
+
+    elif provider == "GROQ":
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        messages = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+        messages.append({"role": "user", "content": prompt})
+
+        payload = json.dumps({
+            "model": model_name,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status == 200:
+                res_json = json.loads(resp.read().decode("utf-8"))
+                return res_json["choices"][0]["message"]["content"]
+            raise RuntimeError(f"Groq API returned HTTP {resp.status}")
+
+    else:
+        client = get_hf_client()
+        messages = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+        messages.append({"role": "user", "content": prompt})
+        resp = client.chat.completions.create(
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return resp.choices[0].message.content
+
