@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { getMediaUrl } from '../../../utils/mediaUtils';
+import { User } from 'lucide-react';
 
 /**
  * AuthorAvatar Component
  * Bulletproof avatar container that:
  * 1. Resolves relative media URLs from backend
  * 2. Catches broken image / 404 load errors via onError
- * 3. Falls back gracefully to user's initials gradient badge
+ * 3. Falls back gracefully to user silhouette icon
  */
 export default function AuthorAvatar({
   author,
@@ -19,7 +20,6 @@ export default function AuthorAvatar({
   const rawAvatar = author?.avatar || author?.profile_photo || author?.profile_image;
   const avatarUrl = getMediaUrl(rawAvatar);
   const name = author?.name || author?.full_name || 'User';
-  const initial = name ? name.trim().charAt(0).toUpperCase() : 'U';
 
   const sizeClasses = {
     xs: 'w-6 h-6 text-2xs',
@@ -44,8 +44,8 @@ export default function AuthorAvatar({
           loading="lazy"
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center shadow-2xs">
-          {initial}
+        <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-2xs">
+          <User className="w-1/2 h-1/2 text-white/95" />
         </div>
       )}
     </div>

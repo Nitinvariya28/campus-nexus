@@ -40,6 +40,9 @@ import AccountSettingsPage from '../pages/profile/AccountSettingsPage';
 // Notifications Page (Protected)
 import NotificationsPage from '../pages/notifications/NotificationsPage';
 
+// AI Mode Page (Protected)
+import AIModePage from '../pages/ai/AIModePage';
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -83,6 +86,10 @@ export default function AppRoutes() {
           {/* Notifications Module */}
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="notifications/*" element={<NotificationsPage />} />
+
+          {/* AI Mode Module */}
+          <Route path="ai" element={<AIModePage />} />
+          <Route path="ai/*" element={<AIModePage />} />
         </Route>
 
         {/* 4. Explicit Error Routes & Catch-All (Always accessible) */}

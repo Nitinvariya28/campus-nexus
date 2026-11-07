@@ -34,7 +34,7 @@ def get_llm_provider_config() -> Dict[str, Any]:
 
     if provider == "GEMINI":
         api_key = gemini_key
-        default_model = "gemini-3-flash-preview"
+        default_model = "gemini-flash-lite-latest"
     elif provider == "GROQ":
         api_key = groq_key
         default_model = "llama-3.3-70b-versatile"
@@ -84,10 +84,14 @@ def probe_gemini_health(api_key: str, model_name: str, timeout: float = 10.0) ->
     Probes Google Gemini API via lightweight HTTP REST call.
     Returns latency in milliseconds.
     """
-    candidates = [model_name]
-    for fallback in ["gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"]:
-        if fallback not in candidates:
-            candidates.append(fallback)
+    candidates = [
+        "gemini-flash-lite-latest",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite-preview",
+        "gemini-3-flash-preview",
+    ]
+    if model_name and model_name not in candidates:
+        candidates.insert(0, model_name)
 
     last_error = None
     for m in candidates:
@@ -233,10 +237,15 @@ def generate_completion(
         raise RuntimeError(f"{provider}_API_KEY is not configured.")
 
     if provider == "GEMINI":
-        candidate_models = [model_name]
-        for fallback in ["gemini-3.1-flash-lite-preview", "gemini-3-flash-preview", "gemini-flash-latest"]:
-            if fallback not in candidate_models:
-                candidate_models.append(fallback)
+        candidate_models = [
+            "gemini-flash-lite-latest",
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite-preview",
+            "gemini-3.1-flash-lite",
+            "gemini-3-flash-preview",
+        ]
+        if model_name and model_name not in candidate_models and model_name != "gemini-3-flash-preview":
+            candidate_models.insert(0, model_name)
 
         last_error = None
         for m in candidate_models:
@@ -269,6 +278,13 @@ def generate_completion(
                             parts = candidates[0].get("content", {}).get("parts", [])
                             if parts:
                                 return parts[0].get("text", "")
+            except urllib.error.HTTPError as http_err:
+                if http_err.code == 429:
+                    logger.warning(f"[LLM] Gemini model {m} rate limited (HTTP 429). Trying next candidate immediately...")
+                else:
+                    logger.warning(f"[LLM] Gemini model {m} HTTP error {http_err.code}: {http_err.reason}. Trying next candidate...")
+                last_error = http_err
+                continue
             except Exception as e:
                 logger.warning(f"[LLM] Gemini model {m} completion failed: {e}. Trying fallback...")
                 last_error = e

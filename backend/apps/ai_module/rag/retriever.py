@@ -10,7 +10,7 @@ from apps.ai_module.vector_store.embedding_service import get_embedding_service
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SIMILARITY_THRESHOLD = 0.45
+DEFAULT_SIMILARITY_THRESHOLD = 0.15
 DEFAULT_MMR_LAMBDA = 0.60
 
 

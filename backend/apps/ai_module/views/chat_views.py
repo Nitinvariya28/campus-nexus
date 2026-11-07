@@ -53,6 +53,10 @@ class ChatbotView(APIView):
                 category=category,
                 conversation_history=conversation_history,
             )
+            if isinstance(result, dict):
+                ans = result.get("answer", "")
+                result["reply"] = ans
+                result["answer"] = ans
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"[Chatbot View] Unexpected error processing query '{question[:60]}': {e}", exc_info=True)

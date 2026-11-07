@@ -269,6 +269,17 @@ class ResumeAnalyzeView(APIView):
             "ats_score": ats_score_data,
             "ai_suggestions": ai_suggestions_data,
             "analysis_id": analysis_id,
+            # Top-level convenience aliases
+            "overall_score": ats_score_data.get("overall_score", 0.0),
+            "score": ats_score_data.get("overall_score", 0.0),
+            "rating": ats_score_data.get("rating", "STRONG_MATCH"),
+            "score_breakdown": ats_score_data.get("dimensions", {}),
+            "matched_skills": ats_score_data.get("matched_skills", []),
+            "missing_skills": ats_score_data.get("missing_skills", []),
+            "missing_keywords": ai_suggestions_data.get("missing_keywords_priority", {}),
+            "recommendations": [ai_suggestions_data.get("summary_recommendation", "")] if ai_suggestions_data.get("summary_recommendation") else [],
+            "tailored_bullet_suggestions": ai_suggestions_data.get("bullet_point_improvements", []),
+            "strengths": ai_suggestions_data.get("strengths", []),
         }
 
         return Response(response_payload, status=status.HTTP_200_OK)

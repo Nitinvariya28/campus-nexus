@@ -9,7 +9,8 @@ import {
   LogIn, 
   Menu, 
   X,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
 import notificationService from '../../services/notifications/notificationService';
 import NotificationDropdown from '../notifications/NotificationDropdown';
@@ -121,6 +122,20 @@ export default function Navbar({ hideBrand = false }) {
               >
                 <Users className="w-4 h-4" />
                 <span>Community</span>
+              </NavLink>
+
+              <NavLink
+                to="/ai"
+                className={({ isActive }) =>
+                  `flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? 'text-blue-600 bg-blue-50/80 font-semibold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                  }`
+                }
+              >
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>AI Mode</span>
               </NavLink>
 
               <NavLink
@@ -313,6 +328,19 @@ export default function Navbar({ hideBrand = false }) {
               >
                 <Users className="w-5 h-5" />
                 <span>Community</span>
+              </NavLink>
+
+              <NavLink
+                to="/ai"
+                onClick={closeMobile}
+                className={({ isActive }) =>
+                  `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                    isActive ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                  }`
+                }
+              >
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <span>AI Mode</span>
               </NavLink>
 
               <NavLink

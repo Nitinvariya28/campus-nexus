@@ -20,13 +20,14 @@ class PrimaryResumeResponseSerializer(serializers.Serializer):
 class ResumeAnalyzeRequestSerializer(serializers.Serializer):
     job_description = serializers.CharField(
         required=True,
-        min_length=50,
+        min_length=15,
         error_messages={
             "required": "Job description is required.",
-            "min_length": "Job description must be at least 50 characters long for meaningful ATS evaluation.",
+            "min_length": "Job description must be at least 15 characters long.",
         },
     )
     use_primary = serializers.BooleanField(required=False, default=False)
+    use_primary_resume = serializers.BooleanField(required=False, default=False)
     resume_id = serializers.IntegerField(required=False, allow_null=True, default=None)
     resume_file = serializers.FileField(required=False, allow_null=True, default=None)
     save_to_profile = serializers.BooleanField(required=False, default=False)
@@ -35,21 +36,20 @@ class ResumeAnalyzeRequestSerializer(serializers.Serializer):
         if value:
             # Check file extension
             _, ext = os.path.splitext(value.name)
-            if ext.lower() not in [".pdf", ".docx"]:
+            if ext.lower() not in [".pdf", ".docx", ".doc"]:
                 raise serializers.ValidationError("Only PDF and DOCX resume formats are supported.")
             if value.size > MAX_RESUME_SIZE_BYTES:
                 raise serializers.ValidationError("Resume file size must not exceed 10 MB.")
         return value
 
     def validate(self, attrs):
-        use_primary = attrs.get("use_primary", False)
+        use_primary = attrs.get("use_primary") or attrs.get("use_primary_resume") or False
+        attrs["use_primary"] = use_primary
         resume_id = attrs.get("resume_id")
         resume_file = attrs.get("resume_file")
 
-        # If user did not supply a specific ID or file, and did not set use_primary explicitly to False,
-        # we allow default behavior to attempt primary resume resolution.
-        if not use_primary and not resume_id and not resume_file:
-            # Mark use_primary as True by default so caller can evaluate their primary resume seamlessly
+        # If user did not supply a specific file or ID and explicitly wants primary resume:
+        if not resume_file and not resume_id and not use_primary:
             attrs["use_primary"] = True
 
         return attrs

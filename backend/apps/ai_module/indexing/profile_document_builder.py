@@ -10,46 +10,36 @@ User = get_user_model()
 def is_profile_ready(user: Any) -> Tuple[bool, str]:
     """
     Evaluates whether a User profile possesses sufficient information to be vectorized.
-    Prevents pushing empty or stub vectors to Qdrant.
-
-    Returns:
-        (True, "Ready") if profile is ready for vectorization.
-        (False, "<Reason>") if profile lacks required data.
+    Ensures active users with any skill, department, or bio are ready for recommendations.
     """
     if not getattr(user, "is_active", True):
         return False, "User account is inactive or deactivated"
 
-    role = getattr(user, "role", None)
+    role = str(getattr(user, "role", "") or "").upper()
+
+    # Check skills
+    has_skills = False
+    if hasattr(user, "user_skills"):
+        has_skills = user.user_skills.exists() if hasattr(user.user_skills, "exists") else len(user.user_skills.all()) > 0
 
     if role == "STUDENT":
         profile = getattr(user, "student_profile", None)
-        if not profile:
-            return False, "StudentProfile record does not exist"
-
-        # Check for skills or bio content
-        has_skills = user.user_skills.exists() if hasattr(user, "user_skills") else False
-        has_bio = bool(profile.bio and len(profile.bio.strip()) >= 15)
-
-        if not (has_skills or has_bio):
-            return False, "Student has zero technical skills and no academic bio"
-
-        return True, "Ready"
+        has_dept = bool(profile and getattr(profile, "department_id", None))
+        has_bio = bool(profile and profile.bio and len(profile.bio.strip()) >= 3)
+        if has_skills or has_dept or has_bio:
+            return True, "Ready"
+        return False, "Student has no skills, department, or bio"
 
     elif role == "ALUMNI":
         profile = getattr(user, "alumni_profile", None)
-        if not profile:
-            return False, "AlumniProfile record does not exist"
+        has_career = bool(profile and (profile.current_job_title or getattr(profile, "current_company_id", None)))
+        has_dept = bool(profile and getattr(profile, "department_id", None))
+        has_bio = bool(profile and profile.bio and len(profile.bio.strip()) >= 3)
+        if has_skills or has_career or has_dept or has_bio:
+            return True, "Ready"
+        return False, "Alumni has no skills, career details, or bio"
 
-        has_career = bool(profile.current_job_title or profile.current_company_id)
-        has_skills = user.user_skills.exists() if hasattr(user, "user_skills") else False
-        has_bio = bool(profile.bio and len(profile.bio.strip()) >= 15)
-
-        if not (has_career or has_skills or has_bio):
-            return False, "Alumni has no career details, zero skills, and no bio"
-
-        return True, "Ready"
-
-    return False, f"Role '{role}' does not use personal profile vectors"
+    return True, "Ready"
 
 
 def get_user_with_full_profile(user_or_id: Union[Any, int]) -> Any:

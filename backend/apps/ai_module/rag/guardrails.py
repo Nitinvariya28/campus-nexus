@@ -15,7 +15,7 @@ PII_INQUIRY_PATTERNS = [
         re.IGNORECASE,
     ),
     re.compile(
-        r"\b([a-zA-Z]+)'s\s+(?:phone|mobile|cell|email|contact|cgpa|gpa|marks|grades?|backlogs?|password|salary)\b",
+        r"\b([a-zA-Z]+)'s\s+(?:.*?\s+)?(?:phone|mobile|cell|email|contact|cgpa|gpa|marks|grades?|backlogs?|password|salary)\b",
         re.IGNORECASE,
     ),
     re.compile(r"\b(?:how\s+many\s+backlogs\s+does)\s+([a-zA-Z]+)\b", re.IGNORECASE),
@@ -92,8 +92,20 @@ def screen_input_query(query: str) -> Optional[Dict[str, Any]]:
             }
 
     # 2. Check Student & Alumni Personal PII (Priority 2)
+    GENERIC_ROLE_NOUNS = {
+        "student", "students", "fresher", "freshers", "engineer", "engineers",
+        "graduate", "graduates", "intern", "interns", "employee", "employees",
+        "candidate", "candidates", "applicant", "applicants", "alumni", "user", "users",
+        "average", "minimum", "maximum", "expected", "typical", "starting", "someone", "anyone"
+    }
     for pat in PII_INQUIRY_PATTERNS:
-        if pat.search(q_clean):
+        m = pat.search(q_clean)
+        if m:
+            # If regex captured a target group, check if it's a generic role noun rather than a person's name
+            captured_name = (m.group(1).lower() if m.groups() and m.group(1) else "").strip()
+            if captured_name in GENERIC_ROLE_NOUNS:
+                continue
+
             logger.warning(f"[Guardrails] Blocked student/alumni PII inquiry: {q_clean[:60]}")
             return {
                 "status": "PROHIBITED_PII",

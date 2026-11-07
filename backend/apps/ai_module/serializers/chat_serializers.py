@@ -5,26 +5,36 @@ CATEGORY_CHOICES = ["ALL", "PLACEMENT_CELL", "NSU", "INTERVIEW_PREP", "INDUSTRY_
 
 class ChatMessageSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=["user", "assistant", "system"])
-    content = serializers.CharField(max_length=2000)
+    content = serializers.CharField(max_length=50000, required=False, allow_blank=True, default="")
+
+    def validate_content(self, value):
+        # Gracefully truncate if client passes very long previous response
+        if value and len(value) > 4000:
+            return value[:4000]
+        return value or ""
 
 
 class ChatRequestSerializer(serializers.Serializer):
-    question = serializers.CharField(
-        required=True,
-        min_length=3,
-        max_length=1000,
-        error_messages={
-            "required": "Question is required.",
-            "min_length": "Question must contain at least 3 characters.",
-            "max_length": "Question cannot exceed 1,000 characters.",
-        },
-    )
+    question = serializers.CharField(required=False, allow_blank=True, default="")
+    message = serializers.CharField(required=False, allow_blank=True, default="")
     category = serializers.CharField(required=False, default="ALL", allow_blank=True)
     conversation_history = serializers.ListField(
         child=ChatMessageSerializer(),
         required=False,
         default=list,
     )
+
+    def validate(self, attrs):
+        raw_text = (attrs.get("question") or attrs.get("message") or "").strip()
+        if not raw_text:
+            raise serializers.ValidationError({"question": "Please enter a question or message."})
+        if len(raw_text) < 2:
+            raise serializers.ValidationError({"question": "Question must contain at least 2 characters."})
+        if len(raw_text) > 1000:
+            raise serializers.ValidationError({"question": "Question cannot exceed 1,000 characters."})
+
+        attrs["question"] = raw_text
+        return attrs
 
     def validate_category(self, value):
         if not value or not value.strip():
