@@ -302,6 +302,34 @@ export default function ResumeInputForm({ onAnalyze, isAnalyzing }) {
             </span>
           </div>
 
+          {/* Quick preset sample buttons */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
+              Sample JDs:
+            </span>
+            <button
+              type="button"
+              onClick={() => setJobDescription('We are seeking a Full Stack Software Engineer proficient in React, Node.js, TypeScript, REST APIs, and PostgreSQL. Responsibilities include building responsive UI components, developing scalable backend microservices, optimizing database queries, and collaborating via Git and CI/CD pipelines. Experience with Docker and cloud deployment is a plus.')}
+              className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              Full Stack
+            </button>
+            <button
+              type="button"
+              onClick={() => setJobDescription('Looking for a Backend Developer with strong Python, Django / Django REST Framework, and SQL database skills. You will architect scalable RESTful APIs, implement Redis caching, integrate third-party payment gateways, write automated unit tests, and maintain containerized applications using Docker and Linux.')}
+              className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              Python Backend
+            </button>
+            <button
+              type="button"
+              onClick={() => setJobDescription('Seeking a Frontend Developer with expertise in React 18, Tailwind CSS, JavaScript ES6+, and state management (Redux/Zustand). Responsibilities include translating UI/UX wireframes into responsive web pages, consuming RESTful APIs, optimizing Core Web Vitals, and ensuring cross-browser compatibility.')}
+              className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              Frontend React
+            </button>
+          </div>
+
           <textarea
             id="job-description-input"
             rows={5}

@@ -77,7 +77,7 @@ export const aiService = {
    * Send a query to the university RAG chatbot.
    * @param {Object} data
    * @param {string} data.message - User prompt
-   * @param {'ALL'|'PLACEMENT_CELL'|'NSU'|'INTERVIEW_PREP'|'INDUSTRY_TECH'} [data.category='ALL']
+   * @param {'ALL'|'PLACEMENT_CELL'|'NIRMA'|'INTERVIEW_PREP'|'INDUSTRY_TECH'} [data.category='ALL']
    * @param {Array<{role: 'user'|'assistant', content: string}>} [data.conversation_history=[]]
    */
   async sendChatMessage(data) {

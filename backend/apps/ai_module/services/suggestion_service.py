@@ -7,13 +7,15 @@ from apps.ai_module.llm.client import generate_completion
 
 logger = logging.getLogger(__name__)
 
-SUGGESTION_SYSTEM_PROMPT = """You are an elite Career & ATS Technical Resume Coach.
-Your task is to analyze a candidate's resume against a target Job Description (JD) and provide high-impact, actionable recommendations to maximize interview callbacks.
+SUGGESTION_SYSTEM_PROMPT = """You are an elite Silicon Valley Technical Career Coach and ATS Expert.
+Your mission is to analyze a candidate's real resume against a target Job Description (JD) and provide realistic, high-impact, actionable recommendations to maximize interview invitations.
 
-Rules:
-1. Strict Anti-Hallucination: Do NOT invent fake previous employers, fake degrees, or unverifiable claims. Only enhance and quantify existing candidate experience and projects.
-2. XYZ Formula: When rewriting bullets, strictly follow Google's XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]".
-3. Output Format: You MUST reply ONLY with valid JSON matching the exact schema specified, with no extra conversational text or markdown explanation outside the JSON.
+GUIDELINES:
+1. HIGH REALISM & SPECIFICITY: Avoid generic clichés (e.g. "Worked on various tasks"). Ground every rewrite and tip in the candidate's actual projects, technologies, and target job domain.
+2. GOOGLE XYZ REWRITES: Transform weak/passive bullet points into compelling engineering achievements following the formula: "Accomplished [X] as measured by [Y], by doing [Z]". Include realistic technical metrics (latency reduction, query optimization, user scale, test coverage, throughput, or accuracy).
+3. KEYWORD PLACEMENT: Tell the candidate exactly WHERE to incorporate missing keywords (e.g. in the Skills taxonomy, specific project bullet, or professional summary).
+4. ACTIONABLE FORMATTING: Provide practical layout, bullet density, and technical hierarchy tips for ATS parser compatibility.
+5. PURE JSON OUTPUT: Return ONLY valid JSON matching the exact schema requested, with no conversational filler.
 """
 
 
@@ -33,68 +35,116 @@ def _build_rule_based_suggestions(
     parsed_sections: Dict[str, str],
     matched_skills: List[str],
     missing_skills: List[str],
+    resume_text: str = "",
 ) -> Dict[str, Any]:
     """
-    Deterministic fallback when LLM is unavailable, rate-limited, or responds with invalid JSON.
-    Guarantees that the API always returns high-quality, actionable advice.
+    High-quality, realistic deterministic fallback when LLM is unavailable or times out.
+    Generates genuine, realistic engineering advice tailored to candidate text and matched skills.
     """
-    # 1. Summary recommendation
-    top_matches = ", ".join(matched_skills[:3]) if matched_skills else "core competencies"
+    top_matches = ", ".join(matched_skills[:4]) if matched_skills else "core technical competencies"
+    missing_preview = ", ".join(missing_skills[:3]) if missing_skills else "target stack requirements"
+
     summary_rec = (
-        f"Align your professional headline and summary directly to the target role. "
-        f"Prominently highlight your expertise in {top_matches} in the top 20% of your resume."
+        f"Position your technical summary directly for the target role by highlighting your proven capabilities in {top_matches}. "
+        f"Explicitly connect your hands-on project work with {missing_preview} in the opening section to pass automated ATS screening."
     )
 
-    # 2. Missing keywords priority
     high_priority = missing_skills[:4]
-    med_priority = missing_skills[4:10]
+    med_priority = missing_skills[4:9]
 
-    # 3. Actionable bullet point rewrites
-    rewrites = []
-    exp_or_proj = parsed_sections.get("experience", "") + "\n" + parsed_sections.get("projects", "")
-    lines = [line.strip("- ").strip() for line in exp_or_proj.split("\n") if len(line.strip()) > 20]
+    # Keyword placement advice
+    placement_advice = []
+    for kw in high_priority[:3]:
+        placement_advice.append({
+            "keyword": kw,
+            "recommended_section": "Skills & Featured Project",
+            "action": f"Add '{kw}' to your core technical skills category and reference its practical application in your primary project implementation.",
+        })
+    for kw in med_priority[:2]:
+        placement_advice.append({
+            "keyword": kw,
+            "recommended_section": "Developer Tools / Environment",
+            "action": f"Incorporate '{kw}' under tools or workflow libraries to improve automated keyword match density.",
+        })
 
-    weak_verbs = ["worked on", "handled", "responsible for", "helped", "made", "created", "built", "did"]
+    # Extract real candidate lines from experience or projects or raw text
+    exp_or_proj = (parsed_sections.get("experience", "") + "\n" + parsed_sections.get("projects", "")).strip()
+    if not exp_or_proj:
+        exp_or_proj = resume_text
 
-    candidate_line = None
-    for line in lines:
-        lower_line = line.lower()
-        if any(v in lower_line for v in weak_verbs) and not any(c.isdigit() for c in line):
-            candidate_line = line
+    raw_lines = [
+        re.sub(r"^[\*\-•▪◦\d\.]+\s*", "", l).strip()
+        for l in exp_or_proj.splitlines()
+        if len(l.strip()) > 25 and not l.strip().isupper()
+    ]
+
+    weak_verbs = ["worked on", "handled", "responsible for", "helped", "made", "created", "built", "did", "used", "developed a", "assisted"]
+    candidate_lines = []
+    for l in raw_lines:
+        lower_l = l.lower()
+        if any(v in lower_l for v in weak_verbs) and not any(c.isdigit() for c in l):
+            candidate_lines.append(l)
+        if len(candidate_lines) >= 3:
             break
 
-    if not candidate_line and lines:
-        candidate_line = lines[0]
+    if not candidate_lines and raw_lines:
+        candidate_lines = raw_lines[:2]
 
-    if candidate_line:
-        improved_sample = (
-            f"Architected and deployed {candidate_line.rstrip('.')}, resulting in a 25% efficiency "
-            f"gain and robust test coverage across all deliverables."
-        )
+    # Build realistic Google XYZ rewrites
+    rewrites = []
+    sample_metrics = [
+        ("35% reduction in API response latency", "optimized database queries and Redis caching"),
+        ("99.4% uptime and zero-downtime deployments", "modular Docker containerization and CI/CD pipelines"),
+        ("serving 800+ concurrent user requests", "scalable RESTful microservice architecture"),
+    ]
+
+    for idx, orig in enumerate(candidate_lines[:2]):
+        metric_str, action_str = sample_metrics[idx % len(sample_metrics)]
+        clean_orig = orig.rstrip(".")
+        improved = f"Architected and deployed {clean_orig}, achieving {metric_str} through {action_str}."
         rewrites.append({
-            "section": "Projects / Experience",
-            "original": candidate_line,
-            "improved": improved_sample,
-            "reason": "Applies Google's XYZ formula with quantifiable scale and active engineering ownership.",
-        })
-    else:
-        rewrites.append({
-            "section": "Experience",
-            "original": "Worked on backend development and database queries.",
-            "improved": "Engineered scalable REST endpoints and optimized database queries, reducing average API response latency by 35%.",
-            "reason": "Quantifies performance improvements and specifies technical responsibility.",
+            "section": "Projects / Technical Experience",
+            "original": orig,
+            "improved": improved,
+            "metric": metric_str,
+            "reason": "Applies Google's XYZ formula by clearly quantifying performance impact, technical responsibility, and engineering scale.",
         })
 
-    # 4. Strengths
+    if not rewrites:
+        rewrites.append({
+            "section": "Technical Experience",
+            "original": "Worked on backend development and database integration for the application.",
+            "improved": "Engineered RESTful backend microservices in Django and PostgreSQL, reducing average query response times by 38% and supporting 1,000+ active user sessions.",
+            "metric": "38% query latency reduction",
+            "reason": "Replaces vague duty descriptions with measurable technical outcomes and active ownership verbs.",
+        })
+
+    # Actionable structural suggestions
+    structural_suggestions = [
+        {
+            "category": "Section Organization",
+            "suggestion": "Organize technical competencies into clear sub-categories (Languages, Frameworks, Developer Tools, Databases/Cloud) rather than a single comma-separated block to maximize ATS parser accuracy.",
+        },
+        {
+            "category": "Quantifiable Achievements",
+            "suggestion": "Ensure at least 70% of project bullet points contain concrete metrics (e.g. latency, user volume, test coverage, processing speed) rather than only listing assigned tasks.",
+        },
+        {
+            "category": "Active Action Verbs",
+            "suggestion": "Begin every bullet point with strong technical action verbs (Engineered, Architected, Refactored, Containerized) instead of passive phrasing like 'Responsible for' or 'Assisted with'.",
+        },
+    ]
+
+    # Strengths
     strengths = []
     if matched_skills:
-        strengths.append(f"Strong match for core technical stack: {', '.join(matched_skills[:4])}.")
+        strengths.append(f"Demonstrates solid foundation in core technical stack: {', '.join(matched_skills[:4])}.")
     if parsed_sections.get("projects"):
-        strengths.append("Dedicated projects section demonstrating practical software implementation.")
+        strengths.append("Dedicated project section highlighting practical, hands-on software development experience.")
     if parsed_sections.get("education"):
-        strengths.append("Clear academic qualifications and educational background.")
+        strengths.append("Clear educational background with degree and specialization visibly positioned.")
     if not strengths:
-        strengths.append("Clean chronological formatting suitable for automated parsing.")
+        strengths.append("Clean, chronological layout suitable for standard automated ATS parsers.")
 
     return {
         "summary_recommendation": summary_rec,
@@ -102,7 +152,9 @@ def _build_rule_based_suggestions(
             "high": high_priority,
             "medium": med_priority,
         },
+        "keyword_placement_advice": placement_advice,
         "bullet_point_improvements": rewrites,
+        "structural_suggestions": structural_suggestions,
         "strengths": strengths,
     }
 
@@ -115,44 +167,71 @@ def generate_resume_suggestions(
     missing_skills: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
-    Generates tailored, prioritized resume improvement suggestions.
-    Uses Google Gemini free tier with automatic multi-model failover,
-    falling back seamlessly to rule-based analysis on error.
+    Generates tailored, prioritized, and realistic resume improvement suggestions.
+    Uses Google Gemini with automatic failover, falling back to realistic rule-based analysis.
     """
     sections = parsed_sections or {}
     m_skills = matched_skills or []
     miss_skills = missing_skills or []
 
+    # Ensure experience and project excerpts are populated even if sectioning is non-standard
+    exp_text = sections.get("experience", "")
+    proj_text = sections.get("projects", "")
+    if not exp_text and not proj_text:
+        lines = [l.strip() for l in resume_text.splitlines() if len(l.strip()) > 25]
+        exp_text = "\n".join(lines[:10])
+        proj_text = "\n".join(lines[10:20])
+
     prompt = f"""
 TARGET JOB DESCRIPTION:
 {job_description[:2000]}
 
-CANDIDATE RESUME SUMMARY:
-- Matched Skills: {', '.join(m_skills[:15])}
-- Missing Skills: {', '.join(miss_skills[:15])}
-- Experience Text: {sections.get('experience', '')[:1000]}
-- Projects Text: {sections.get('projects', '')[:1000]}
-- Education Text: {sections.get('education', '')[:500]}
+CANDIDATE RESUME INFORMATION:
+- Matched Skills: {', '.join(m_skills[:15]) if m_skills else 'None identified'}
+- Missing Skills: {', '.join(miss_skills[:15]) if miss_skills else 'None identified'}
+- Candidate Experience Excerpts:
+{exp_text[:1200] if exp_text else 'General software engineering background'}
 
-Generate actionable feedback in this EXACT JSON structure:
+- Candidate Project Excerpts:
+{proj_text[:1200] if proj_text else 'Software development project implementations'}
+
+- Candidate Education:
+{sections.get('education', '')[:400] if sections.get('education') else 'University Degree'}
+
+TASK:
+Provide realistic, professional, and actionable resume enhancement advice in this EXACT JSON format:
 {{
-  "summary_recommendation": "1-2 sentence recommendation for candidate's top summary/headline",
+  "summary_recommendation": "2-sentence tailored headline/summary recommendation aligned with the JD",
   "missing_keywords_priority": {{
     "high": ["Top 3-4 most critical missing technical skills"],
-    "medium": ["2-4 nice-to-have or secondary missing skills"]
+    "medium": ["2-4 secondary technical skills or tools"]
   }},
+  "keyword_placement_advice": [
+    {{
+      "keyword": "Skill name",
+      "recommended_section": "Skills / Projects / Experience",
+      "action": "Specific instruction on how and where to naturally weave this skill into the resume"
+    }}
+  ],
   "bullet_point_improvements": [
     {{
       "section": "Projects or Experience",
-      "original": "Weak bullet point found in resume",
-      "improved": "High-impact rewrite following Google XYZ formula: Accomplished [X] as measured by [Y], by doing [Z]",
-      "reason": "Specific rationale connecting to the Job Description"
+      "original": "Actual bullet point from candidate resume needing improvement",
+      "improved": "Accomplished [X] as measured by [Y], by doing [Z] following Google XYZ formula with realistic metrics",
+      "metric": "Key measurable result (e.g. 35% latency drop, 1000+ users)",
+      "reason": "Specific rationale connecting this rewrite to the Job Description"
+    }}
+  ],
+  "structural_suggestions": [
+    {{
+      "category": "Formatting & Structure / Metrics & Impact / Technical Clarity",
+      "suggestion": "Realistic, actionable advice to optimize resume readability and ATS machine score"
     }}
   ],
   "strengths": [
-    "Strength 1",
-    "Strength 2",
-    "Strength 3"
+    "Identified candidate strength 1",
+    "Identified candidate strength 2",
+    "Identified candidate strength 3"
   ]
 }}
 """
@@ -167,16 +246,21 @@ Generate actionable feedback in this EXACT JSON structure:
         cleaned_json = _clean_json_response(raw_output)
         parsed = json.loads(cleaned_json)
 
-        # Validate required keys
+        # Ensure required keys exist
         if (
             "summary_recommendation" in parsed
             and "missing_keywords_priority" in parsed
             and "bullet_point_improvements" in parsed
             and "strengths" in parsed
         ):
+            # Normalize missing keys
+            if "keyword_placement_advice" not in parsed:
+                parsed["keyword_placement_advice"] = []
+            if "structural_suggestions" not in parsed:
+                parsed["structural_suggestions"] = []
             return parsed
         logger.warning("[Suggestion Service] LLM response missing required JSON keys, falling back.")
     except Exception as e:
         logger.warning(f"[Suggestion Service] LLM generation failed: {e}. Using deterministic fallback.")
 
-    return _build_rule_based_suggestions(sections, m_skills, miss_skills)
+    return _build_rule_based_suggestions(sections, m_skills, miss_skills, resume_text=resume_text)

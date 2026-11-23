@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 
 /**
  * ChatbotView Component
- * ChatGPT-like conversational interface grounded in NSU official documents & guides.
+ * ChatGPT-like conversational interface grounded in Nirma University official documents & guides.
  */
 export default function ChatbotView() {
   const [messages, setMessages] = useState([]);
@@ -43,6 +43,7 @@ export default function ChatbotView() {
           role: 'assistant',
           content: botAnswer,
           citations: response.citations || [],
+          suggested_followups: response.suggested_followups || [],
           guardrail_status: response.guardrail_status || 'PASSED',
         };
         setMessages([...nextMessages, assistantMessageObj]);
@@ -97,6 +98,7 @@ export default function ChatbotView() {
           messages={messages}
           isLoading={isLoading}
           onSelectStarterPrompt={handleSelectStarterPrompt}
+          onSelectFollowup={(fu) => handleSendMessage(fu)}
         />
 
         {/* 3. Composer / Input Area */}

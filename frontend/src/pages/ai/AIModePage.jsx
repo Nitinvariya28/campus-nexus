@@ -10,7 +10,7 @@ import ChatbotView from '../../components/ai/chat/ChatbotView';
  * Dedicated full AI Mode page orchestrating:
  * 1. AI Profile Recommendations (Top 5 Students & Alumni with independent pagination)
  * 2. Resume ATS Analyzer & Gemini Google XYZ Enhancer
- * 3. NSU Grounded RAG Chatbot
+ * 3. Nirma University Grounded RAG Chatbot
  */
 export default function AIModePage() {
   const [searchParams, setSearchParams] = useSearchParams();

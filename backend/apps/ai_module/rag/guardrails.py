@@ -138,21 +138,28 @@ def screen_input_query(query: str) -> Optional[Dict[str, Any]]:
             }
 
     # 4. Check Blatant Out-of-Domain questions (Priority 4)
-    for pat in OUT_OF_DOMAIN_PATTERNS:
-        if pat.search(q_clean):
-            logger.info(f"[Guardrails] Blocked out-of-domain inquiry: {q_clean[:60]}")
-            return {
-                "status": "OUT_OF_SCOPE",
-                "answer": "I cannot answer this question as it is outside the scope of the AlumiBridge platform (Campus Placements, Academic Regulations, Technical Interview Prep, and Software Technology).",
-                "category": "OUT_OF_SCOPE",
-                "retrieval_mode": "GUARDRAIL_BLOCKED",
-                "citations": [],
-                "confidence_score": 0.1,
-                "suggested_followups": [
-                    "What are the tiered recruitment policy rules for placement drives?",
-                    "What are the core operating systems topics for technical interviews?",
-                ],
-            }
+    IN_DOMAIN_KEYWORDS = re.compile(
+        r"\b(?:nirma|nsu|university|campus|college|academic|placement|internship|intern|interview|resume|cv|job|drive|"
+        r"faculty|syllabus|exam|grading|cgpa|sgpa|degree|student|alumni|course|semester|noc|attendance|"
+        r"code|coding|software|python|java|react|sql|api|system|data|algorithm|dsa|engineering|tech|study|rule|policy)\b",
+        re.IGNORECASE,
+    )
+    if not IN_DOMAIN_KEYWORDS.search(q_clean):
+        for pat in OUT_OF_DOMAIN_PATTERNS:
+            if pat.search(q_clean):
+                logger.info(f"[Guardrails] Blocked out-of-domain inquiry: {q_clean[:60]}")
+                return {
+                    "status": "OUT_OF_SCOPE",
+                    "answer": "I cannot answer this question as it is outside the scope of the AlumiBridge platform (Campus Placements, Academic Regulations, Technical Interview Prep, and Software Technology).",
+                    "category": "OUT_OF_SCOPE",
+                    "retrieval_mode": "GUARDRAIL_BLOCKED",
+                    "citations": [],
+                    "confidence_score": 0.1,
+                    "suggested_followups": [
+                        "What are the tiered recruitment policy rules for placement drives?",
+                        "What are the core operating systems topics for technical interviews?",
+                    ],
+                }
 
     return None
 

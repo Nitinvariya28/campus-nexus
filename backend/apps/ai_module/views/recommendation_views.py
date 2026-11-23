@@ -2,6 +2,7 @@ import logging
 import math
 from typing import Any, Dict, List, Optional
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -58,6 +59,7 @@ class ProfileRecommendationsView(APIView):
         ranked_meta: Dict[str, Any],
         caller: User,
         request: Any,
+        caller_skills_lookup: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         Builds a lightweight profile card for the candidate.
@@ -111,12 +113,14 @@ class ProfileRecommendationsView(APIView):
         else:
             headline = "University Community Member"
 
-        # 4. Overlapping technical skills
-        caller_skills = {}
-        if hasattr(caller, "user_skills"):
-            for us in caller.user_skills.all():
-                if hasattr(us, "skill") and us.skill:
-                    caller_skills[us.skill.name.strip().lower()] = us.skill.name.strip()
+        # 4. Overlapping technical skills (using cached caller skills lookup)
+        caller_skills = caller_skills_lookup
+        if caller_skills is None:
+            caller_skills = {}
+            if hasattr(caller, "user_skills"):
+                for us in caller.user_skills.all():
+                    if hasattr(us, "skill") and us.skill:
+                        caller_skills[us.skill.name.strip().lower()] = us.skill.name.strip()
 
         cand_skills = {}
         if hasattr(candidate_user, "user_skills"):
@@ -154,14 +158,16 @@ class ProfileRecommendationsView(APIView):
         page: int,
         limit: int,
         request: Any,
+        query_vector: Optional[List[float]] = None,
+        caller_skills_lookup: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         Executes filtered vector retrieval, pooling, hydration, and ranking for a specific role,
         then slices the exact page window for 'Load More' pagination.
         Falls back smoothly to relational database matching if vectors are not yet populated.
         """
-        # Retrieve candidate chunks (fetch enough to cover target page window)
-        top_k = max(60, page * limit * 5)
+        # Fast top_k candidate retrieval (covers requested page with lean overhead)
+        top_k = min(30, max(12, page * limit * 2))
         raw_hits = []
         try:
             raw_hits = self.retriever.retrieve_candidates(
@@ -169,6 +175,7 @@ class ProfileRecommendationsView(APIView):
                 target_role=target_role,
                 caller_user=caller,
                 top_k=top_k,
+                query_vector=query_vector,
             )
         except Exception as e:
             logger.warning(f"[ProfileRecommendations] Vector retrieval exception: {e}. Falling back to database candidates.")
@@ -211,7 +218,7 @@ class ProfileRecommendationsView(APIView):
                     "match_reasons": ["Academic and skill set alignment"],
                     "department": dept_str,
                 }
-                cards.append(self._build_candidate_card(u, meta, caller, request))
+                cards.append(self._build_candidate_card(u, meta, caller, request, caller_skills_lookup=caller_skills_lookup))
 
             return {
                 "items": cards,
@@ -249,7 +256,7 @@ class ProfileRecommendationsView(APIView):
             uid = meta["user_id"]
             cand_user = hydrated_users.get(uid)
             if cand_user:
-                cards.append(self._build_candidate_card(cand_user, meta, caller, request))
+                cards.append(self._build_candidate_card(cand_user, meta, caller, request, caller_skills_lookup=caller_skills_lookup))
 
         return {
             "items": cards,
@@ -350,8 +357,29 @@ class ProfileRecommendationsView(APIView):
                 status=status.HTTP_200_OK,
             )
 
-        # 4. Execute Retrieval & Multi-Signal Ranking
+        # 4. Check Fast Cache (60s TTL)
+        cache_key = f"ai_recs_fast_{caller.id}_{target_role}_{student_page}_{alumni_page}_{limit}"
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            return Response(cached_result, status=status.HTTP_200_OK)
+
+        # 5. Execute Retrieval & Multi-Signal Ranking
         try:
+            # Precompute caller skills dictionary once to reuse across candidate cards
+            caller_skills_lookup = {}
+            if hasattr(caller, "user_skills"):
+                for us in caller.user_skills.all():
+                    if hasattr(us, "skill") and us.skill:
+                        caller_skills_lookup[us.skill.name.strip().lower()] = us.skill.name.strip()
+
+            # Precompute or cache caller embedding vector once for both roles
+            caller_vec_key = f"ai_caller_vector_{caller.id}"
+            query_vector = cache.get(caller_vec_key)
+            if not query_vector:
+                query_text = self.retriever.build_caller_query_text(caller)
+                query_vector = self.retriever.embedding_service.embed_query(query_text)
+                cache.set(caller_vec_key, query_vector, timeout=300)
+
             response_data = {
                 "status": "SUCCESS",
                 "caller": caller_meta,
@@ -365,6 +393,8 @@ class ProfileRecommendationsView(APIView):
                     page=student_page,
                     limit=limit,
                     request=request,
+                    query_vector=query_vector,
+                    caller_skills_lookup=caller_skills_lookup,
                 )
                 response_data["students"] = student_res
                 response_data["student_recommendations"] = student_res
@@ -376,9 +406,14 @@ class ProfileRecommendationsView(APIView):
                     page=alumni_page,
                     limit=limit,
                     request=request,
+                    query_vector=query_vector,
+                    caller_skills_lookup=caller_skills_lookup,
                 )
                 response_data["alumni"] = alumni_res
                 response_data["alumni_recommendations"] = alumni_res
+
+            # Cache final output for 60 seconds
+            cache.set(cache_key, response_data, timeout=60)
 
             return Response(response_data, status=status.HTTP_200_OK)
 

@@ -134,12 +134,13 @@ function renderInline(str) {
  * ChatMessage Component
  * Premium chat message layout for User (right, blue) and Assistant (left, sleek white card).
  */
-export default function ChatMessage({ message }) {
+export default function ChatMessage({ message, onSelectFollowup }) {
   const [showCitations, setShowCitations] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const isUser = message.role === 'user';
   const citations = Array.isArray(message.citations) ? message.citations : [];
+  const followups = Array.isArray(message.suggested_followups) ? message.suggested_followups : [];
   const isGuardrailBlocked = message.guardrail_status === 'POLICY_PROHIBITED';
   const messageText = message.content || message.answer || '';
 
@@ -241,11 +242,33 @@ export default function ChatMessage({ message }) {
           </div>
         )}
 
+        {/* Suggested Follow-up Questions (ChatGPT interactive chips) */}
+        {followups.length > 0 && onSelectFollowup && (
+          <div className="pt-2.5 border-t border-slate-100 space-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Suggested Follow-ups:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {followups.map((fu, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => onSelectFollowup(fu)}
+                  className="text-left text-xs bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 px-2.5 py-1 rounded-lg border border-slate-200/80 hover:border-blue-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3 h-3 text-blue-500 shrink-0" />
+                  <span>{fu}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Message Footer: Status & Copy Button */}
         <div className="pt-2 flex items-center justify-between text-2xs text-slate-400 border-t border-slate-50">
           <span className="flex items-center gap-1.5 font-medium text-slate-400">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>AlumiBridge Assistant</span>
+            <span>AlumiBridge Assistant • Educational Project (Simulated Data)</span>
           </span>
 
           <button

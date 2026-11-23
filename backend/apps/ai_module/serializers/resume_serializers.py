@@ -77,22 +77,36 @@ class AtsScoreResponseSerializer(serializers.Serializer):
 
 
 class BulletPointImprovementSerializer(serializers.Serializer):
-    section = serializers.CharField()
+    section = serializers.CharField(required=False, allow_blank=True, default="Projects / Experience")
     original = serializers.CharField()
     improved = serializers.CharField()
-    reason = serializers.CharField()
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+    metric = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class MissingKeywordsPrioritySerializer(serializers.Serializer):
-    high = serializers.ListField(child=serializers.CharField())
-    medium = serializers.ListField(child=serializers.CharField())
+    high = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    medium = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+
+
+class KeywordPlacementAdviceSerializer(serializers.Serializer):
+    keyword = serializers.CharField()
+    recommended_section = serializers.CharField(required=False, allow_blank=True, default="")
+    action = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class StructuralSuggestionSerializer(serializers.Serializer):
+    category = serializers.CharField()
+    suggestion = serializers.CharField()
 
 
 class AiSuggestionsResponseSerializer(serializers.Serializer):
-    summary_recommendation = serializers.CharField()
-    missing_keywords_priority = MissingKeywordsPrioritySerializer()
-    bullet_point_improvements = serializers.ListField(child=BulletPointImprovementSerializer())
-    strengths = serializers.ListField(child=serializers.CharField())
+    summary_recommendation = serializers.CharField(required=False, allow_blank=True, default="")
+    missing_keywords_priority = MissingKeywordsPrioritySerializer(required=False)
+    keyword_placement_advice = serializers.ListField(child=KeywordPlacementAdviceSerializer(), required=False, default=list)
+    bullet_point_improvements = serializers.ListField(child=BulletPointImprovementSerializer(), required=False, default=list)
+    structural_suggestions = serializers.ListField(child=StructuralSuggestionSerializer(), required=False, default=list)
+    strengths = serializers.ListField(child=serializers.CharField(), required=False, default=list)
 
 
 class ResumeInfoSerializer(serializers.Serializer):

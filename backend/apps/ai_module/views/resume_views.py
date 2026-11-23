@@ -277,8 +277,10 @@ class ResumeAnalyzeView(APIView):
             "matched_skills": ats_score_data.get("matched_skills", []),
             "missing_skills": ats_score_data.get("missing_skills", []),
             "missing_keywords": ai_suggestions_data.get("missing_keywords_priority", {}),
+            "keyword_placement_advice": ai_suggestions_data.get("keyword_placement_advice", []),
             "recommendations": [ai_suggestions_data.get("summary_recommendation", "")] if ai_suggestions_data.get("summary_recommendation") else [],
             "tailored_bullet_suggestions": ai_suggestions_data.get("bullet_point_improvements", []),
+            "structural_suggestions": ai_suggestions_data.get("structural_suggestions", []),
             "strengths": ai_suggestions_data.get("strengths", []),
         }
 

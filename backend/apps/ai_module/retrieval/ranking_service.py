@@ -24,16 +24,24 @@ class RankingService:
     WEIGHT_ACADEMIC = 0.10
     WEIGHT_CAREER = 0.10
 
-    def compute_skill_overlap(self, caller: User, candidate: User) -> Tuple[float, List[str]]:
+    def compute_skill_overlap(
+        self,
+        caller: User,
+        candidate: User,
+        caller_skills_map: Optional[Dict[str, Tuple[str, str]]] = None,
+    ) -> Tuple[float, List[str]]:
         """
         Calculates Jaccard skill overlap with proficiency alignment bonus.
         Returns (score, shared_skill_names).
         """
-        caller_skills = {}
-        if hasattr(caller, "user_skills"):
-            for us in caller.user_skills.all():
-                if hasattr(us, "skill") and us.skill:
-                    caller_skills[us.skill.name.strip().lower()] = (us.proficiency, us.skill.name.strip())
+        if caller_skills_map is not None:
+            caller_skills = caller_skills_map
+        else:
+            caller_skills = {}
+            if hasattr(caller, "user_skills"):
+                for us in caller.user_skills.all():
+                    if hasattr(us, "skill") and us.skill:
+                        caller_skills[us.skill.name.strip().lower()] = (us.proficiency, us.skill.name.strip())
 
         candidate_skills = {}
         if hasattr(candidate, "user_skills"):
@@ -204,13 +212,22 @@ class RankingService:
         """
         ranked_candidates = []
 
+        # Precompute caller skills map once to avoid redundant N queries inside candidate loop
+        caller_skills_map: Dict[str, Tuple[str, str]] = {}
+        if hasattr(caller, "user_skills"):
+            for us in caller.user_skills.all():
+                if hasattr(us, "skill") and us.skill:
+                    caller_skills_map[us.skill.name.strip().lower()] = (us.proficiency, us.skill.name.strip())
+
         for uid, pool_meta in candidate_pool.items():
             candidate = hydrated_users.get(uid)
             if not candidate or not candidate.is_active:
                 continue
 
             semantic_score = pool_meta.get("best_score", 0.0)
-            skill_score, shared_skills = self.compute_skill_overlap(caller, candidate)
+            skill_score, shared_skills = self.compute_skill_overlap(
+                caller, candidate, caller_skills_map=caller_skills_map
+            )
             academic_score, academic_reasons = self.compute_academic_compatibility(caller, candidate)
             career_score, career_reasons = self.compute_career_relevance(caller, candidate)
 

@@ -10,7 +10,9 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 CATEGORY_NORMALIZATION_MAP = {
-    "NSU": "NSU",
+    "NIRMA": "NIRMA",
+    "Nirma": "NIRMA",
+    "NSU": "NIRMA",
     "Placement": "PLACEMENT_CELL",
     "PLACEMENT_CELL": "PLACEMENT_CELL",
     "Interview_Preparation": "INTERVIEW_PREP",

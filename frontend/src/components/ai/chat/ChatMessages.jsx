@@ -10,6 +10,7 @@ export default function ChatMessages({
   messages,
   isLoading,
   onSelectStarterPrompt,
+  onSelectFollowup,
 }) {
   const bottomRef = useRef(null);
 
@@ -20,7 +21,7 @@ export default function ChatMessages({
   const starterPrompts = [
     {
       title: 'Super Dream Placement Rules',
-      query: 'What are the eligibility criteria and rules for Super Dream placement drives at NSU?',
+      query: 'What are the eligibility criteria and rules for Super Dream placement drives at Nirma University?',
       category: 'PLACEMENT_CELL',
     },
     {
@@ -30,8 +31,8 @@ export default function ChatMessages({
     },
     {
       title: 'Summer Internship NOC Process',
-      query: 'What is the step-by-step procedure to get an official NOC approved for summer internships?',
-      category: 'NSU',
+      query: 'What is the step-by-step procedure to get an official NOC approved for summer internships at Nirma University?',
+      category: 'NIRMA',
     },
     {
       title: 'Full-Stack Technical Interview Tips',
@@ -53,8 +54,13 @@ export default function ChatMessages({
               How can I assist you today?
             </h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Ask anything about NSU academic regulations, placement cell drives, summer internships, or interview preparation.
+              Ask anything about Nirma University academic regulations, placement cell drives, summer internships, or interview preparation.
             </p>
+            <div className="pt-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/80">
+                <span>⚠️ Note: AI-generated answers for learning and project demonstration using simulated guidelines.</span>
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left">
@@ -80,7 +86,11 @@ export default function ChatMessages({
 
       {/* Message Stream */}
       {messages.map((msg, idx) => (
-        <ChatMessage key={idx} message={msg} />
+        <ChatMessage
+          key={idx}
+          message={msg}
+          onSelectFollowup={onSelectFollowup}
+        />
       ))}
 
       {/* Loading / Thinking Indicator */}

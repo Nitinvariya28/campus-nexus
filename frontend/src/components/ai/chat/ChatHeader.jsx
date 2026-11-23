@@ -14,7 +14,7 @@ export default function ChatHeader({
   const categories = [
     { id: 'ALL', label: 'All Knowledge' },
     { id: 'PLACEMENT_CELL', label: 'Placement Cell' },
-    { id: 'NSU', label: 'University Rules' },
+    { id: 'NIRMA', label: 'Nirma University' },
     { id: 'INTERVIEW_PREP', label: 'Interview Prep' },
     { id: 'INDUSTRY_TECH', label: 'Industry Tech' },
   ];
@@ -38,7 +38,7 @@ export default function ChatHeader({
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Official university regulations, placement policies, and technical interview guidelines
+              Official Nirma University regulations, placement policies, and technical interview guidelines
             </p>
           </div>
         </div>

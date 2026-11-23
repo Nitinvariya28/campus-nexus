@@ -131,6 +131,8 @@ class KnowledgeRetriever:
             cat_val = category.upper()
             if cat_val == "PLACEMENT":
                 cat_val = "PLACEMENT_CELL"
+            if cat_val in ["NSU", "NIRMA", "NIRMA UNIVERSITY"]:
+                cat_val = "NIRMA"
             query_filter = qmodels.Filter(
                 must=[
                     qmodels.FieldCondition(

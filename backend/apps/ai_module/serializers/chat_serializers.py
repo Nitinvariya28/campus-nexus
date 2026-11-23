@@ -1,11 +1,11 @@
 from rest_framework import serializers
 
-CATEGORY_CHOICES = ["ALL", "PLACEMENT_CELL", "NSU", "INTERVIEW_PREP", "INDUSTRY_TECH", "GENERAL"]
+CATEGORY_CHOICES = ["ALL", "PLACEMENT_CELL", "NIRMA", "NSU", "INTERVIEW_PREP", "INDUSTRY_TECH", "GENERAL"]
 
 
 class ChatMessageSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=["user", "assistant", "system"])
-    content = serializers.CharField(max_length=50000, required=False, allow_blank=True, default="")
+    content = serializers.CharField(max_length=100000, required=False, allow_blank=True, default="")
 
     def validate_content(self, value):
         # Gracefully truncate if client passes very long previous response
@@ -28,8 +28,6 @@ class ChatRequestSerializer(serializers.Serializer):
         raw_text = (attrs.get("question") or attrs.get("message") or "").strip()
         if not raw_text:
             raise serializers.ValidationError({"question": "Please enter a question or message."})
-        if len(raw_text) < 2:
-            raise serializers.ValidationError({"question": "Question must contain at least 2 characters."})
         if len(raw_text) > 1000:
             raise serializers.ValidationError({"question": "Question cannot exceed 1,000 characters."})
 
@@ -42,6 +40,8 @@ class ChatRequestSerializer(serializers.Serializer):
         clean_val = value.strip().upper()
         if clean_val == "PLACEMENT":
             return "PLACEMENT_CELL"
+        if clean_val in ["NSU", "NIRMA", "NIRMA UNIVERSITY"]:
+            return "NIRMA"
         return clean_val
 
 

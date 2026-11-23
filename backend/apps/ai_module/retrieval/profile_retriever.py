@@ -74,6 +74,7 @@ class ProfileRetriever:
         caller_user: Optional[User] = None,
         top_k: int = 50,
         filters: Optional[Dict[str, Any]] = None,
+        query_vector: Optional[List[float]] = None,
     ) -> List[Any]:
         """
         Retrieves top-K candidate vector chunks from Qdrant.
@@ -85,28 +86,29 @@ class ProfileRetriever:
             caller_user: Optional loaded User object for automatic query formulation
             top_k: Number of raw points to retrieve per collection
             filters: Optional dict of exact-match filters (e.g. {'department_id': 1})
+            query_vector: Optional pre-computed embedding vector to eliminate redundant inference
 
         Returns:
             List of raw Qdrant ScoredPoint objects
         """
-        # 1. Derive query string if omitted
-        if not query_text:
-            if caller_user:
-                query_text = self.build_caller_query_text(caller_user)
-            else:
-                try:
-                    loaded_caller = User.objects.select_related(
-                        "student_profile__department",
-                        "student_profile__batch",
-                        "alumni_profile__department",
-                        "alumni_profile__current_company",
-                    ).prefetch_related("user_skills__skill").get(id=caller_user_id)
-                    query_text = self.build_caller_query_text(loaded_caller)
-                except User.DoesNotExist:
-                    query_text = f"User #{caller_user_id}"
+        # 1. Use precomputed vector or compute embedding once
+        if query_vector is None:
+            if not query_text:
+                if caller_user:
+                    query_text = self.build_caller_query_text(caller_user)
+                else:
+                    try:
+                        loaded_caller = User.objects.select_related(
+                            "student_profile__department",
+                            "student_profile__batch",
+                            "alumni_profile__department",
+                            "alumni_profile__current_company",
+                        ).prefetch_related("user_skills__skill").get(id=caller_user_id)
+                        query_text = self.build_caller_query_text(loaded_caller)
+                    except User.DoesNotExist:
+                        query_text = f"User #{caller_user_id}"
 
-        # 2. Generate 384-dimensional normalized embedding
-        query_vector = self.embedding_service.embed_query(query_text)
+            query_vector = self.embedding_service.embed_query(query_text)
 
         # 3. Construct Qdrant payload filters
         must_conditions = [

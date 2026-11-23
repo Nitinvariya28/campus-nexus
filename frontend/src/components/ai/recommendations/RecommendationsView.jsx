@@ -25,7 +25,37 @@ export default function RecommendationsView() {
   const [incompleteMessage, setIncompleteMessage] = useState('');
   const [error, setError] = useState(null);
 
-  // Fetch student recommendations
+  // Single unified loader on initial load or full refresh (prevents duplicate queries & vector lock)
+  const fetchAllRecommendations = useCallback(async (sPage = 1, aPage = 1) => {
+    setIsStudentLoading(true);
+    setIsAlumniLoading(true);
+    setError(null);
+    try {
+      const res = await aiService.getProfileRecommendations({
+        target_role: 'ALL',
+        student_page: sPage,
+        alumni_page: aPage,
+        page_size: 5,
+      });
+
+      if (res?.status === 'PROFILE_INCOMPLETE' && !res?.students?.items?.length && !res?.alumni?.items?.length) {
+        setIsIncompleteProfile(true);
+        setIncompleteMessage(res.message);
+        return;
+      }
+
+      setStudentData(res?.students || res?.student_recommendations || null);
+      setAlumniData(res?.alumni || res?.alumni_recommendations || null);
+    } catch (err) {
+      console.error('Failed to load profile recommendations:', err);
+      setError(extractErrorMessage(err, 'Failed to fetch recommendations.'));
+    } finally {
+      setIsStudentLoading(false);
+      setIsAlumniLoading(false);
+    }
+  }, []);
+
+  // Fetch only student recommendations on pagination
   const fetchStudents = useCallback(async (pageToLoad) => {
     setIsStudentLoading(true);
     try {
@@ -34,12 +64,6 @@ export default function RecommendationsView() {
         student_page: pageToLoad,
         page_size: 5,
       });
-
-      if (res?.status === 'PROFILE_INCOMPLETE' && !res?.students?.items?.length) {
-        setIsIncompleteProfile(true);
-        setIncompleteMessage(res.message);
-        return;
-      }
 
       setStudentData(res?.students || res?.student_recommendations || null);
     } catch (err) {
@@ -50,7 +74,7 @@ export default function RecommendationsView() {
     }
   }, []);
 
-  // Fetch alumni recommendations
+  // Fetch only alumni recommendations on pagination
   const fetchAlumni = useCallback(async (pageToLoad) => {
     setIsAlumniLoading(true);
     try {
@@ -59,12 +83,6 @@ export default function RecommendationsView() {
         alumni_page: pageToLoad,
         page_size: 5,
       });
-
-      if (res?.status === 'PROFILE_INCOMPLETE' && !res?.alumni?.items?.length) {
-        setIsIncompleteProfile(true);
-        setIncompleteMessage(res.message);
-        return;
-      }
 
       setAlumniData(res?.alumni || res?.alumni_recommendations || null);
     } catch (err) {
@@ -75,11 +93,10 @@ export default function RecommendationsView() {
     }
   }, []);
 
-  // Initial load
+  // Initial load: 1 single unified API request!
   useEffect(() => {
-    fetchStudents(1);
-    fetchAlumni(1);
-  }, [fetchStudents, fetchAlumni]);
+    fetchAllRecommendations(1, 1);
+  }, [fetchAllRecommendations]);
 
   const handleStudentPageChange = (newPage) => {
     setStudentPage(newPage);
@@ -96,8 +113,7 @@ export default function RecommendationsView() {
     setIsIncompleteProfile(false);
     setStudentPage(1);
     setAlumniPage(1);
-    fetchStudents(1);
-    fetchAlumni(1);
+    fetchAllRecommendations(1, 1);
   };
 
   // If user profile is incomplete

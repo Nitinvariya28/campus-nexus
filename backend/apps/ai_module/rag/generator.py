@@ -62,7 +62,7 @@ class RAGResponseGenerator:
             logger.info(f"[RAG Generator] Query '{standalone_query}' yielded no matching chunks above threshold. Generating direct campus assist.")
 
             gen_sys_prompt = (
-                "You are the official AlumiBridge Campus Assistant for Netaji Subhas University (NSU). "
+                "You are the official AlumiBridge Campus Assistant for Nirma University. "
                 "Provide a helpful, professional, well-structured response regarding the university, "
                 "campus placement preparation, academic guidelines, student-alumni networking, or technical interview skills. "
                 "Keep answers informative, accurate, and encouraging."
@@ -94,7 +94,7 @@ class RAGResponseGenerator:
             return {
                 "status": "SUCCESS",
                 "answer": (
-                    "Welcome to AlumiBridge! For specific academic procedures or placement drive guidelines at NSU, "
+                    "Welcome to AlumiBridge! For specific academic procedures or placement drive guidelines at Nirma University, "
                     "please ensure you have completed your profile and updated your technical skills. "
                     "You can ask me questions about campus placements, attendance requirements, grading systems, or interview preparation."
                 ),
@@ -187,7 +187,7 @@ class RAGResponseGenerator:
                 followups.append("What are the rules regarding Dream and Super Dream placement offers?")
                 followups.append("How does the Placement Cell handle Pre-Placement Offers (PPOs)?")
                 break
-            elif "Academic" in title or "Grading" in title or category == "NSU":
+            elif "Academic" in title or "Grading" in title or category in ["NSU", "NIRMA"]:
                 followups.append("What are the attendance condonation requirements?")
                 followups.append("How are SGPA and CGPA calculated for semester exams?")
                 break
