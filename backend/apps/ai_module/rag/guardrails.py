@@ -168,9 +168,36 @@ def sanitize_output(text: str) -> str:
     """
     Tier 2 Post-Generation Gatekeeper.
     Scrubs accidental leakage of personal emails, phone numbers, or credentials from generated text.
+    Also strips raw internal document metadata, file:/// paths, and academic bracket citations [1], [2]
+    so the assistant output reads naturally and realistically like ChatGPT.
     """
     if not text:
         return ""
     sanitized = EMAIL_SANITIZER_REGEX.sub("[CONFIDENTIAL EMAIL REDACTED]", text)
     sanitized = PHONE_SANITIZER_REGEX.sub("[CONFIDENTIAL CONTACT REDACTED]", sanitized)
-    return sanitized
+
+    # 1. Remove raw internal document header tags: [Document: Title | Section: ... | Category: ...]
+    sanitized = re.sub(r"\[Document:[^\]]+\]", "", sanitized)
+
+    # 2. Clean markdown file:/// links: [Title](file:///path.md) -> Title, or bare file:/// links
+    sanitized = re.sub(r"\[([^\]]+)\]\(file:///[^\)]+\)", r"\1", sanitized)
+    sanitized = re.sub(r"\(file:///[^\)]+\)", "", sanitized)
+    sanitized = re.sub(r"file:///\S+", "", sanitized)
+
+    # 3. Remove raw document catalog IDs: [Nirma University-PLC-001] -> ""
+    sanitized = re.sub(r"\[?[A-Za-z\s]+-(?:PLC|ACA|ADM|INT|TECH)-\d+\]?:?", "", sanitized)
+
+    # 4. Remove bracket citations: [1], [2], [3], etc.
+    sanitized = re.sub(r"\s*\[\d+\]", "", sanitized)
+
+    # 5. Fix glued inline bullet points: "...will not be accepted. * Career Benchmark:..." -> separate lines
+    sanitized = re.sub(r"([.!?])\s+\*\s+", r"\1\n* ", sanitized)
+
+    # 6. Remove stray separator lines (***, ---) and empty markdown headings
+    sanitized = re.sub(r"^\s*[\*\-_]{3,}\s*$", "", sanitized, flags=re.MULTILINE)
+    sanitized = re.sub(r"^\s*##+\s*(?:Related Topics|Document References|References)?\s*$", "", sanitized, flags=re.MULTILINE)
+
+    # 7. Normalize consecutive blank lines
+    sanitized = re.sub(r"\n{3,}", "\n\n", sanitized)
+
+    return sanitized.strip()

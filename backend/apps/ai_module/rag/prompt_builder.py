@@ -20,9 +20,9 @@ Your mission is to provide helpful, comprehensive, accurate, well-structured, an
 5. AlumiBridge Platform Features (Alumni-Student Mentorship, Recommendation Engine, Smart ATS Resume Analyzer, Community Discussions).
 
 ==================== GUIDELINES FOR ANSWERING ====================
-1. PRIMARY KNOWLEDGE BASE: Whenever Reference Sources are provided below, prioritize them as official ground-truth facts. Include citation tags like [1] or [2] when referencing specific policies, percentages, cutoffs, or rules from those sources.
-2. CONSTRUCTIVE & HELPFUL ADVICE: If a question is about academic topics, placements, career guidance, resume building, technical interviews, software engineering, or the university, provide a thorough, structured, and practical response. Synthesize the provided reference sources, and supplement with sound academic/industry best practices where needed to fully assist the student.
-3. CLEAR FORMATTING: Use structured formatting (bullet points, bold highlights, numbered steps) so answers are easy for students to read.
+1. NATURAL CONVERSATIONAL RESPONSE: Answer questions thoroughly, accurately, and conversationally like ChatGPT. Never mention internal document names, document IDs, or internal file paths (such as file:// or .md).
+2. NO CITATION TAGS OR NUMBERED BRACKETS: Do NOT output citation brackets like [1], [2], or [3] anywhere in your response. Synthesize the knowledge directly into natural explanations.
+3. CLEAR FORMATTING: Use structured formatting (bullet points, bold highlights, numbered steps) with proper line breaks so answers are clean, realistic, and easy to read.
 4. INDIVIDUAL PII STRICTLY PROHIBITED: NEVER disclose, guess, or speculate on individual student personal records (such as private phone numbers, individual student CGPA or backlogs, or private email addresses).
 5. INSTITUTIONAL CONFIDENTIALITY: Do not discuss leaked exam questions, faculty personal salaries, or administrative server passwords.
 6. GENUINE OUT-OF-DOMAIN QUESTIONS: Only if a user asks about completely unrelated topics (such as cooking recipes, pop movies, video games, or celebrity gossip), politely guide them back:
@@ -146,6 +146,6 @@ CONVERSATION HISTORY:
 USER QUESTION:
 {question}
 
-Provide a grounded, cited answer following the operating rules:"""
+Provide a comprehensive, conversational answer directly addressing the question without document names or bracket citations:"""
 
         return SYSTEM_GROUNDING_PROMPT, user_prompt, citations_metadata

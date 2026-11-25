@@ -8,7 +8,12 @@ import toast from 'react-hot-toast';
 
 /**
  * ChatbotView Component
- * ChatGPT-like conversational interface grounded in Nirma University official documents & guides.
+ * Modern ChatGPT-style conversational interface grounded in Nirma University official documents & guides.
+ * Features:
+ * - Clean fixed bottom input composer
+ * - Word-by-word streaming typewriter response
+ * - Realistic search thinking status
+ * - Sleek, decluttered citations & suggested follow-ups
  */
 export default function ChatbotView() {
   const [messages, setMessages] = useState([]);
@@ -16,23 +21,27 @@ export default function ChatbotView() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSendMessage = async (userPrompt, overrideCategory) => {
+    const trimmedPrompt = (userPrompt || '').trim();
+    if (!trimmedPrompt) return;
+
     const categoryToSend = overrideCategory || activeCategory;
 
     // Append user message immediately
-    const userMessageObj = { role: 'user', content: userPrompt };
+    const userMessageObj = { role: 'user', content: trimmedPrompt };
     const nextMessages = [...messages, userMessageObj];
     setMessages(nextMessages);
     setIsLoading(true);
 
     try {
-      // Prepare conversation history for backend context (last 6 messages, capped length)
+      // Prepare conversation history (last 6 turns)
       const historyPayload = messages.slice(-6).map((m) => ({
         role: m.role || 'user',
         content: (m.content || m.answer || '').slice(0, 1000),
       }));
 
       const response = await aiService.sendChatMessage({
-        message: userPrompt,
+        message: trimmedPrompt,
+        question: trimmedPrompt,
         category: categoryToSend,
         conversation_history: historyPayload,
       });
@@ -45,10 +54,11 @@ export default function ChatbotView() {
           citations: response.citations || [],
           suggested_followups: response.suggested_followups || [],
           guardrail_status: response.guardrail_status || 'PASSED',
+          isNew: true, // triggers smooth typewriter word streaming
         };
         setMessages([...nextMessages, assistantMessageObj]);
       } else {
-        throw new Error(response?.message || 'Received unexpected response from AI assistant.');
+        throw new Error(response?.message || 'Received empty response from assistant.');
       }
     } catch (err) {
       console.error('Chat error:', err);
@@ -63,6 +73,7 @@ export default function ChatbotView() {
           content: `⚠️ ${errMsg}`,
           citations: [],
           guardrail_status: 'ERROR_NOTICE',
+          isNew: false,
         },
       ]);
     } finally {
@@ -83,7 +94,7 @@ export default function ChatbotView() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10.5rem)] min-h-[580px] max-h-[820px] space-y-3">
+    <div className="h-[calc(100vh-8.5rem)] min-h-[600px] bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col overflow-hidden relative">
       {/* 1. Header with Domain Filter & Reset */}
       <ChatHeader
         activeCategory={activeCategory}
@@ -92,22 +103,22 @@ export default function ChatbotView() {
         messageCount={messages.length}
       />
 
-      {/* 2. Message History Stream */}
-      <div className="flex-1 min-h-0 bg-slate-50/50 rounded-2xl border border-slate-200/90 flex flex-col overflow-hidden">
+      {/* 2. Chat Messages Stream with Auto-scroll */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-slate-50/40">
         <ChatMessages
           messages={messages}
           isLoading={isLoading}
           onSelectStarterPrompt={handleSelectStarterPrompt}
           onSelectFollowup={(fu) => handleSendMessage(fu)}
         />
+      </div>
 
-        {/* 3. Composer / Input Area */}
-        <div className="p-3 bg-white border-t border-slate-200/80">
-          <ChatInput
-            onSendMessage={(msg) => handleSendMessage(msg)}
-            isLoading={isLoading}
-          />
-        </div>
+      {/* 3. Sticky Bottom Composer (ChatGPT style) */}
+      <div className="border-t border-slate-200/80 bg-white p-3 sm:p-4 shrink-0 shadow-xs">
+        <ChatInput
+          onSendMessage={(msg) => handleSendMessage(msg)}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );

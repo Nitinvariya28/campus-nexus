@@ -171,7 +171,7 @@ class RAGChatbotApiIntegrationTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["status"], "SUCCESS")
-        self.assertIn("Placement Guidelines [1]", response.data["answer"])
+        self.assertIn("Placement Guidelines", response.data["answer"])
         self.assertIn("Super Dream", response.data["answer"])
         self.assertEqual(response.data["retrieval_mode"], "MMR_VECTOR")
         self.assertGreaterEqual(len(response.data["citations"]), 1)

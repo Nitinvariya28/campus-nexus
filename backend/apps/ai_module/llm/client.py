@@ -85,10 +85,12 @@ def probe_gemini_health(api_key: str, model_name: str, timeout: float = 10.0) ->
     Returns latency in milliseconds.
     """
     candidates = [
+        "gemini-1.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
+        "gemini-2.5-flash",
         "gemini-flash-lite-latest",
-        "gemini-3.5-flash-lite",
-        "gemini-3.1-flash-lite-preview",
-        "gemini-3-flash-preview",
     ]
     if model_name and model_name not in candidates:
         candidates.insert(0, model_name)
@@ -238,11 +240,12 @@ def generate_completion(
 
     if provider == "GEMINI":
         candidate_models = [
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash-8b",
+            "gemini-1.5-pro",
+            "gemini-2.5-flash",
             "gemini-flash-lite-latest",
-            "gemini-3.5-flash-lite",
-            "gemini-3.1-flash-lite-preview",
-            "gemini-3.1-flash-lite",
-            "gemini-3-flash-preview",
         ]
         if model_name and model_name not in candidate_models and model_name != "gemini-3-flash-preview":
             candidate_models.insert(0, model_name)
