@@ -26,6 +26,26 @@ def get_qdrant_client() -> QdrantClient:
         if _client_instance is not None:
             return _client_instance
 
+        # 1. Cloud Qdrant Client (Preferred for production / Render deployment)
+        qdrant_url = getattr(settings, "QDRANT_URL", "") or os.getenv("QDRANT_URL", "")
+        qdrant_api_key = getattr(settings, "QDRANT_API_KEY", "") or os.getenv("QDRANT_API_KEY", "")
+
+        if qdrant_url and qdrant_url.strip():
+            clean_url = qdrant_url.strip()
+            clean_key = qdrant_api_key.strip() if qdrant_api_key else None
+            logger.info(f"[Qdrant Client] Connecting to Qdrant Cloud cluster at: {clean_url}")
+            try:
+                _client_instance = QdrantClient(
+                    url=clean_url,
+                    api_key=clean_key,
+                    timeout=30.0,
+                )
+                return _client_instance
+            except Exception as e:
+                logger.error(f"[Qdrant Client] Failed to connect to Qdrant Cloud: {e}", exc_info=True)
+                raise e
+
+        # 2. Local File-Based Storage (Fallback for local development)
         storage_path = getattr(
             settings,
             "QDRANT_STORAGE_PATH",

@@ -221,6 +221,8 @@ SPECTACULAR_SETTINGS = {
 # ==========================================
 # AI Module Configurations
 # ==========================================
+QDRANT_URL = os.getenv("QDRANT_URL", "").strip()
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "").strip()
 QDRANT_STORAGE_PATH = BASE_DIR / "storage" / "qdrant_data"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIMENSION = 384
