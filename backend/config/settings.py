@@ -12,12 +12,15 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 import os
+from pathlib import Path
 from dotenv import load_dotenv
-
-load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from backend/.env
+load_dotenv(BASE_DIR / ".env")
+load_dotenv()
 
 
 # Quick-start development settings - unsuitable for production
@@ -104,15 +107,26 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+import ssl
+
+_db_host = os.getenv("DB_HOST", "localhost")
+_db_options = {
+    "charset": "utf8mb4",
+}
+# TiDB Cloud public endpoint requires TLS/SSL
+if "tidbcloud.com" in _db_host or os.getenv("DB_SSL", "").lower() in ("true", "1", "yes"):
+    _db_options["ssl"] = ssl.create_default_context()
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": os.getenv("DB_HOST"),
-        "PORT": os.getenv("DB_PORT"),
+        "NAME": os.getenv("DB_NAME", "alumni_platform"),
+        "USER": os.getenv("DB_USER", "root"),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
+        "HOST": _db_host,
+        "PORT": os.getenv("DB_PORT", "4000" if "tidbcloud.com" in _db_host else "3306"),
         "CONN_MAX_AGE": 600,  # 10 minutes persistent connection pooling
+        "OPTIONS": _db_options,
     }
 }
 
