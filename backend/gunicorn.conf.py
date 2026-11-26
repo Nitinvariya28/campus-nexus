@@ -1,23 +1,19 @@
-import multiprocessing
-import os
+# Gunicorn configuration optimized for 512 MB Cloud RAM
+# 1 master worker with 4 threads ensures low memory footprint (~200 MB)
+# while allowing 4 concurrent requests to prevent request queueing bottlenecks
 
-# Gunicorn configuration file for Render Cloud deployment
-# Enables concurrent multi-threaded request processing to prevent queuing bottlenecks
-
-# 2 workers with 4 threads each = 8 concurrent request handlers
-workers = 2
+workers = 1
 threads = 4
 worker_class = "gthread"
 
-# Timeout settings (prevents slow LLM or cross-region network requests from aborting prematurely)
-timeout = 60
+# Timeout settings
+timeout = 120
 keepalive = 5
 
-# Memory management: restart workers periodically to prevent memory leaks in free tiers
-max_requests = 1000
+# Memory protection: recycle worker every 500 requests to avoid fragmentation
+max_requests = 500
 max_requests_jitter = 50
 
-# Log formats
 loglevel = "info"
 accesslog = "-"
 errorlog = "-"
