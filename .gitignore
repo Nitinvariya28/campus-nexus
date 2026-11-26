@@ -26,6 +26,11 @@ db.sqlite3
 *.sql
 *.bak
 
+# Static files
+staticfiles/
+backend/staticfiles/
+backend/storage/qdrant_data/.lock
+
 # Python
 __pycache__/
 *.py[cod]

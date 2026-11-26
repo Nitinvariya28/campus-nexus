@@ -32,6 +32,7 @@ django-debug-toolbar>=4.3  # For query optimization (verifying select_related/pr
 # Cloud Deployment & WSGI Server (Render)
 # ==========================================
 gunicorn>=21.2.0  # Production WSGI HTTP server
+whitenoise>=6.6.0  # Fast static file serving for Django on cloud hosts
 
 # ==========================================
 # AI Module & File Parsing
