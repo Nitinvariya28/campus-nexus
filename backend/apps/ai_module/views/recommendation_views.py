@@ -376,9 +376,13 @@ class ProfileRecommendationsView(APIView):
             caller_vec_key = f"ai_caller_vector_{caller.id}"
             query_vector = cache.get(caller_vec_key)
             if not query_vector:
-                query_text = self.retriever.build_caller_query_text(caller)
-                query_vector = self.retriever.embedding_service.embed_query(query_text)
-                cache.set(caller_vec_key, query_vector, timeout=300)
+                try:
+                    query_text = self.retriever.build_caller_query_text(caller)
+                    query_vector = self.retriever.embedding_service.embed_query(query_text)
+                    cache.set(caller_vec_key, query_vector, timeout=300)
+                except Exception as emb_err:
+                    logger.warning(f"[Profile Recommendations] Embedding generation failed: {emb_err}. Proceeding with relational fallback.")
+                    query_vector = None
 
             response_data = {
                 "status": "SUCCESS",

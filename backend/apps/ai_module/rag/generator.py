@@ -49,13 +49,17 @@ class RAGResponseGenerator:
         )
 
         # 3. Qdrant MMR Semantic Vector Search with Adaptive Score Thresholding
-        retrieval_res = self.retriever.search(
-            query=standalone_query,
-            category=category,
-            top_k=4,
-            score_threshold=0.10,
-            use_mmr=True,
-        )
+        try:
+            retrieval_res = self.retriever.search(
+                query=standalone_query,
+                category=category,
+                top_k=4,
+                score_threshold=0.10,
+                use_mmr=True,
+            )
+        except Exception as e:
+            logger.warning(f"[RAG Generator] Vector search failed or model unavailable ({e}). Falling back to direct assist.")
+            retrieval_res = {"status": "NO_MATCHES", "chunks": [], "max_score": 0.0}
 
         # 4. Out-of-Domain Gate (No chunks passed similarity threshold)
         if retrieval_res["status"] == "NO_MATCHES" or not retrieval_res["chunks"]:

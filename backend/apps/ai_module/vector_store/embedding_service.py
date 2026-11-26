@@ -48,17 +48,35 @@ class EmbeddingService:
         """
         Embeds a single query string into a normalized 384-dimensional vector.
         L2 normalization ensures cosine similarity equals direct dot product.
+        Caches results for 24h to avoid redundant model executions and latency.
         """
         if not text or not text.strip():
             raise ValueError("Text for embedding cannot be empty or purely whitespace.")
 
         sanitized_text = text.strip()
+        try:
+            from django.core.cache import cache
+            cache_key = f"emb_vec_{abs(hash(sanitized_text)) % 100000000}"
+            cached_val = cache.get(cache_key)
+            if cached_val is not None:
+                return cached_val
+        except Exception:
+            cache_key = None
+
         embedding = self.model.encode(
             sanitized_text,
             convert_to_numpy=True,
             normalize_embeddings=True,
         )
-        return embedding.tolist()
+        vec = embedding.tolist()
+
+        try:
+            if cache_key:
+                cache.set(cache_key, vec, timeout=86400)
+        except Exception:
+            pass
+
+        return vec
 
     def embed_documents(self, texts: List[str], batch_size: int = 32) -> List[List[float]]:
         """
